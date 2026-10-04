@@ -250,14 +250,24 @@ function generateLocalClinicalFallback(actionInstruction: string): string {
 
   if (isReasoning) {
     return JSON.stringify({
-      mainHypothesis: "Síndrome clínica aguda a esclarecer / Investigação ambulatorial e de urgência",
-      mainCid: "R69",
-      differentialDiagnoses: [
-        { cid: "R10", name: "Dor abdominal e pélvica", justification: "Compatível com a sintomatologia referida na admissão" },
-        { cid: "R51", name: "Cefaleia", justification: "Considerar conforme evolução clínica e exclusão de sinais de alarme" },
-        { cid: "R07", name: "Dor de garganta e no peito", justification: "Diagnóstico diferencial a ser monitorado" }
+      hipotesePrincipal: "Síndrome clínica aguda a esclarecer / Investigação de urgência",
+      rankingHipoteses: [
+        { nome: "Síndrome clínica aguda a esclarecer", tipo: "Principal", prob: "Alta" },
+        { nome: "Dor abdominal e pélvica a esclarecer", tipo: "Diferencial", prob: "Média" },
+        { nome: "Cefaleia tensional / primária", tipo: "Diferencial", prob: "Baixa" },
+        { nome: "Dor torácica atípica", tipo: "Diferencial", prob: "Baixa" }
       ],
-      clinicalSummary: "Quadro clínico agudo atendido em pronto atendimento. Necessita de monitorização clínica e correlação com exames complementares de urgência."
+      diagnosticosDiferenciais: ["Dor abdominal e pélvica a esclarecer", "Cefaleia tensional / primária", "Dor torácica atípica"],
+      cids: [
+        { cid: "R69", desc: "Causas desconhecidas e não especificadas de morbidade", prob: "Alta" },
+        { cid: "R10", desc: "Dor abdominal e pélvica", prob: "Média" },
+        { cid: "R51", desc: "Cefaleia", prob: "Baixa" },
+        { cid: "R07", desc: "Dor de garganta e no peito", prob: "Baixa" },
+        { cid: "R53", desc: "Mal-estar e fadiga", prob: "Baixa" }
+      ],
+      notificacaoCompulsoria: false,
+      detalhesNotificacao: "",
+      escoresClinicos: []
     });
   }
 

@@ -25,7 +25,8 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     (r) =>
       r.patient.nome.toLowerCase().includes(search.toLowerCase()) ||
       r.qp.toLowerCase().includes(search.toLowerCase()) ||
-      (r.aiResults.mainHypothesis || '').toLowerCase().includes(search.toLowerCase())
+      (r.aiResults.mainHypothesis || '').toLowerCase().includes(search.toLowerCase()) ||
+      (r.aiResults.selectedCid || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -89,9 +90,14 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                   <p className="text-slate-600 dark:text-slate-300 truncate">
                     <strong className="text-slate-400 dark:text-slate-500 font-normal">QP:</strong> {rec.qp || 'Não informada'}
                   </p>
-                  {rec.aiResults.mainHypothesis && (
-                    <p className="text-ice-600 dark:text-neutral-300 font-medium truncate">
-                      HD: {rec.aiResults.mainHypothesis}
+                  {(rec.aiResults.mainHypothesis || rec.aiResults.selectedCid) && (
+                    <p className="text-ice-600 dark:text-neutral-300 font-medium truncate flex items-center gap-1.5">
+                      {rec.aiResults.mainHypothesis && <span>HD: {rec.aiResults.mainHypothesis}</span>}
+                      {rec.aiResults.selectedCid && (
+                        <span className="font-mono text-[10px] bg-slate-100 dark:bg-navy-900 text-slate-700 dark:text-ice-300 px-1 py-0.2 rounded border border-slate-200 dark:border-slate-800">
+                          CID: {rec.aiResults.selectedCid}
+                        </span>
+                      )}
                     </p>
                   )}
                   <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 pt-1">

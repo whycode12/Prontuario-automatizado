@@ -25,7 +25,8 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
     const nome = (r.patient?.nome || '').toLowerCase();
     const qp = (r.qp || '').toLowerCase();
     const hd = (r.aiResults?.mainHypothesis || '').toLowerCase();
-    const matchesSearch = nome.includes(term) || qp.includes(term) || hd.includes(term);
+    const cid = (r.aiResults?.selectedCid || '').toLowerCase();
+    const matchesSearch = nome.includes(term) || qp.includes(term) || hd.includes(term) || cid.includes(term);
 
     if (!selectedDate) return matchesSearch;
     const recordDateStr = new Date(r.savedAt).toLocaleDateString('en-CA'); // YYYY-MM-DD
@@ -163,10 +164,17 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
                     <strong className="text-slate-700 dark:text-neutral-200">QP:</strong> {rec.qp || 'Não informada'}
                   </div>
 
-                  {/* HD */}
-                  {rec.aiResults?.mainHypothesis && (
-                    <div className="text-xs text-slate-600 dark:text-neutral-300">
-                      <strong className="text-slate-700 dark:text-neutral-200">HD:</strong> {rec.aiResults.mainHypothesis}
+                  {/* HD & CID */}
+                  {(rec.aiResults?.mainHypothesis || rec.aiResults?.selectedCid) && (
+                    <div className="text-xs text-slate-600 dark:text-neutral-300 flex items-center flex-wrap gap-1">
+                      {rec.aiResults.mainHypothesis && (
+                        <span><strong className="text-slate-700 dark:text-neutral-200">HD:</strong> {rec.aiResults.mainHypothesis}</span>
+                      )}
+                      {rec.aiResults.selectedCid && (
+                        <span className="font-mono text-[10px] bg-slate-100 dark:bg-navy-900 text-slate-700 dark:text-ice-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                          CID: {rec.aiResults.selectedCid}
+                        </span>
+                      )}
                     </div>
                   )}
 

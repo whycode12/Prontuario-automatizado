@@ -220,8 +220,8 @@ Retorne no formato JSON especificado.`,
   diagnostico: `Você é um médico em emergência/UPA/UBS.
 Analise todo o caso clínico até agora (Identificação, QP, HMA, HPP, Sinais Vitais, Exame Físico).
 1. Indique a Hipótese Diagnóstica Principal.
-2. Indique até 3 Diagnósticos Diferenciais pertinentes.
-3. Elenque 5 CIDs (CID-10) prováveis em ranking (do mais provável para o menos provável), com código e descrição.
+2. Elenque o ranking completo de hipóteses (Principal e Diferenciais) com probabilidade de ser cada uma (Alta, Média ou Baixa).
+3. Elenque 5 opções de CID (CID-10) prováveis em ranking (do mais provável para o menos provável), com código, descrição e probabilidade (Alta, Média ou Baixa).
 4. Identifique se é Agravo de Notificação Compulsória (SINAN).
 5. Sugira escores de risco pertinentes se houver (ex: Centor, CURB-65, HEART, Wells, etc.) com cálculo e interpretação.
 Retorne no formato JSON especificado.`,

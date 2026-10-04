@@ -858,7 +858,17 @@ export default function App() {
     try {
       const jsonExample = `{
   "hipotesePrincipal": "Cistite Aguda Não Complicada",
-  "diagnosticosDiferenciais": ["Pielonefrite Aguda", "Vaginite Infecciosa", "Urolitíase"],
+  "rankingHipoteses": [
+    {"nome": "Cistite Aguda Não Complicada", "tipo": "Principal", "prob": "Alta"},
+    {"nome": "Pielonefrite Aguda", "tipo": "Diferencial", "prob": "Média"},
+    {"nome": "Vaginite Infecciosa", "tipo": "Diferencial", "prob": "Baixa"},
+    {"nome": "Urolitíase", "tipo": "Diferencial", "prob": "Baixa"}
+  ],
+  "diagnosticosDiferenciais": [
+    {"nome": "Pielonefrite Aguda", "prob": "Média"},
+    {"nome": "Vaginite Infecciosa", "prob": "Baixa"},
+    {"nome": "Urolitíase", "prob": "Baixa"}
+  ],
   "cids": [
     {"cid": "N30.0", "desc": "Cistite aguda", "prob": "Alta"},
     {"cid": "N39.0", "desc": "Infecção do trato urinário de localização não especificada", "prob": "Média"},
@@ -878,21 +888,58 @@ export default function App() {
         model,
         prompts.diagnostico,
         payload,
-        'Elabore a hipótese principal, 3 diferenciais, ranking de 5 CIDs, verificação de notificação compulsória e escores clínicos pertinentes.',
+        'Elabore a hipótese principal, ranking de hipóteses (principal e diferenciais) com probabilidade (Alta, Média ou Baixa), ranking de 5 CIDs com probabilidade, verificação de notificação compulsória e escores clínicos pertinentes.',
         jsonExample
       );
 
       const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+
+      // Monta o ranking estruturado de hipóteses
+      let rankingHipoteses = parsed.rankingHipoteses || [];
+      if (!rankingHipoteses.length && parsed.hipotesePrincipal) {
+        rankingHipoteses.push({
+          nome: parsed.hipotesePrincipal,
+          tipo: 'Principal',
+          prob: 'Alta'
+        });
+        if (Array.isArray(parsed.diagnosticosDiferenciais)) {
+          parsed.diagnosticosDiferenciais.forEach((item: any, idx: number) => {
+            if (typeof item === 'string') {
+              rankingHipoteses.push({
+                nome: item,
+                tipo: 'Diferencial',
+                prob: idx === 0 ? 'Média' : 'Baixa'
+              });
+            } else if (item && typeof item === 'object') {
+              rankingHipoteses.push({
+                nome: item.nome || item.name || item.hipotese || '',
+                tipo: 'Diferencial',
+                prob: item.prob || item.probabilidade || (idx === 0 ? 'Média' : 'Baixa')
+              });
+            }
+          });
+        }
+      }
+
+      const diffStrings = rankingHipoteses
+        .filter((h: any) => h.tipo?.toLowerCase() !== 'principal' && h.nome !== parsed.hipotesePrincipal)
+        .map((h: any) => h.nome);
+
+      const cids = parsed.cids || [];
+      const defaultCid = cids.length > 0 ? `${cids[0].cid} - ${cids[0].desc}` : undefined;
+
       setAiResults((prev) => ({
         ...prev,
-        mainHypothesis: parsed.hipotesePrincipal,
-        differentialDiagnoses: parsed.diagnosticosDiferenciais || [],
-        cidRankings: parsed.cids || [],
+        mainHypothesis: parsed.hipotesePrincipal || prev.mainHypothesis,
+        hypothesisRankings: rankingHipoteses,
+        differentialDiagnoses: diffStrings.length ? diffStrings : (parsed.diagnosticosDiferenciais || []),
+        cidRankings: cids,
+        selectedCid: prev.selectedCid || defaultCid,
         isCompulsoryNotification: !!parsed.notificacaoCompulsoria,
         compulsoryDetails: parsed.detalhesNotificacao || '',
         clinicalScores: parsed.escoresClinicos || []
       }));
-      showToast('Diagnósticos e CIDs gerados pela IA!');
+      showToast('Diagnósticos e CID gerados pela IA!');
     } catch (err: any) {
       alert(`Falha na IA (Diagnóstico): ${err.message}`);
     } finally {
@@ -1211,10 +1258,10 @@ export default function App() {
       .replace('{{FR}}', vitals.fr || '--')
       .replace('{{SAT}}', vitals.sat || '--')
       .replace('{{TAX}}', vitals.tax || '--')
-      .replace('{{EXAME_FISICO}}', exameFisico || 'Não informado')
-      .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
+      .replace('{{HIPOTESE}}', aiResults.mainHypothesis ? (aiResults.selectedCid && !templates.prontuario.includes('{{CID}}') && !templates.prontuario.includes('{{CIDS}}') ? `${aiResults.mainHypothesis} (CID: ${aiResults.selectedCid})` : aiResults.mainHypothesis) : 'A esclarecer')
       .replace('{{DIFERENCIAIS}}', aiResults.differentialDiagnoses?.length ? `Diferenciais: ${aiResults.differentialDiagnoses.join(' • ')}` : '')
-      .replace('{{CIDS}}', '')
+      .replace('{{CID}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
+      .replace('{{CIDS}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
       .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
       .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
       .replace('{{ORIENTACOES_TECNICAS}}', aiResults.techOrientations ? `\n#ORIENTAÇÕES:\n${aiResults.techOrientations}` : '');
@@ -1279,9 +1326,10 @@ export default function App() {
         .replace('{{SAT}}', vitals.sat || '--')
         .replace('{{TAX}}', vitals.tax || '--')
         .replace('{{EXAME_FISICO}}', exameFisico || 'Não informado')
-        .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
+        .replace('{{HIPOTESE}}', aiResults.mainHypothesis ? (aiResults.selectedCid && !templates.prontuario.includes('{{CID}}') && !templates.prontuario.includes('{{CIDS}}') ? `${aiResults.mainHypothesis} (CID: ${aiResults.selectedCid})` : aiResults.mainHypothesis) : 'A esclarecer')
         .replace('{{DIFERENCIAIS}}', aiResults.differentialDiagnoses?.length ? `Diferenciais: ${aiResults.differentialDiagnoses.join(' • ')}` : '')
-        .replace('{{CIDS}}', '')
+        .replace('{{CID}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
+        .replace('{{CIDS}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
         .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
         .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
         .replace('{{ORIENTACOES_TECNICAS}}', aiResults.techOrientations ? `\n#ORIENTAÇÕES:\n${aiResults.techOrientations}` : '');

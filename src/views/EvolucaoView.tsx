@@ -1,9 +1,10 @@
 import React from 'react';
-import { Bed, AlertTriangle, ArrowDownToLine, Sparkles } from 'lucide-react';
+import { Bed, AlertTriangle } from 'lucide-react';
 import type { ObservationData, AIResult, SystemTemplates, SystemPrompts } from '../types';
 import { UndoableTextarea } from '../components/UndoableTextarea';
 import { AIActionButton } from '../components/AIActionButton';
 import { TemplateEditorButton } from '../components/TemplateEditorButton';
+import { AIDrawer } from '../components/AIDrawer';
 
 interface EvolucaoViewProps {
   patientName: string;
@@ -169,48 +170,38 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           rows={4}
         />
 
-        {/* Sugestão de Texto da IA para Reavaliação Clínica */}
+        {/* Sugestão de Texto da IA para Reavaliação Clínica com engavetar */}
         {aiResults.reevaluationSuggestion && (
-          <div className="p-3 rounded-lg border border-[#e5e5e5] dark:border-[#333] bg-[#fbfbfa] dark:bg-[#202020] space-y-2 animate-in fade-in">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
-                Sugestão da IA para Reavaliação Clínica:
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setObservation((prev) => ({
-                    ...prev,
-                    clinicalReevaluationText: aiResults.reevaluationSuggestion || ''
-                  }));
-                }}
-                className="px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-[#262626] border border-[#d4d4d4] dark:border-[#3e3e3e] text-slate-700 dark:text-neutral-200 hover:bg-[#f0f0f0] dark:hover:bg-[#303030] flex items-center gap-1.5 transition-colors shadow-2xs"
-                title="Substituir texto da Reavaliação por esta sugestão"
-              >
-                <ArrowDownToLine className="w-3.5 h-3.5" />
-                <span>Implementar no campo</span>
-              </button>
-            </div>
+          <AIDrawer
+            title="Sugestão da IA para Reavaliação Clínica:"
+            onImplement={() => {
+              setObservation((prev) => ({
+                ...prev,
+                clinicalReevaluationText: aiResults.reevaluationSuggestion || ''
+              }));
+            }}
+            triggerUpdate={aiResults.reevaluationSuggestion}
+          >
             <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
               {aiResults.reevaluationSuggestion}
             </p>
-          </div>
+          </AIDrawer>
         )}
 
-        {/* Box de Checagens Faltantes Sugeridas pela IA */}
+        {/* Box de Checagens Faltantes Sugeridas pela IA com engavetar */}
         {aiResults.missingReevaluationChecks && aiResults.missingReevaluationChecks.length > 0 && (
-          <div className="bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 rounded-lg p-3 text-xs space-y-1.5 animate-in fade-in">
-            <span className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 text-xs">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              Checagens recomendadas pela IA que faltou investigar na reavaliação:
-            </span>
+          <AIDrawer
+            title="Checagens recomendadas pela IA que faltou investigar na reavaliação:"
+            icon={<AlertTriangle className="w-4 h-4 text-amber-500" />}
+            variant="amber"
+            triggerUpdate={aiResults.missingReevaluationChecks}
+          >
             <ul className="list-disc list-inside text-amber-800 dark:text-amber-200 space-y-0.5 pl-1 text-xs">
               {aiResults.missingReevaluationChecks.map((item, idx) => (
                 <li key={idx}>{item}</li>
               ))}
             </ul>
-          </div>
+          </AIDrawer>
         )}
       </section>
 
@@ -248,33 +239,22 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
               rows={3}
             />
 
-            {/* Sugestão da IA para Nova Hipótese */}
+            {/* Sugestão da IA para Nova Hipótese com engavetar */}
             {aiResults.conclusionHypothesisSuggestion && (
-              <div className="mt-2.5 p-3 rounded-lg border border-[#e5e5e5] dark:border-[#333] bg-[#fbfbfa] dark:bg-[#202020] space-y-2 animate-in fade-in">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
-                    Sugestão da IA para Hipótese:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setObservation((prev) => ({
-                        ...prev,
-                        conclusionNewHypothesis: aiResults.conclusionHypothesisSuggestion || ''
-                      }));
-                    }}
-                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-[#262626] border border-[#d4d4d4] dark:border-[#3e3e3e] text-slate-700 dark:text-neutral-200 hover:bg-[#f0f0f0] dark:hover:bg-[#303030] flex items-center gap-1.5 transition-colors shadow-2xs"
-                    title="Substituir texto da Hipótese por esta sugestão"
-                  >
-                    <ArrowDownToLine className="w-3.5 h-3.5" />
-                    <span>Implementar no campo</span>
-                  </button>
-                </div>
+              <AIDrawer
+                title="Sugestão da IA para Hipótese:"
+                onImplement={() => {
+                  setObservation((prev) => ({
+                    ...prev,
+                    conclusionNewHypothesis: aiResults.conclusionHypothesisSuggestion || ''
+                  }));
+                }}
+                triggerUpdate={aiResults.conclusionHypothesisSuggestion}
+              >
                 <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
                   {aiResults.conclusionHypothesisSuggestion}
                 </p>
-              </div>
+              </AIDrawer>
             )}
           </div>
 
@@ -288,33 +268,22 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
               rows={3}
             />
 
-            {/* Sugestão da IA para Novas Condutas */}
+            {/* Sugestão da IA para Novas Condutas com engavetar */}
             {aiResults.newConductsSuggestion && (
-              <div className="mt-2.5 p-3 rounded-lg border border-[#e5e5e5] dark:border-[#333] bg-[#fbfbfa] dark:bg-[#202020] space-y-2 animate-in fade-in">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
-                    Sugestão da IA para Condutas:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setObservation((prev) => ({
-                        ...prev,
-                        newConducts: aiResults.newConductsSuggestion || ''
-                      }));
-                    }}
-                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-[#262626] border border-[#d4d4d4] dark:border-[#3e3e3e] text-slate-700 dark:text-neutral-200 hover:bg-[#f0f0f0] dark:hover:bg-[#303030] flex items-center gap-1.5 transition-colors shadow-2xs"
-                    title="Substituir texto das Condutas por esta sugestão"
-                  >
-                    <ArrowDownToLine className="w-3.5 h-3.5" />
-                    <span>Implementar no campo</span>
-                  </button>
-                </div>
+              <AIDrawer
+                title="Sugestão da IA para Condutas:"
+                onImplement={() => {
+                  setObservation((prev) => ({
+                    ...prev,
+                    newConducts: aiResults.newConductsSuggestion || ''
+                  }));
+                }}
+                triggerUpdate={aiResults.newConductsSuggestion}
+              >
                 <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
                   {aiResults.newConductsSuggestion}
                 </p>
-              </div>
+              </AIDrawer>
             )}
           </div>
         </div>

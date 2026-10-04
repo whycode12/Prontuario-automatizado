@@ -23,6 +23,12 @@ export interface HppData {
   etilismo: string;
 }
 
+export interface HypothesisItem {
+  nome: string;
+  prob: string;
+  tipo?: string;
+}
+
 export interface AIResult {
   hmaSuggestion?: string;
   hmaMissingQuestions?: string[];
@@ -30,6 +36,8 @@ export interface AIResult {
   physicalExamMissingManeuvers?: string[];
   mainHypothesis?: string;
   differentialDiagnoses?: string[];
+  hypothesisRankings?: HypothesisItem[];
+  selectedCid?: string;
   cidRankings?: Array<{ cid: string; desc: string; prob: string }>;
   isCompulsoryNotification?: boolean;
   compulsoryDetails?: string;
