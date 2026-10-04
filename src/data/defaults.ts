@@ -49,10 +49,10 @@ export function parseHppText(text: string): HppData {
 }
 
 export const DEFAULT_TEMPLATES: SystemTemplates = {
-  hpp: `Alergias: Nega alergias medicamentosas conhecidas.
+  hpp: `Alergias: Nega alergias medicamentosas conhecidas
 Comorbidades: Nega.
 MUC: Nega medicações de uso contínuo
-Cirurgias prévias: Nega cirurgias prévias.
+Cirurgias prévias: Nega cirurgias prévias
 Tabagismo: Nega.
 Etilismo: Nega.`,
   exameFisico: `BEG, afebril, hidratado, corado, anictérico, acianótico, hemodinamicamente estável.
@@ -79,33 +79,31 @@ PA: {{PA}} mmHg | FC: {{FC}} bpm | FR: {{FR}} irpm | SatO2: {{SAT}}% | Tax: {{TA
 #EXAME FÍSICO:
 {{EXAME_FISICO}}
 
-#HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
+#HIPÓTESE DIAGNÓSTICA:
+{{HIPOTESE}}
+{{DIFERENCIAIS}}
+
+#RESULTADO DE EXAMES:
+{{RESULTADOS_EXAMES}}
 
 #CONDUTAS:
 {{CONDUTAS}}
-
-#ORIENTAÇÕES:
-{{ORIENTACOES_PRONTUARIO}}
-
-#SINAIS DE ALARME:
-{{ALARME_PRONTUARIO}}`,
-  receitaInterna: `PRESCRIÇÃO INTERNA
+- {{orientacoes_prontuario}}
+- {{alarme_prontuario}}`,
+  receitaInterna: `PRESCRIÇÃO UNIDADE / PRONTO ATENDIMENTO
 Paciente: {{NOME}} | Idade: {{IDADE}} anos | Data: {{DATA}}
-
-{{MEDICACOES_UNIDADE}}
-
-Exames Solicitados:
-{{EXAMES_SOLICITADOS}}`,
+———————————————————————————————————
+{{MEDICACOES_UNIDADE}}`,
   receitaDomiciliar: `RECEITUÁRIO MÉDICO
 Paciente: {{NOME}} | Idade: {{IDADE}} anos | Data: {{DATA}}
-
-USO ORAL / DOMICILIAR:
+———————————————————————————————————
+USO ORAL:
 {{MEDICACOES_CASA}}
 
---------------------------------------------------
-ORIENTAÇÕES GERAIS: {{ORIENTACOES_PACIENTE}}
+———————————————————————————————————
+ORIENTAÇÕES GERAIS: {{orientacoes_paciente}}
 
-SINAIS DE ALARME: {{ALARME_PACIENTE}}`,
+SINAIS DE ALARME: {{alarme_paciente}}`,
   passagemPlantao: `PASSAGEM DE CASO CLÍNICO:
 Paciente {{NOME}}, {{IDADE}} anos, sexo {{SEXO}}.
 Quadro principal: {{QP}}
@@ -191,17 +189,56 @@ Resultados de Exames na Observação: {{RESULTADOS_EXAMES}}
 Reavaliação Clínica: {{REAVALIACAO_TEXTO}}
 Nova Hipótese / Conclusão: {{NOVA_HIPOTESE}}
 Novas Condutas: {{NOVAS_CONDUTAS}}`,
-  payloadHma: `IDENTIFICAÇÃO:
+  payloadHma: `=== DADOS DO PACIENTE ===
 Nome: {{NOME}}
 Idade: {{IDADE}} anos
 Sexo: {{SEXO}}
 Peso: {{PESO}}
-Altura: {{ALTURA}}
+Altura: {{ALTURA}} {{IMC}}
+D
+=== QUEIXA PRINCIPAL ===
+{{QP}}
 
-QUEIXA PRINCIPAL: {{QP}}
+=== HISTÓRIA DA MOLÉSTIA ATUAL (HMA) ===
+{{HMA}}
 
-HISTÓRIA DA MOLÉSTIA ATUAL:
-{{HMA}}`,
+=== HISTÓRIA PATOLÓGICA PREGRESSA (HPP) ===
+Alergias: {{ALERGIAS}}
+Comorbidades: {{COMORBIDADES}}
+MUC (Medicações em Uso Contínuo): {{MUC}}
+Cirurgias Prévias: {{CIRURGIAS}}
+Tabagismo: {{TABAGISMO}}
+Etilismo: {{ETILISMO}}
+
+=== SINAIS VITAIS ===
+PA: {{PA}} mmHg
+FC: {{FC}} bpm
+FR: {{FR}} irpm
+SatO2: {{SAT}} %
+TAX: {{TAX}} ºC
+
+=== EXAME FÍSICO ===
+{{EXAME_FISICO}}
+
+=== RESULTADOS DE EXAMES (LABORATÓRIO / IMAGEM) ===
+{{RESULTADOS_EXAMES}}
+
+=== HIPÓTESE DIAGNÓSTICA (ATÉ AGORA) ===
+{{HIPOTESE}}
+{{DIFERENCIAIS}}
+
+=== CONDUTAS JÁ SUGERIDAS/REALIZADAS ===
+Medicações Unidade: {{MEDS_UNIDADE}}
+Medicações Casa: {{MEDS_CASA}}
+Exames Solicitados: {{EXAMES_SOLICITADOS}}
+
+=== STATUS DE OBSERVAÇÃO ===
+Em observação: {{STATUS_OBSERVACAO}}
+Pendências da Reavaliação: {{PENDENCIAS_OBSERVACAO}}
+Resultados de Exames na Observação: {{RESULTADOS_EXAMES}}
+Reavaliação Clínica: {{REAVALIACAO_TEXTO}}
+Nova Hipótese / Conclusão: {{NOVA_HIPOTESE}}
+Novas Condutas: {{NOVAS_CONDUTAS}}`,
   payloadExameFisico: `IDENTIFICAÇÃO:
 Nome: {{NOME}}
 Idade: {{IDADE}} anos
@@ -323,6 +360,11 @@ HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
 
 export const DEFAULT_PROMPTS: SystemPrompts = {
   hma: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
+Com base nos dados do paciente (Idade, Sexo, Peso, Altura, Queixa Principal e texto inicial da HMA), realize duas tarefas de forma direta, concisa e sem prolixidade:
+1. Melhore a redação da HMA tornando-a técnica, fluida, cronológica e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita.
+2. Sugira perguntas ou dados de anamnese essenciais que faltaram investigar para este caso específico, levando em consideração todo o caso, apresente as perguntas em ordem de prioridade ao caso.
+Retorne no formato JSON especificado.`,
+  exameFisico: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
 
 Com base nos dados do paciente (Idade, Sexo, Peso, Altura, Queixa Principal e texto inicial da HMA), realize duas tarefas de forma direta, concisa e sem prolixidade:
 
@@ -331,23 +373,6 @@ Com base nos dados do paciente (Idade, Sexo, Peso, Altura, Queixa Principal e te
 2. Sugira perguntas ou dados de anamnese essenciais que faltaram investigar para este caso específico, levando em consideração todo o caso, apresente as perguntas em ordem de prioridade ao caso.
 
 Retorne no formato JSON especificado.`,
-  exameFisico: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
-
-Com base na Queixa Principal, HMA e texto digitado do Exame Físico:
-
-1. Melhore a redação do Exame Físico mantendo estritamente o padrão semiológico médico tradicional, de forma técnica, fluida, cronológica e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita. Compare o template padrão abaixo com o exame físico e só mude a escrita do que está diferente do template padrão, que é o que eu escrevi para o paciente em questão.
-
-2. Sugira manobras específicas ou partes do exame físico que faltou realizar com base na queixa e suspeitas clínicas. Registre-as da forma como colocaria no exame físico, com achados esperados para o quadro clínico em questão.
-
-Retorne no formato JSON especificado.
-
-Template padrão:
-'BEG, afebril, hidratado, corado, anictérico, acianótico, hemodinamicamente estável.
-AR: Eupneico, sem sinais de esforço respiratório. Sons respiratórios normais, sem RA.
-ACV: RCR 2T, BNF, sem sopros. Pulsos periféricos cheios e simétricos. TEC <3s. Extremidades bem aquecidas e perfundidas.
-AGI: Abdome plano, normotenso, RHA+, indolor a palpação superficial e profunda, sem sinais de irritação peritoneal. Murphy/Blumberg/Giordano negativos. Não palpo massas ou visceromegalias
-MMII: Panturrilhas livres, sem edema.
-Neurológico: Glasgow 15, pupilas isocóricas e fotorreagentes, sem déficits focais, sem sinais meníngeos.'`,
   diagnostico: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
 
 Analise todo o caso clínico até agora (Identificação, QP, HMA, HPP, Sinais Vitais, Exame Físico).
@@ -381,7 +406,7 @@ Com base no caso clínico acumulado (Identificação, QP, HMA, HPP, Sinais Vitai
 
 1. Melhore a redação das condutas médicas, tornando-a técnica, fluida e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita.
 
-Retorne no formato JSON especificado: {"condutasRefinadas": "texto organizado e técnico..."}`,
+Retorne no formato JSON especificado.`,
   orientacoes: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
 
 Com base em todo o caso clínico:
