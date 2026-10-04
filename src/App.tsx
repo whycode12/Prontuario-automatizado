@@ -13,7 +13,8 @@ import {
   Stethoscope,
   ClipboardList,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  Cloud
 } from 'lucide-react';
 
 import type {
@@ -30,6 +31,14 @@ import type {
 import { DEFAULT_TEMPLATES, DEFAULT_PROMPTS, parseHppText } from './data/defaults';
 import { buildCaseContextPayload, callGeminiApi } from './services/gemini';
 import { SettingsModal } from './components/SettingsModal';
+import { CloudSyncModal } from './components/CloudSyncModal';
+import {
+  saveRecordToCloud,
+  fetchRecordsFromCloud,
+  deleteRecordFromCloud,
+  saveConfigToCloud,
+  fetchConfigFromCloud
+} from './services/firebase';
 
 import { AtendimentoView } from './views/AtendimentoView';
 import { DocumentosView } from './views/DocumentosView';
@@ -44,7 +53,8 @@ const STORAGE_KEYS = {
   PROMPTS: 'prontuario_custom_prompts',
   RECORDS: 'prontuario_saved_records',
   SUS_FILTER: 'prontuario_sus_filter_active',
-  THEME: 'prontuario_color_theme'
+  THEME: 'prontuario_color_theme',
+  ENCRYPTION_KEY: 'prontuario_master_encryption_key'
 };
 
 function computeObservationCountdown(startedAt?: string, revaluationMinutes: number = 120) {
@@ -125,9 +135,13 @@ export default function App() {
   const [susFilter, setSusFilter] = useState<boolean>(() => {
     return localStorage.getItem(STORAGE_KEYS.SUS_FILTER) !== 'false';
   });
+  const [masterKey, setMasterKey] = useState<string>(() => {
+    return localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+  });
 
   // UI Navigation & Modals
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [cloudSyncOpen, setCloudSyncOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
     return localStorage.getItem('prontuario_sidebar_open') !== 'false';
   });
@@ -310,6 +324,13 @@ export default function App() {
     if (showFeedback) {
       showToast(patient.nome ? `Atendimento de ${patient.nome} atualizado!` : 'Atendimento salvo com sucesso!');
     }
+
+    // Se tiver chave mestra configurada, sincroniza silenciosamente com o Firebase na nuvem
+    if (masterKey.trim()) {
+      saveRecordToCloud(recordToSave, masterKey.trim()).catch((err) => {
+        console.warn('Erro ao salvar no Firebase:', err);
+      });
+    }
   };
 
   // Debounced Auto-Save Effect (triggers 1.5s after any clinical field changes)
@@ -385,10 +406,69 @@ export default function App() {
     saveOrUpdateRecord(true);
   };
 
+  // Sync All Records to Firebase Cloud
+  const handleSyncToCloud = async () => {
+    if (!masterKey.trim()) {
+      throw new Error('Configure uma senha mestra primeiro.');
+    }
+    // Envia todos os atendimentos locais para o Firebase
+    for (const record of savedRecords) {
+      await saveRecordToCloud(record, masterKey.trim());
+    }
+    // Salva também templates e prompts
+    await saveConfigToCloud(templates, prompts, masterKey.trim());
+  };
+
+  // Pull All Records from Firebase Cloud
+  const handlePullFromCloud = async () => {
+    if (!masterKey.trim()) {
+      throw new Error('Configure uma senha mestra primeiro.');
+    }
+    const cloudRecords = await fetchRecordsFromCloud(masterKey.trim());
+    if (cloudRecords.length === 0) {
+      showToast('Nenhum atendimento encontrado no Firebase para esta senha.');
+      return;
+    }
+
+    // Mescla atendimentos da nuvem com os locais sem duplicar IDs
+    setSavedRecords((prev) => {
+      const map = new Map<string, SavedPatientRecord>();
+      // Primeiro os locais
+      prev.forEach((r) => map.set(r.id, r));
+      // Depois substitui ou adiciona os da nuvem
+      cloudRecords.forEach((r) => map.set(r.id, r));
+      const merged = Array.from(map.values()).sort(
+        (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+      );
+      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
+      return merged;
+    });
+
+    // Baixa configurações se houver
+    const cloudConfig = await fetchConfigFromCloud(masterKey.trim());
+    if (cloudConfig?.templates) {
+      setTemplates(cloudConfig.templates);
+      localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(cloudConfig.templates));
+    }
+    if (cloudConfig?.prompts) {
+      setPrompts(cloudConfig.prompts);
+      localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(cloudConfig.prompts));
+    }
+  };
+
+  const handleSaveMasterKey = (key: string) => {
+    setMasterKey(key);
+    localStorage.setItem(STORAGE_KEYS.ENCRYPTION_KEY, key);
+    showToast('Senha mestra de criptografia salva com sucesso!');
+  };
+
   const handleDeleteRecord = (id: string) => {
     const updated = savedRecords.filter((r) => r.id !== id);
     setSavedRecords(updated);
     localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(updated));
+    if (masterKey.trim()) {
+      deleteRecordFromCloud(id).catch((err) => console.warn('Erro ao deletar da nuvem:', err));
+    }
     showToast('Registro excluído do histórico.');
   };
 
@@ -1126,6 +1206,26 @@ export default function App() {
             )}
           </button>
 
+          {/* Cloud Sync Modal */}
+          <button
+            type="button"
+            onClick={() => setCloudSyncOpen(true)}
+            className={`w-full flex items-center ${
+              sidebarOpen ? 'justify-between px-2.5 py-1.5' : 'justify-center p-2'
+            } rounded-md text-xs text-slate-600 dark:text-neutral-400 hover:bg-[#efefee] dark:hover:bg-[#262626] hover:text-slate-900 dark:hover:text-white transition-colors`}
+            title="Nuvem Firebase (Criptografia AES-256)"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <Cloud className="w-3.5 h-3.5 text-ice-500 shrink-0" />
+              {sidebarOpen && <span className="truncate">Nuvem Firebase</span>}
+            </div>
+            {sidebarOpen && (
+              <span className="text-[10px] font-semibold text-ice-500 uppercase">
+                {masterKey ? 'Ativo' : 'Off'}
+              </span>
+            )}
+          </button>
+
           {/* Settings Modal */}
           <button
             type="button"
@@ -1300,10 +1400,22 @@ export default function App() {
               setActiveTab('atendimento');
             }}
             onDeleteRecord={handleDeleteRecord}
+            onOpenCloudSync={() => setCloudSyncOpen(true)}
           />
         )}
       </main>
       </div>
+
+      {/* Cloud Sync Modal (Firebase com Criptografia Ponta a Ponta) */}
+      <CloudSyncModal
+        isOpen={cloudSyncOpen}
+        onClose={() => setCloudSyncOpen(false)}
+        encryptionKey={masterKey}
+        onSaveEncryptionKey={handleSaveMasterKey}
+        onSyncToCloud={handleSyncToCloud}
+        onPullFromCloud={handlePullFromCloud}
+        localRecordsCount={savedRecords.length}
+      />
 
       {/* Settings Modal */}
       <SettingsModal

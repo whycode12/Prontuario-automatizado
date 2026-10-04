@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { History, Search, Trash2, ArrowRight, UserCheck, Calendar, Bed } from 'lucide-react';
+import { History, Search, Trash2, ArrowRight, UserCheck, Calendar, Bed, Cloud } from 'lucide-react';
 import type { SavedPatientRecord } from '../types';
 
 interface HistoricoViewProps {
@@ -7,6 +7,7 @@ interface HistoricoViewProps {
   currentRecordId: string;
   onLoadRecord: (record: SavedPatientRecord) => void;
   onDeleteRecord: (id: string) => void;
+  onOpenCloudSync?: () => void;
 }
 
 export const HistoricoView: React.FC<HistoricoViewProps> = ({
@@ -14,6 +15,7 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
   currentRecordId,
   onLoadRecord,
   onDeleteRecord,
+  onOpenCloudSync,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -44,7 +46,18 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-neutral-200 border border-[#ececeb] dark:border-[#333]">
+          {onOpenCloudSync && (
+            <button
+              type="button"
+              onClick={onOpenCloudSync}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-[#252525] border border-[#ececeb] dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#2e2e2e] text-slate-700 dark:text-neutral-200 flex items-center gap-1.5 transition-colors shadow-xs"
+              title="Sincronizar com Firebase na nuvem"
+            >
+              <Cloud className="w-3.5 h-3.5 text-ice-500" />
+              <span>Nuvem Criptografada</span>
+            </button>
+          )}
+          <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-[#252525] text-slate-700 dark:text-neutral-200 border border-[#ececeb] dark:border-[#333]">
             Total: {records.length} atendimento{records.length === 1 ? '' : 's'}
           </span>
         </div>
