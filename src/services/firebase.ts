@@ -246,6 +246,22 @@ export function subscribeToCloudConfig(
   );
 }
 
+// Helper para limpar campos undefined antes de enviar ao Firestore (o Firestore não aceita valores undefined)
+function removeUndefinedFields<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(removeUndefinedFields) as unknown as T;
+  if (typeof obj === 'object') {
+    const cleaned: Record<string, any> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (val !== undefined) {
+        cleaned[key] = removeUndefinedFields(val);
+      }
+    }
+    return cleaned as T;
+  }
+  return obj;
+}
+
 // Salva configuracoes como PADRÃO GLOBAL do sistema (para todos os usuarios do app)
 // Path: system/default_config
 export async function saveGlobalDefaultConfig(
@@ -256,16 +272,14 @@ export async function saveGlobalDefaultConfig(
   if (!user) throw new Error('É necessário estar autenticado para definir o padrão global.');
 
   const docRef = doc(db, 'system', 'default_config');
-  await setDoc(
-    docRef,
-    {
-      templates,
-      prompts,
-      updatedAt: serverTimestamp(),
-      updatedBy: user.email || user.uid
-    },
-    { merge: true }
-  );
+  const payload = removeUndefinedFields({
+    templates,
+    prompts,
+    updatedAt: serverTimestamp(),
+    updatedBy: user.email || user.uid
+  });
+
+  await setDoc(docRef, payload, { merge: true });
 }
 
 // Carrega configuracoes do PADRÃO GLOBAL do sistema

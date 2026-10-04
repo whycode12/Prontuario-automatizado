@@ -201,16 +201,7 @@ Pendências da Reavaliação: {{PENDENCIAS_OBSERVACAO}}
 Resultados de Exames na Observação: {{RESULTADOS_EXAMES}}
 Reavaliação Clínica: {{REAVALIACAO_TEXTO}}
 Nova Hipótese / Conclusão: {{NOVA_HIPOTESE}}
-Novas Condutas: {{NOVAS_CONDUTAS}}`,
-  payloadHma: undefined,
-  payloadExameFisico: undefined,
-  payloadDiagnostico: undefined,
-  payloadConduta: undefined,
-  payloadOrientacoes: undefined,
-  payloadPassagemPlantao: undefined,
-  payloadPassometro: undefined,
-  payloadReavaliacao: undefined,
-  payloadConclusaoObs: undefined
+Novas Condutas: {{NOVAS_CONDUTAS}}`
 };
 
 export const DEFAULT_PROMPTS: SystemPrompts = {

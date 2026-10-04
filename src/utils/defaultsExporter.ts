@@ -73,16 +73,17 @@ export const DEFAULT_TEMPLATES: SystemTemplates = {
   passagemPlantao: ${sanitizeString(templates.passagemPlantao)},
   passometro: ${sanitizeString(templates.passometro)},
   evolucao: ${sanitizeString(templates.evolucao)},
-  payloadCaso: ${sanitizeString(templates.payloadCaso)},
-  payloadHma: ${templates.payloadHma ? sanitizeString(templates.payloadHma) : 'undefined'},
-  payloadExameFisico: ${templates.payloadExameFisico ? sanitizeString(templates.payloadExameFisico) : 'undefined'},
-  payloadDiagnostico: ${templates.payloadDiagnostico ? sanitizeString(templates.payloadDiagnostico) : 'undefined'},
-  payloadConduta: ${templates.payloadConduta ? sanitizeString(templates.payloadConduta) : 'undefined'},
-  payloadOrientacoes: ${templates.payloadOrientacoes ? sanitizeString(templates.payloadOrientacoes) : 'undefined'},
-  payloadPassagemPlantao: ${templates.payloadPassagemPlantao ? sanitizeString(templates.payloadPassagemPlantao) : 'undefined'},
-  payloadPassometro: ${templates.payloadPassometro ? sanitizeString(templates.payloadPassometro) : 'undefined'},
-  payloadReavaliacao: ${templates.payloadReavaliacao ? sanitizeString(templates.payloadReavaliacao) : 'undefined'},
-  payloadConclusaoObs: ${templates.payloadConclusaoObs ? sanitizeString(templates.payloadConclusaoObs) : 'undefined'}
+  payloadCaso: ${sanitizeString(templates.payloadCaso)}${[
+    templates.payloadHma ? `,\n  payloadHma: ${sanitizeString(templates.payloadHma)}` : '',
+    templates.payloadExameFisico ? `,\n  payloadExameFisico: ${sanitizeString(templates.payloadExameFisico)}` : '',
+    templates.payloadDiagnostico ? `,\n  payloadDiagnostico: ${sanitizeString(templates.payloadDiagnostico)}` : '',
+    templates.payloadConduta ? `,\n  payloadConduta: ${sanitizeString(templates.payloadConduta)}` : '',
+    templates.payloadOrientacoes ? `,\n  payloadOrientacoes: ${sanitizeString(templates.payloadOrientacoes)}` : '',
+    templates.payloadPassagemPlantao ? `,\n  payloadPassagemPlantao: ${sanitizeString(templates.payloadPassagemPlantao)}` : '',
+    templates.payloadPassometro ? `,\n  payloadPassometro: ${sanitizeString(templates.payloadPassometro)}` : '',
+    templates.payloadReavaliacao ? `,\n  payloadReavaliacao: ${sanitizeString(templates.payloadReavaliacao)}` : '',
+    templates.payloadConclusaoObs ? `,\n  payloadConclusaoObs: ${sanitizeString(templates.payloadConclusaoObs)}` : ''
+  ].join('')}
 };
 
 export const DEFAULT_PROMPTS: SystemPrompts = {
