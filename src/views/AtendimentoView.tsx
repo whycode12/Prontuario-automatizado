@@ -6,8 +6,7 @@ import {
   Bed,
   Building2,
   Ambulance,
-  Check,
-  Tag
+  Check
 } from 'lucide-react';
 import type {
   PatientData,
@@ -187,14 +186,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   // Controle de seleção única nos rankings
   const [selectedHypothesisIdx, setSelectedHypothesisIdx] = React.useState<number | null>(null);
   const [selectedCidIdx, setSelectedCidIdx] = React.useState<number | null>(null);
-  const [copiedTag, setCopiedTag] = React.useState<string | null>(null);
-
-  const handleCopyTag = (tag: string) => {
-    navigator.clipboard.writeText(tag);
-    setCopiedTag(tag);
-    showToast(`Tag ${tag} copiada! Cole em qualquer template.`);
-    setTimeout(() => setCopiedTag(null), 2000);
-  };
 
   // Define a seleção inicial ao gerar novos resultados de IA
   React.useEffect(() => {
@@ -308,7 +299,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             </label>
             <input
               type="text"
-              placeholder="175"
               value={patient.altura}
               onChange={(e) => setPatient({ ...patient, altura: e.target.value })}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-center"
@@ -711,7 +701,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               type="text"
               value={aiResults.mainHypothesis || ''}
               onChange={(e) => setAiResults({ ...aiResults, mainHypothesis: e.target.value })}
-              placeholder="Digite ou clique numa das hipóteses do ranking..."
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50"
             />
 
@@ -719,9 +708,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                 <span>Ranking de Hipóteses (IA)</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                  Clique para selecionar
-                </span>
               </div>
               <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 min-h-[42px] max-h-36 overflow-y-auto bg-slate-50/50 dark:bg-navy-900">
                 {displayedHypotheses.length > 0 ? (
@@ -786,7 +772,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               type="text"
               value={aiResults.selectedCid || ''}
               onChange={(e) => setAiResults({ ...aiResults, selectedCid: e.target.value })}
-              placeholder="Digite ou clique num dos CIDs do ranking..."
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50"
             />
 
@@ -794,9 +779,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                 <span>Ranking de CID-10 (IA)</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                  Clique para definir o CID
-                </span>
               </div>
               <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 min-h-[42px] max-h-36 overflow-y-auto bg-slate-50/50 dark:bg-navy-900">
                 {aiResults.cidRankings && aiResults.cidRankings.length > 0 ? (
@@ -955,13 +937,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             label="Exames Laboratoriais"
             value={aiResults.orderedLabs || ''}
             onChange={(val) => setAiResults({ ...aiResults, orderedLabs: val })}
-            placeholder="Exames laboratoriais solicitados..."
           />
           <AutoResizeTextarea
             label="Exames de Imagem"
             value={aiResults.orderedImages || ''}
             onChange={(val) => setAiResults({ ...aiResults, orderedImages: val })}
-            placeholder="Exames de imagem solicitados..."
           />
         </div>
       </section>
@@ -1039,90 +1019,40 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Bloco 1: PRONTUÁRIO */}
           <div className="space-y-3 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-navy-900/40">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-                PRONTUÁRIO
-              </h3>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                Linguagem técnica
-              </span>
-            </div>
+            <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+              PRONTUÁRIO
+            </h3>
             <UndoableTextarea
               label="Orientações Gerais"
-              headerRight={
-                <button
-                  type="button"
-                  onClick={() => handleCopyTag('{{orientacoes_prontuario}}')}
-                  className="font-mono text-[10px] text-blue-700 dark:text-ice-200 bg-blue-100/70 dark:bg-navy-800 hover:bg-blue-200/80 dark:hover:bg-blue-900/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-700/60 transition-colors flex items-center gap-1"
-                  title="Clique para copiar a tag {{orientacoes_prontuario}}"
-                >
-                  <Tag className="w-2.5 h-2.5" />
-                  <span>{copiedTag === '{{orientacoes_prontuario}}' ? 'Copiado!' : '{{orientacoes_prontuario}}'}</span>
-                </button>
-              }
+              hideActions={true}
               value={aiResults.techOrientations || ''}
               onChange={(val) => setAiResults({ ...aiResults, techOrientations: val })}
               rows={3}
             />
             <UndoableTextarea
               label="Sinais de Alarme"
-              headerRight={
-                <button
-                  type="button"
-                  onClick={() => handleCopyTag('{{alarme_prontuario}}')}
-                  className="font-mono text-[10px] text-blue-700 dark:text-ice-200 bg-blue-100/70 dark:bg-navy-800 hover:bg-blue-200/80 dark:hover:bg-blue-900/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-700/60 transition-colors flex items-center gap-1"
-                  title="Clique para copiar a tag {{alarme_prontuario}}"
-                >
-                  <Tag className="w-2.5 h-2.5" />
-                  <span>{copiedTag === '{{alarme_prontuario}}' ? 'Copiado!' : '{{alarme_prontuario}}'}</span>
-                </button>
-              }
+              hideActions={true}
               value={aiResults.techAlarmSignals || ''}
               onChange={(val) => setAiResults({ ...aiResults, techAlarmSignals: val })}
               rows={3}
             />
           </div>
 
-          {/* Bloco 2: RECEITA (PACIENTE) */}
+          {/* Bloco 2: RECEITUÁRIO */}
           <div className="space-y-3 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-navy-900/40">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-                RECEITA (PACIENTE)
-              </h3>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                Linguagem leiga
-              </span>
-            </div>
+            <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+              RECEITUÁRIO
+            </h3>
             <UndoableTextarea
               label="Orientações Gerais"
-              headerRight={
-                <button
-                  type="button"
-                  onClick={() => handleCopyTag('{{orientacoes_paciente}}')}
-                  className="font-mono text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/40 hover:bg-emerald-200/80 dark:hover:bg-emerald-900/50 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-700/60 transition-colors flex items-center gap-1"
-                  title="Clique para copiar a tag {{orientacoes_paciente}}"
-                >
-                  <Tag className="w-2.5 h-2.5" />
-                  <span>{copiedTag === '{{orientacoes_paciente}}' ? 'Copiado!' : '{{orientacoes_paciente}}'}</span>
-                </button>
-              }
+              hideActions={true}
               value={aiResults.layOrientations || ''}
               onChange={(val) => setAiResults({ ...aiResults, layOrientations: val })}
               rows={3}
             />
             <UndoableTextarea
               label="Sinais de Alarme"
-              headerRight={
-                <button
-                  type="button"
-                  onClick={() => handleCopyTag('{{alarme_paciente}}')}
-                  className="font-mono text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/40 hover:bg-emerald-200/80 dark:hover:bg-emerald-900/50 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-700/60 transition-colors flex items-center gap-1"
-                  title="Clique para copiar a tag {{alarme_paciente}}"
-                >
-                  <Tag className="w-2.5 h-2.5" />
-                  <span>{copiedTag === '{{alarme_paciente}}' ? 'Copiado!' : '{{alarme_paciente}}'}</span>
-                </button>
-              }
+              hideActions={true}
               value={aiResults.layAlarmSignals || ''}
               onChange={(val) => setAiResults({ ...aiResults, layAlarmSignals: val })}
               rows={3}

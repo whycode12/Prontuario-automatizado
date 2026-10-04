@@ -1306,85 +1306,18 @@ export default function App() {
     showToast('Evolução médica compilada com sucesso!');
   };
 
-  // Compile All Final Documents
-  const compileAllDocuments = () => {
-    const today = new Date().toLocaleDateString('pt-BR');
-
-    const prontuarioCompiled = replaceOrientationAndAlarmTags(
-      templates.prontuario
-        .replace('{{QP}}', qp || 'Não informada')
-        .replace('{{HMA}}', hma || 'Não informada')
-        .replace('{{ALERGIAS}}', hpp.alergias)
-        .replace('{{COMORBIDADES}}', hpp.comorbidades)
-        .replace('{{MUC}}', hpp.muc)
-        .replace('{{CIRURGIAS}}', hpp.cirurgias)
-        .replace('{{TABAGISMO}}', hpp.tabagismo)
-        .replace('{{ETILISMO}}', hpp.etilismo)
-        .replace('{{PA}}', vitals.pa || '--')
-        .replace('{{FC}}', vitals.fc || '--')
-        .replace('{{FR}}', vitals.fr || '--')
-        .replace('{{SAT}}', vitals.sat || '--')
-        .replace('{{TAX}}', vitals.tax || '--')
-        .replace('{{EXAME_FISICO}}', exameFisico || 'Não informado')
-        .replace('{{HIPOTESE}}', aiResults.mainHypothesis ? (aiResults.selectedCid && !templates.prontuario.includes('{{CID}}') && !templates.prontuario.includes('{{CIDS}}') ? `${aiResults.mainHypothesis} (CID: ${aiResults.selectedCid})` : aiResults.mainHypothesis) : 'A esclarecer')
-        .replace('{{DIFERENCIAIS}}', aiResults.differentialDiagnoses?.length ? `Diferenciais: ${aiResults.differentialDiagnoses.join(' • ')}` : '')
-        .replace('{{CID}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
-        .replace('{{CIDS}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
-        .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
-        .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
-    );
-
-    // 2. Receita Interna
-    const medsUnidadeText = (aiResults.unitMedications || []).join('\n') || 'Nenhuma medicação prescrita na unidade.';
-    const examesSolicitados = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join('\n') || 'Nenhum exame solicitado.';
-    const receitaInternaCompiled = replaceOrientationAndAlarmTags(
-      templates.receitaInterna
-        .replace('{{NOME}}', patient.nome || 'Paciente')
-        .replace('{{IDADE}}', patient.idade || '--')
-        .replace('{{DATA}}', today)
-        .replace('{{MEDICACOES_UNIDADE}}', medsUnidadeText)
-        .replace('{{EXAMES_SOLICITADOS}}', examesSolicitados)
-    );
-
-    // 3. Receita Domiciliar
-    const medsCasaText = (aiResults.homeMedications || []).join('\n\n') || 'Nenhuma medicação domiciliar.';
-    const receitaDomiciliarCompiled = replaceOrientationAndAlarmTags(
-      templates.receitaDomiciliar
-        .replace('{{NOME}}', patient.nome || 'Paciente')
-        .replace('{{IDADE}}', patient.idade || '--')
-        .replace('{{DATA}}', today)
-        .replace('{{MEDICACOES_CASA}}', medsCasaText)
-    );
-
-    // 4. Passômetro e Passagem
-    const passometroCompiled = replaceOrientationAndAlarmTags(
-      templates.passometro
-        .replace('{{NOME}}', patient.nome || 'Paciente')
-        .replace('{{IDADE}}', patient.idade || '--')
-        .replace('{{SEXO}}', patient.sexo || '')
-        .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
-        .replace('{{CONDUTAS_FEITAS}}', (aiResults.unitMedications || []).join(', ') || 'Sintomáticos')
-        .replace('{{PENDENCIAS}}', observation.whatToReevaluate || examResults ? 'Conferir exames' : 'Reavaliação clínica')
-        .replace('{{SINAIS_ALERTA}}', 'Piora hemodinâmica ou dor refratária')
-    );
-
-    setDocuments((prev) => ({
-      ...prev,
-      prontuario: prontuarioCompiled,
-      receitaInterna: receitaInternaCompiled,
-      receitaDomiciliar: receitaDomiciliarCompiled,
-      passometro: prev.passometro || passometroCompiled
-    }));
-
-    setActiveTab('documentos');
-    showToast('Documentos gerados e prontos para conferência/cópia!');
-  };
-
-  const compileSingleDocument = (docType: 'prontuario' | 'receitaInterna' | 'receitaDomiciliar' | 'passagemPlantao' | 'passometro') => {
+  // Montador único e centralizado para qualquer documento
+  const buildDocumentContent = (docType: 'prontuario' | 'receitaInterna' | 'receitaDomiciliar' | 'passagemPlantao' | 'passometro'): string => {
     const today = new Date().toLocaleDateString('pt-BR');
     if (docType === 'prontuario') {
-      const prontuarioCompiled = replaceOrientationAndAlarmTags(
+      return replaceOrientationAndAlarmTags(
         templates.prontuario
+          .replace('{{NOME}}', patient.nome || 'Paciente')
+          .replace('{{IDADE}}', patient.idade || '--')
+          .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : patient.sexo || 'Não informado')
+          .replace('{{DATA}}', today)
+          .replace('{{PESO}}', patient.peso || '--')
+          .replace('{{ALTURA}}', patient.altura || '--')
           .replace('{{QP}}', qp || 'Não informada')
           .replace('{{HMA}}', hma || 'Não informada')
           .replace('{{ALERGIAS}}', hpp.alergias)
@@ -1406,38 +1339,38 @@ export default function App() {
           .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
           .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
       );
-      setDocuments((prev) => ({ ...prev, prontuario: prontuarioCompiled }));
-      showToast('Prontuário compilado!');
-    } else if (docType === 'receitaInterna') {
+    }
+    if (docType === 'receitaInterna') {
       const medsUnidadeText = (aiResults.unitMedications || []).join('\n') || 'Nenhuma medicação prescrita na unidade.';
       const examesSolicitados = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join('\n') || 'Nenhum exame solicitado.';
-      const receitaInternaCompiled = replaceOrientationAndAlarmTags(
+      return replaceOrientationAndAlarmTags(
         templates.receitaInterna
           .replace('{{NOME}}', patient.nome || 'Paciente')
           .replace('{{IDADE}}', patient.idade || '--')
+          .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : patient.sexo || 'Não informado')
           .replace('{{DATA}}', today)
           .replace('{{MEDICACOES_UNIDADE}}', medsUnidadeText)
           .replace('{{EXAMES_SOLICITADOS}}', examesSolicitados)
       );
-      setDocuments((prev) => ({ ...prev, receitaInterna: receitaInternaCompiled }));
-      showToast('Prescrição interna compilada!');
-    } else if (docType === 'receitaDomiciliar') {
+    }
+    if (docType === 'receitaDomiciliar') {
       const medsCasaText = (aiResults.homeMedications || []).join('\n\n') || 'Nenhuma medicação domiciliar.';
-      const receitaDomiciliarCompiled = replaceOrientationAndAlarmTags(
+      return replaceOrientationAndAlarmTags(
         templates.receitaDomiciliar
           .replace('{{NOME}}', patient.nome || 'Paciente')
           .replace('{{IDADE}}', patient.idade || '--')
+          .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : patient.sexo || 'Não informado')
           .replace('{{DATA}}', today)
           .replace('{{MEDICACOES_CASA}}', medsCasaText)
       );
-      setDocuments((prev) => ({ ...prev, receitaDomiciliar: receitaDomiciliarCompiled }));
-      showToast('Receituário domiciliar compilado!');
-    } else if (docType === 'passagemPlantao') {
-      const passagemCompiled = replaceOrientationAndAlarmTags(
+    }
+    if (docType === 'passagemPlantao') {
+      return replaceOrientationAndAlarmTags(
         templates.passagemPlantao
           .replace('{{NOME}}', patient.nome || 'Paciente')
           .replace('{{IDADE}}', patient.idade || '--')
           .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : 'Não informado')
+          .replace('{{DATA}}', today)
           .replace('{{QP}}', qp || 'Não informada')
           .replace('{{HMA_RESUMO}}', hma ? hma.slice(0, 150) + (hma.length > 150 ? '...' : '') : 'Não informada')
           .replace('{{PA}}', vitals.pa || '--')
@@ -1449,22 +1382,55 @@ export default function App() {
           .replace('{{PENDENCIAS}}', observation.whatToReevaluate || examResults ? 'Conferir exames' : 'Reavaliação clínica')
           .replace('{{STATUS}}', observation.inObservation ? 'Em observação clínica' : 'Em atendimento')
       );
-      setDocuments((prev) => ({ ...prev, passagemPlantao: passagemCompiled }));
-      showToast('Passagem de caso compilada!');
-    } else if (docType === 'passometro') {
-      const passometroCompiled = replaceOrientationAndAlarmTags(
+    }
+    if (docType === 'passometro') {
+      return replaceOrientationAndAlarmTags(
         templates.passometro
           .replace('{{NOME}}', patient.nome || 'Paciente')
           .replace('{{IDADE}}', patient.idade || '--')
-          .replace('{{SEXO}}', patient.sexo || '')
+          .replace('{{SEXO}}', patient.sexo === 'M' ? 'M' : patient.sexo === 'F' ? 'F' : patient.sexo || '')
+          .replace('{{DATA}}', today)
           .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
           .replace('{{CONDUTAS_FEITAS}}', (aiResults.unitMedications || []).join(', ') || 'Sintomáticos')
           .replace('{{PENDENCIAS}}', observation.whatToReevaluate || examResults ? 'Conferir exames' : 'Reavaliação clínica')
           .replace('{{SINAIS_ALERTA}}', 'Piora hemodinâmica ou dor refratária')
       );
-      setDocuments((prev) => ({ ...prev, passometro: passometroCompiled }));
-      showToast('Passômetro compilado!');
     }
+    return '';
+  };
+
+  // Compile All Final Documents (Preencher Tudo)
+  const compileAllDocuments = () => {
+    const prontuario = buildDocumentContent('prontuario');
+    const receitaInterna = buildDocumentContent('receitaInterna');
+    const receitaDomiciliar = buildDocumentContent('receitaDomiciliar');
+    const passagemPlantao = buildDocumentContent('passagemPlantao');
+    const passometro = buildDocumentContent('passometro');
+
+    setDocuments((prev) => ({
+      ...prev,
+      prontuario,
+      receitaInterna,
+      receitaDomiciliar,
+      passagemPlantao,
+      passometro
+    }));
+
+    setActiveTab('documentos');
+    showToast('Todos os documentos foram compilados!');
+  };
+
+  const compileSingleDocument = (docType: 'prontuario' | 'receitaInterna' | 'receitaDomiciliar' | 'passagemPlantao' | 'passometro') => {
+    const compiled = buildDocumentContent(docType);
+    setDocuments((prev) => ({ ...prev, [docType]: compiled }));
+    const titles: Record<string, string> = {
+      prontuario: 'Prontuário',
+      receitaInterna: 'Prescrição interna',
+      receitaDomiciliar: 'Receituário domiciliar',
+      passagemPlantao: 'Passagem de plantão',
+      passometro: 'Passômetro'
+    };
+    showToast(`${titles[docType] || 'Documento'} compilado!`);
   };
 
   return (
