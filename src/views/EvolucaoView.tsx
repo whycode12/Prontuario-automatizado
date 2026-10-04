@@ -18,8 +18,10 @@ interface EvolucaoViewProps {
   getCasePayload: (key: keyof SystemTemplates) => string;
   getPayloadTemplate: (key: keyof SystemTemplates) => string;
   handleSavePrompt: (key: keyof SystemPrompts, value: string) => void;
+  handleSaveGlobalPrompt?: (key: keyof SystemPrompts, value: string) => void;
   handleResetSinglePrompt: (key: keyof SystemPrompts) => void;
   handleSaveTemplate: (key: keyof SystemTemplates, value: string) => void;
+  handleSaveGlobalTemplate?: (key: keyof SystemTemplates, value: string) => void;
   handleResetSinglePayloadTemplate: (key: keyof SystemTemplates) => void;
   runAiReavaliacao: () => void;
   runAiConclusaoObs: () => void;
@@ -42,8 +44,10 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   getCasePayload,
   getPayloadTemplate,
   handleSavePrompt,
+  handleSaveGlobalPrompt,
   handleResetSinglePrompt,
   handleSaveTemplate,
+  handleSaveGlobalTemplate,
   handleResetSinglePayloadTemplate,
   runAiReavaliacao,
   runAiConclusaoObs,
@@ -120,16 +124,13 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         </div>
       </section>
 
-      {/* 2. Resultados de Exames Realizados (Laboratório & Imagem) */}
+      {/* RESULTADOS DE EXAMES */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-2">
         <div className="flex items-center justify-between pb-1">
           <div>
             <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              Resultados de Exames Realizados (Laboratório & Imagem)
+              RESULTADOS DE EXAMES
             </h2>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Insira os laudos ou dados brutos dos exames liberados. A IA usará esses resultados na reavaliação.
-            </p>
           </div>
         </div>
         <UndoableTextarea
@@ -139,11 +140,11 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         />
       </section>
 
-      {/* 3. Reavaliação Clínica com IA */}
+      {/* REAVALIAÇÃO CLÍNICA */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-            Reavaliação Clínica (Estado Atual do Paciente)
+            REAVALIAÇÃO CLÍNICA
           </h2>
           <AIActionButton
             label="Aprimorar Reavaliação com IA"
@@ -152,10 +153,12 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             promptKey="reavaliacao"
             currentPrompt={prompts.reavaliacao}
             onSavePrompt={(p) => handleSavePrompt('reavaliacao', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('reavaliacao', p) : undefined}
             onResetPrompt={() => handleResetSinglePrompt('reavaliacao')}
             contextPayload={getCasePayload('payloadReavaliacao')}
             payloadTemplate={getPayloadTemplate('payloadReavaliacao')}
             onSavePayloadTemplate={(t) => handleSaveTemplate('payloadReavaliacao', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadReavaliacao', t) : undefined}
             onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadReavaliacao')}
           />
         </div>
@@ -211,11 +214,11 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         )}
       </section>
 
-      {/* 4. Conclusão / Nova Hipótese & Novas Condutas com IA */}
+      {/* HIPÓTESES E CONDUTAS */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-            Conclusão / Nova Hipótese & Novas Condutas
+            HIPÓTESES E CONDUTAS
           </h2>
           <AIActionButton
             label="Sugerir Nova Hipótese & Condutas (IA)"
@@ -224,10 +227,12 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             promptKey="conclusaoObs"
             currentPrompt={prompts.conclusaoObs}
             onSavePrompt={(p) => handleSavePrompt('conclusaoObs', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('conclusaoObs', p) : undefined}
             onResetPrompt={() => handleResetSinglePrompt('conclusaoObs')}
             contextPayload={getCasePayload('payloadConclusaoObs')}
             payloadTemplate={getPayloadTemplate('payloadConclusaoObs')}
             onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConclusaoObs', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConclusaoObs', t) : undefined}
             onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConclusaoObs')}
           />
         </div>
@@ -315,12 +320,12 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         </div>
       </section>
 
-      {/* 5. Documento Final #EVOLUÇÃO MÉDICA */}
+      {/* EVOLUÇÃO */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 tracking-wide uppercase">
-              Evolução Médica da Reavaliação (Documento Final)
+              EVOLUÇÃO
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -329,6 +334,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
               templateKey="evolucao"
               currentTemplate={templates.evolucao}
               onSaveTemplate={(t) => handleSaveTemplate('evolucao', t)}
+              onSaveGlobalTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('evolucao', t) : undefined}
             />
             <button
               type="button"
@@ -344,7 +350,6 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           value={evolucaoDocument}
           onChange={setEvolucaoDocument}
           rows={10}
-          placeholder="Clique em 'Compilar Evolução' para preencher automaticamente com os dados do caso..."
           className="font-mono text-xs leading-relaxed"
         />
       </section>

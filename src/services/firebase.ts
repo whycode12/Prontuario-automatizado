@@ -12,6 +12,7 @@ import {
   doc,
   setDoc,
   getDocs,
+  getDoc,
   deleteDoc,
   serverTimestamp,
   onSnapshot
@@ -213,4 +214,99 @@ export async function fetchConfigFromCloud(
     }
   }
   return null;
+}
+
+// Ouve em tempo real as alteracoes nos templates e prompts deste medico
+export function subscribeToCloudConfig(
+  encryptionKey: string,
+  onConfigUpdated: (config: { templates?: SystemTemplates; prompts?: SystemPrompts }) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const configDocRef = doc(db, 'users', user.uid, 'settings', 'config');
+  return onSnapshot(
+    configDocRef,
+    async (docSnap) => {
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
+      if (data?.encryptedPayload) {
+        try {
+          const decrypted = await decryptData(data.encryptedPayload, encryptionKey);
+          const parsed = JSON.parse(decrypted);
+          onConfigUpdated(parsed);
+        } catch (err) {
+          console.warn('[Sync] Não foi possível decifrar configurações da nuvem:', err);
+        }
+      }
+    },
+    (error) => {
+      console.error('[Sync] Erro na escuta de configurações:', error);
+    }
+  );
+}
+
+// Salva configuracoes como PADRÃO GLOBAL do sistema (para todos os usuarios do app)
+// Path: system/default_config
+export async function saveGlobalDefaultConfig(
+  templates: SystemTemplates,
+  prompts: SystemPrompts
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('É necessário estar autenticado para definir o padrão global.');
+
+  const docRef = doc(db, 'system', 'default_config');
+  await setDoc(
+    docRef,
+    {
+      templates,
+      prompts,
+      updatedAt: serverTimestamp(),
+      updatedBy: user.email || user.uid
+    },
+    { merge: true }
+  );
+}
+
+// Carrega configuracoes do PADRÃO GLOBAL do sistema
+export async function fetchGlobalDefaultConfig(): Promise<{
+  templates?: SystemTemplates;
+  prompts?: SystemPrompts;
+} | null> {
+  try {
+    const docRef = doc(db, 'system', 'default_config');
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return null;
+    const data = docSnap.data();
+    return {
+      templates: data.templates,
+      prompts: data.prompts
+    };
+  } catch (err) {
+    console.warn('[Sync] Não foi possível carregar padrão global:', err);
+    return null;
+  }
+}
+
+// Ouve em tempo real alteracoes no PADRAO GLOBAL
+export function subscribeToGlobalDefaultConfig(
+  onConfigUpdated: (config: { templates?: SystemTemplates; prompts?: SystemPrompts }) => void
+): () => void {
+  const docRef = doc(db, 'system', 'default_config');
+  return onSnapshot(
+    docRef,
+    (docSnap) => {
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
+      if (data) {
+        onConfigUpdated({
+          templates: data.templates,
+          prompts: data.prompts
+        });
+      }
+    },
+    (error) => {
+      console.warn('[Sync] Escuta de padrão global inativa ou com erro:', error);
+    }
+  );
 }

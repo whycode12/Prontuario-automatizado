@@ -39,8 +39,12 @@ import {
   deleteRecordFromCloud,
   saveConfigToCloud,
   fetchConfigFromCloud,
-  subscribeToCloudRecords
+  subscribeToCloudRecords,
+  subscribeToCloudConfig,
+  saveGlobalDefaultConfig,
+  fetchGlobalDefaultConfig
 } from './services/firebase';
+import { downloadDefaultsFile, copyDefaultsCodeToClipboard } from './utils/defaultsExporter';
 
 import { AtendimentoView } from './views/AtendimentoView';
 import { DocumentosView } from './views/DocumentosView';
@@ -144,11 +148,16 @@ export default function App() {
 
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | null = null;
+    let unsubscribeConfig: (() => void) | null = null;
 
     const setupListener = (user: typeof auth.currentUser, key: string) => {
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
         unsubscribeSnapshot = null;
+      }
+      if (unsubscribeConfig) {
+        unsubscribeConfig();
+        unsubscribeConfig = null;
       }
       if (user && key) {
         console.log('[App] Ativando sincronização em tempo real para:', user.email);
@@ -163,6 +172,17 @@ export default function App() {
             localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
             return merged;
           });
+        });
+
+        unsubscribeConfig = subscribeToCloudConfig(key, (cloudConfig) => {
+          if (cloudConfig?.templates) {
+            setTemplates((prev) => ({ ...prev, ...cloudConfig.templates }));
+            localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(cloudConfig.templates));
+          }
+          if (cloudConfig?.prompts) {
+            setPrompts((prev) => ({ ...prev, ...cloudConfig.prompts }));
+            localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(cloudConfig.prompts));
+          }
         });
       }
     };
@@ -182,6 +202,7 @@ export default function App() {
     return () => {
       unsubAuth();
       if (unsubscribeSnapshot) unsubscribeSnapshot();
+      if (unsubscribeConfig) unsubscribeConfig();
     };
   }, [masterKey]);
 
@@ -269,23 +290,139 @@ export default function App() {
     setModel(m);
     localStorage.setItem(STORAGE_KEYS.MODEL, m);
   };
-  const handleSaveTemplate = (key: keyof SystemTemplates, value: string) => {
+  const handleSaveTemplate = async (key: keyof SystemTemplates, value: string) => {
     const updated = { ...templates, [key]: value };
     setTemplates(updated);
     localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updated));
     showToast(`Template padrão atualizado!`);
+
+    const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+    if (auth.currentUser && activeKey) {
+      try {
+        await saveConfigToCloud(updated, prompts, activeKey);
+      } catch (err) {
+        console.error('[Sync] Erro ao sincronizar template com a nuvem:', err);
+      }
+    }
   };
-  const handleSavePrompt = (key: keyof SystemPrompts, value: string) => {
+
+  const handleSavePrompt = async (key: keyof SystemPrompts, value: string) => {
     const updated = { ...prompts, [key]: value };
     setPrompts(updated);
     localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(updated));
     showToast(`Prompt padrão atualizado!`);
+
+    const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+    if (auth.currentUser && activeKey) {
+      try {
+        await saveConfigToCloud(templates, updated, activeKey);
+      } catch (err) {
+        console.error('[Sync] Erro ao sincronizar prompt com a nuvem:', err);
+      }
+    }
   };
-  const handleResetSinglePrompt = (key: keyof SystemPrompts) => {
+
+  const handleResetSinglePrompt = async (key: keyof SystemPrompts) => {
     const updated = { ...prompts, [key]: DEFAULT_PROMPTS[key] };
     setPrompts(updated);
     localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(updated));
     showToast(`Prompt restaurado para o original!`);
+
+    const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+    if (auth.currentUser && activeKey) {
+      try {
+        await saveConfigToCloud(templates, updated, activeKey);
+      } catch (err) {
+        console.error('[Sync] Erro ao sincronizar prompt com a nuvem:', err);
+      }
+    }
+  };
+
+  // Salva template como PADRÃO GLOBAL do sistema (Firebase)
+  const handleSaveGlobalTemplate = async (key: keyof SystemTemplates, value: string) => {
+    const updated = { ...templates, [key]: value };
+    setTemplates(updated);
+    localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updated));
+    showToast(`Template definido como PADRÃO GLOBAL do sistema!`);
+
+    if (auth.currentUser) {
+      try {
+        await saveGlobalDefaultConfig(updated, prompts);
+      } catch (err: any) {
+        console.error('[Sync] Erro ao salvar template global:', err);
+        showToast('Erro ao salvar no Firebase: ' + (err.message || ''));
+      }
+    } else {
+      showToast('Aviso: Faça login para sincronizar o padrão global no Firebase.');
+    }
+  };
+
+  // Salva prompt de IA como PADRÃO GLOBAL do sistema (Firebase)
+  const handleSaveGlobalPrompt = async (key: keyof SystemPrompts, value: string) => {
+    const updated = { ...prompts, [key]: value };
+    setPrompts(updated);
+    localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(updated));
+    showToast(`Prompt de IA definido como PADRÃO GLOBAL do sistema!`);
+
+    if (auth.currentUser) {
+      try {
+        await saveGlobalDefaultConfig(templates, updated);
+      } catch (err: any) {
+        console.error('[Sync] Erro ao salvar prompt global:', err);
+        showToast('Erro ao salvar no Firebase: ' + (err.message || ''));
+      }
+    } else {
+      showToast('Aviso: Faça login para sincronizar o padrão global no Firebase.');
+    }
+  };
+
+  // Salva todas as configurações atuais como Padrão Global no Firebase
+  const handleSaveAllAsGlobalDefault = async () => {
+    if (!auth.currentUser) {
+      alert('Você precisa estar logado para publicar o padrão global na nuvem.');
+      return;
+    }
+    if (window.confirm('Deseja publicar TODOS os templates e prompts atuais como o PADRÃO GLOBAL do sistema?')) {
+      try {
+        await saveGlobalDefaultConfig(templates, prompts);
+        showToast('Padrão Global publicado com sucesso no Firebase!');
+      } catch (err: any) {
+        showToast('Erro ao publicar padrão global: ' + (err.message || ''));
+      }
+    }
+  };
+
+  // Puxa o Padrão Global do Firebase e aplica
+  const handlePullGlobalDefaults = async () => {
+    try {
+      const globalConfig = await fetchGlobalDefaultConfig();
+      if (!globalConfig) {
+        showToast('Nenhum padrão global cadastrado no Firebase ainda.');
+        return;
+      }
+      if (globalConfig.templates) {
+        setTemplates((prev) => ({ ...prev, ...globalConfig.templates }));
+        localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(globalConfig.templates));
+      }
+      if (globalConfig.prompts) {
+        setPrompts((prev) => ({ ...prev, ...globalConfig.prompts }));
+        localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(globalConfig.prompts));
+      }
+      showToast('Padrão Global do sistema carregado com sucesso!');
+    } catch (err: any) {
+      showToast('Erro ao carregar padrão global: ' + (err.message || ''));
+    }
+  };
+
+  // Exportar / Baixar defaults.ts para o repositório GitHub
+  const handleExportDefaultsFile = () => {
+    downloadDefaultsFile(templates, prompts);
+    showToast('Arquivo defaults.ts gerado e baixado!');
+  };
+
+  const handleCopyDefaultsCode = async () => {
+    await copyDefaultsCodeToClipboard(templates, prompts);
+    showToast('Código de defaults.ts copiado para a área de transferência!');
   };
 
   const getPayloadTemplate = (key: keyof SystemTemplates): string => {
@@ -314,11 +451,21 @@ export default function App() {
     showToast(`Template de dados restaurado para o original!`);
   };
 
-  const handleResetTemplates = () => {
+  const handleResetTemplates = async () => {
     setTemplates(DEFAULT_TEMPLATES);
     setPrompts(DEFAULT_PROMPTS);
     localStorage.removeItem(STORAGE_KEYS.TEMPLATES);
     localStorage.removeItem(STORAGE_KEYS.PROMPTS);
+    showToast('Templates e prompts restaurados para o padrão.');
+
+    const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+    if (auth.currentUser && activeKey) {
+      try {
+        await saveConfigToCloud(DEFAULT_TEMPLATES, DEFAULT_PROMPTS, activeKey);
+      } catch (err) {
+        console.error('[Sync] Erro ao sincronizar reset com a nuvem:', err);
+      }
+    }
   };
   const toggleSusFilter = () => {
     const nextVal = !susFilter;
@@ -1066,6 +1213,85 @@ export default function App() {
     showToast('Documentos gerados e prontos para conferência/cópia!');
   };
 
+  const compileSingleDocument = (docType: 'prontuario' | 'receitaInterna' | 'receitaDomiciliar' | 'passagemPlantao' | 'passometro') => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    if (docType === 'prontuario') {
+      const prontuarioCompiled = templates.prontuario
+        .replace('{{QP}}', qp || 'Não informada')
+        .replace('{{HMA}}', hma || 'Não informada')
+        .replace('{{ALERGIAS}}', hpp.alergias)
+        .replace('{{COMORBIDADES}}', hpp.comorbidades)
+        .replace('{{MUC}}', hpp.muc)
+        .replace('{{CIRURGIAS}}', hpp.cirurgias)
+        .replace('{{TABAGISMO}}', hpp.tabagismo)
+        .replace('{{ETILISMO}}', hpp.etilismo)
+        .replace('{{PA}}', vitals.pa || '--')
+        .replace('{{FC}}', vitals.fc || '--')
+        .replace('{{FR}}', vitals.fr || '--')
+        .replace('{{SAT}}', vitals.sat || '--')
+        .replace('{{TAX}}', vitals.tax || '--')
+        .replace('{{EXAME_FISICO}}', exameFisico || 'Não informado')
+        .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
+        .replace('{{DIFERENCIAIS}}', aiResults.differentialDiagnoses?.length ? `Diferenciais: ${aiResults.differentialDiagnoses.join(' • ')}` : '')
+        .replace('{{CIDS}}', '')
+        .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
+        .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
+        .replace('{{ORIENTACOES_TECNICAS}}', aiResults.techOrientations ? `\n#ORIENTAÇÕES:\n${aiResults.techOrientations}` : '');
+      setDocuments((prev) => ({ ...prev, prontuario: prontuarioCompiled }));
+      showToast('Prontuário compilado!');
+    } else if (docType === 'receitaInterna') {
+      const medsUnidadeText = (aiResults.unitMedications || []).map((m, i) => `${i + 1}. ${m}`).join('\n') || 'Nenhuma medicação prescrita na unidade.';
+      const examesSolicitados = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join('\n') || 'Nenhum exame solicitado.';
+      const receitaInternaCompiled = templates.receitaInterna
+        .replace('{{NOME}}', patient.nome || 'Paciente')
+        .replace('{{IDADE}}', patient.idade || '--')
+        .replace('{{DATA}}', today)
+        .replace('{{MEDICACOES_UNIDADE}}', medsUnidadeText)
+        .replace('{{EXAMES_SOLICITADOS}}', examesSolicitados);
+      setDocuments((prev) => ({ ...prev, receitaInterna: receitaInternaCompiled }));
+      showToast('Prescrição interna compilada!');
+    } else if (docType === 'receitaDomiciliar') {
+      const medsCasaText = (aiResults.homeMedications || []).map((m, i) => `${i + 1}) ${m}`).join('\n\n') || 'Nenhuma medicação domiciliar.';
+      const receitaDomiciliarCompiled = templates.receitaDomiciliar
+        .replace('{{NOME}}', patient.nome || 'Paciente')
+        .replace('{{IDADE}}', patient.idade || '--')
+        .replace('{{DATA}}', today)
+        .replace('{{MEDICACOES_CASA}}', medsCasaText)
+        .replace('{{ORIENTACOES_LEIGAS}}', aiResults.layOrientations || 'Manter repouso e hidratação oral contínua.')
+        .replace('{{SINAIS_ALARME_LEIGOS}}', 'Retornar ao pronto atendimento em caso de febre persistente, piora progressiva da dor ou surgimento de novos sintomas.');
+      setDocuments((prev) => ({ ...prev, receitaDomiciliar: receitaDomiciliarCompiled }));
+      showToast('Receituário domiciliar compilado!');
+    } else if (docType === 'passagemPlantao') {
+      const passagemCompiled = templates.passagemPlantao
+        .replace('{{NOME}}', patient.nome || 'Paciente')
+        .replace('{{IDADE}}', patient.idade || '--')
+        .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : 'Não informado')
+        .replace('{{QP}}', qp || 'Não informada')
+        .replace('{{HMA_RESUMO}}', hma ? hma.slice(0, 150) + (hma.length > 150 ? '...' : '') : 'Não informada')
+        .replace('{{PA}}', vitals.pa || '--')
+        .replace('{{FC}}', vitals.fc || '--')
+        .replace('{{TAX}}', vitals.tax || '--')
+        .replace('{{EXAME_RESUMO}}', exameFisico ? exameFisico.slice(0, 100) + '...' : 'Sem alterações descritas')
+        .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
+        .replace('{{CONDUTAS_UNIDADE}}', (aiResults.unitMedications || []).join(', ') || condutas || 'Sintomáticos')
+        .replace('{{PENDENCIAS}}', observation.whatToReevaluate || examResults ? 'Conferir exames' : 'Reavaliação clínica')
+        .replace('{{STATUS}}', observation.inObservation ? 'Em observação clínica' : 'Em atendimento');
+      setDocuments((prev) => ({ ...prev, passagemPlantao: passagemCompiled }));
+      showToast('Passagem de caso compilada!');
+    } else if (docType === 'passometro') {
+      const passometroCompiled = templates.passometro
+        .replace('{{NOME}}', patient.nome || 'Paciente')
+        .replace('{{IDADE}}', patient.idade || '--')
+        .replace('{{SEXO}}', patient.sexo || '')
+        .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
+        .replace('{{CONDUTAS_FEITAS}}', (aiResults.unitMedications || []).join(', ') || 'Sintomáticos')
+        .replace('{{PENDENCIAS}}', observation.whatToReevaluate || examResults ? 'Conferir exames' : 'Reavaliação clínica')
+        .replace('{{SINAIS_ALERTA}}', 'Piora hemodinâmica ou dor refratária');
+      setDocuments((prev) => ({ ...prev, passometro: passometroCompiled }));
+      showToast('Passômetro compilado!');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#191919] text-slate-800 dark:text-[#d4d4d4] flex font-sans transition-colors duration-150 antialiased selection:bg-ice-500/20">
       {/* Toast Notification */}
@@ -1422,8 +1648,10 @@ export default function App() {
             getCasePayload={getCasePayload}
             getPayloadTemplate={getPayloadTemplate}
             handleSavePrompt={handleSavePrompt}
+            handleSaveGlobalPrompt={handleSaveGlobalPrompt}
             handleResetSinglePrompt={handleResetSinglePrompt}
             handleSaveTemplate={handleSaveTemplate}
+            handleSaveGlobalTemplate={handleSaveGlobalTemplate}
             handleResetSinglePayloadTemplate={handleResetSinglePayloadTemplate}
             runAiHma={runAiHma}
             runAiExameFisico={runAiExameFisico}
@@ -1439,10 +1667,13 @@ export default function App() {
             documents={documents}
             setDocuments={setDocuments}
             compileAllDocuments={compileAllDocuments}
+            compileSingleDocument={compileSingleDocument}
             templates={templates}
             prompts={prompts}
             handleSaveTemplate={handleSaveTemplate}
+            handleSaveGlobalTemplate={handleSaveGlobalTemplate}
             handleSavePrompt={handleSavePrompt}
+            handleSaveGlobalPrompt={handleSaveGlobalPrompt}
             handleResetSinglePrompt={handleResetSinglePrompt}
             getCasePayload={getCasePayload}
             getPayloadTemplate={getPayloadTemplate}
@@ -1467,8 +1698,10 @@ export default function App() {
             getCasePayload={getCasePayload}
             getPayloadTemplate={getPayloadTemplate}
             handleSavePrompt={handleSavePrompt}
+            handleSaveGlobalPrompt={handleSaveGlobalPrompt}
             handleResetSinglePrompt={handleResetSinglePrompt}
             handleSaveTemplate={handleSaveTemplate}
+            handleSaveGlobalTemplate={handleSaveGlobalTemplate}
             handleResetSinglePayloadTemplate={handleResetSinglePayloadTemplate}
             runAiReavaliacao={runAiReavaliacao}
             runAiConclusaoObs={runAiConclusaoObs}
@@ -1531,6 +1764,10 @@ export default function App() {
         model={model}
         onSaveModel={handleSaveModel}
         onResetTemplates={handleResetTemplates}
+        onExportDefaultsFile={handleExportDefaultsFile}
+        onCopyDefaultsCode={handleCopyDefaultsCode}
+        onSaveAllAsGlobalDefault={handleSaveAllAsGlobalDefault}
+        onPullGlobalDefaults={handlePullGlobalDefaults}
       />
     </div>
   );

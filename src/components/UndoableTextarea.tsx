@@ -9,6 +9,7 @@ interface UndoableTextareaProps {
   placeholder?: string;
   className?: string;
   headerRight?: React.ReactNode;
+  hideActions?: boolean;
 }
 
 export const UndoableTextarea: React.FC<UndoableTextareaProps> = ({
@@ -19,6 +20,7 @@ export const UndoableTextarea: React.FC<UndoableTextareaProps> = ({
   placeholder,
   className = '',
   headerRight,
+  hideActions = false,
 }) => {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [history, setHistory] = React.useState<string[]>([value]);
@@ -71,26 +73,28 @@ export const UndoableTextarea: React.FC<UndoableTextareaProps> = ({
           ) : (
             <div />
           )}
-          <div className="flex items-center gap-1.5">
-            {headerRight}
-            <button
-              type="button"
-              onClick={handleUndo}
-              disabled={historyIndex <= 0}
-              className="p-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-ice-200 disabled:opacity-30 rounded hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
-              title="Desfazer última alteração (Undo)"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="p-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-ice-200 rounded hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
-              title="Copiar texto"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
+          {!hideActions && (
+            <div className="flex items-center gap-1.5">
+              {headerRight}
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={historyIndex <= 0}
+                className="p-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-ice-200 disabled:opacity-30 rounded hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
+                title="Desfazer última alteração (Undo)"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="p-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-ice-200 rounded hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
+                title="Copiar texto"
+              >
+                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
         </div>
       )}
       <textarea

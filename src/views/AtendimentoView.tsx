@@ -49,8 +49,10 @@ interface AtendimentoViewProps {
   getCasePayload: (key: keyof SystemTemplates) => string;
   getPayloadTemplate: (key: keyof SystemTemplates) => string;
   handleSavePrompt: (key: keyof SystemPrompts, value: string) => void;
+  handleSaveGlobalPrompt?: (key: keyof SystemPrompts, value: string) => void;
   handleResetSinglePrompt: (key: keyof SystemPrompts) => void;
   handleSaveTemplate: (key: keyof SystemTemplates, value: string) => void;
+  handleSaveGlobalTemplate?: (key: keyof SystemTemplates, value: string) => void;
   handleResetSinglePayloadTemplate: (key: keyof SystemTemplates) => void;
   runAiHma: () => void;
   runAiExameFisico: () => void;
@@ -86,8 +88,10 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   getCasePayload,
   getPayloadTemplate,
   handleSavePrompt,
+  handleSaveGlobalPrompt,
   handleResetSinglePrompt,
   handleSaveTemplate,
+  handleSaveGlobalTemplate,
   handleResetSinglePayloadTemplate,
   runAiHma,
   runAiExameFisico,
@@ -117,17 +121,28 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     }
   };
 
+  // Cálculo automático de IMC
+  const computedImc = React.useMemo(() => {
+    const p = parseFloat(patient.peso.replace(',', '.'));
+    const a = parseFloat(patient.altura.replace(',', '.'));
+    if (!p || !a || a <= 0) return '';
+    const alturaMetros = a > 3 ? a / 100 : a;
+    const imc = p / (alturaMetros * alturaMetros);
+    if (isNaN(imc) || !isFinite(imc) || imc <= 0) return '';
+    return imc.toFixed(1);
+  }, [patient.peso, patient.altura]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* 1. IDENTIFICAÇÃO DO PACIENTE */}
+      {/* IDENTIFICAÇÃO DO PACIENTE */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-          1. Identificação do Paciente
+          IDENTIFICAÇÃO
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 text-sm">
           {/* Nome */}
-          <div className="sm:col-span-2 lg:col-span-4">
+          <div className="sm:col-span-2 lg:col-span-3">
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
               Nome Completo ou Iniciais
             </label>
@@ -140,52 +155,52 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           </div>
 
           {/* Idade */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
-              Idade (anos)
+              Idade
             </label>
             <input
               type="text"
               value={patient.idade}
               onChange={(e) => setPatient({ ...patient, idade: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-center"
             />
           </div>
 
           {/* Sexo com botões estéticos de mesma altura que os inputs */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-2">
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
-              Sexo Biológico
+              Sexo
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
               <button
                 type="button"
                 onClick={() => setPatient({ ...patient, sexo: 'M' })}
-                className={`h-[38px] px-3 rounded-lg text-sm font-medium border transition-colors flex items-center justify-center gap-1.5 ${
+                className={`h-[38px] px-2 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center gap-1 ${
                   patient.sexo === 'M'
                     ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848] font-semibold shadow-2xs'
                     : 'bg-white dark:bg-[#202020] border-[#e5e5e5] dark:border-[#333] text-slate-600 dark:text-neutral-400 hover:bg-[#f5f5f5] dark:hover:bg-[#262626]'
                 }`}
               >
-                <span>Masculino</span>
+                <span>Masc</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setPatient({ ...patient, sexo: 'F' })}
-                className={`h-[38px] px-3 rounded-lg text-sm font-medium border transition-colors flex items-center justify-center gap-1.5 ${
+                className={`h-[38px] px-2 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center gap-1 ${
                   patient.sexo === 'F'
                     ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848] font-semibold shadow-2xs'
                     : 'bg-white dark:bg-[#202020] border-[#e5e5e5] dark:border-[#333] text-slate-600 dark:text-neutral-400 hover:bg-[#f5f5f5] dark:hover:bg-[#262626]'
                 }`}
               >
-                <span>Feminino</span>
+                <span>Fem</span>
               </button>
             </div>
           </div>
 
           {/* Peso */}
-          <div className="lg:col-span-1.5">
+          <div className="lg:col-span-2">
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
               Peso (kg)
             </label>
@@ -198,7 +213,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           </div>
 
           {/* Altura */}
-          <div className="lg:col-span-1.5">
+          <div className="lg:col-span-2">
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
               Altura (cm)
             </label>
@@ -210,14 +225,28 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50"
             />
           </div>
+
+          {/* IMC Calculado Automaticamente */}
+          <div className="lg:col-span-2">
+            <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
+              IMC (kg/m²)
+            </label>
+            <input
+              type="text"
+              readOnly
+              value={computedImc ? `${computedImc}` : ''}
+              placeholder="-"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-[#1f1f1f] text-slate-800 dark:text-ice-100 text-sm font-semibold text-center cursor-default"
+            />
+          </div>
         </div>
       </section>
 
-      {/* 2. QUEIXA PRINCIPAL & HMA */}
+      {/* QUEIXA PRINCIPAL E HISTÓRIA DA MOLÉSTIA ATUAL */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-            2. Queixa Principal & HMA
+            QUEIXA PRINCIPAL E HISTÓRIA DA MOLÉSTIA ATUAL
           </h2>
           <AIActionButton
             label="Aprimorar HMA com IA"
@@ -226,10 +255,12 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             promptKey="hma"
             currentPrompt={prompts.hma}
             onSavePrompt={(p) => handleSavePrompt('hma', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('hma', p) : undefined}
             onResetPrompt={() => handleResetSinglePrompt('hma')}
             contextPayload={getCasePayload('payloadHma')}
             payloadTemplate={getPayloadTemplate('payloadHma')}
             onSavePayloadTemplate={(t) => handleSaveTemplate('payloadHma', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadHma', t) : undefined}
             onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadHma')}
           />
         </div>
@@ -254,6 +285,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             value={hma}
             onChange={setHma}
             rows={4}
+            hideActions={true}
           />
 
           {/* Sugestão de Texto da IA com botão de implementar */}
@@ -300,11 +332,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         )}
       </section>
 
-      {/* 3. HISTÓRIA PATOLÓGICA PREGRESSA (HPP) */}
+      {/* HISTÓRIA PATOLÓGICA PREGRESSA (HPP) */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-            3. História Patológica Pregressa (HPP)
+            HISTÓRIA PATOLÓGICA PREGRESSA (HPP)
           </h2>
           <TemplateEditorButton
             label="HPP"
@@ -315,13 +347,18 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               setHpp(parseHppText(t));
               showToast('Template de HPP atualizado e aplicado aos campos!');
             }}
+            onSaveGlobalTemplate={handleSaveGlobalTemplate ? (t) => {
+              handleSaveGlobalTemplate('hpp', t);
+              setHpp(parseHppText(t));
+              showToast('Template de HPP definido como padrão global!');
+            } : undefined}
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
           <div>
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
-              Alergias Medicamentosas
+              Alergias
             </label>
             <input
               type="text"
@@ -350,7 +387,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
 
           <div>
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
-              MUC (Uso Contínuo)
+              Medicações de Uso Contínuo (MUC)
             </label>
             <input
               type="text"
@@ -398,11 +435,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
       </section>
 
-      {/* 4. SINAIS VITAIS & EXAME FÍSICO */}
+      {/* EXAME FÍSICO */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-            4. Sinais Vitais & Exame Físico
+            EXAME FÍSICO
           </h2>
           <div className="flex items-center gap-2">
             <TemplateEditorButton
@@ -413,6 +450,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                 handleSaveTemplate('exameFisico', t);
                 setExameFisico(t);
               }}
+              onSaveGlobalTemplate={handleSaveGlobalTemplate ? (t) => {
+                handleSaveGlobalTemplate('exameFisico', t);
+                setExameFisico(t);
+                showToast('Template de Exame Físico definido como padrão global!');
+              } : undefined}
             />
             <AIActionButton
               label="Refinar Exame Físico com IA"
@@ -421,10 +463,12 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               promptKey="exameFisico"
               currentPrompt={prompts.exameFisico}
               onSavePrompt={(p) => handleSavePrompt('exameFisico', p)}
+              onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('exameFisico', p) : undefined}
               onResetPrompt={() => handleResetSinglePrompt('exameFisico')}
               contextPayload={getCasePayload('payloadExameFisico')}
               payloadTemplate={getPayloadTemplate('payloadExameFisico')}
               onSavePayloadTemplate={(t) => handleSaveTemplate('payloadExameFisico', t)}
+              onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadExameFisico', t) : undefined}
               onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadExameFisico')}
             />
           </div>
@@ -482,7 +526,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         {/* Exame Físico */}
         <div>
           <UndoableTextarea
-            label="Exame Físico Dirigido"
             value={exameFisico}
             onChange={setExameFisico}
             rows={5}
@@ -532,12 +575,12 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         )}
       </section>
 
-      {/* 5. HIPÓTESE DIAGNÓSTICA */}
+      {/* HIPÓTESE DIAGNÓSTICA */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              5. Hipótese Diagnóstica
+              HIPÓTESE DIAGNÓSTICA
             </h2>
           </div>
           <AIActionButton
@@ -547,10 +590,12 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             promptKey="diagnostico"
             currentPrompt={prompts.diagnostico}
             onSavePrompt={(p) => handleSavePrompt('diagnostico', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('diagnostico', p) : undefined}
             onResetPrompt={() => handleResetSinglePrompt('diagnostico')}
             contextPayload={getCasePayload('payloadDiagnostico')}
             payloadTemplate={getPayloadTemplate('payloadDiagnostico')}
             onSavePayloadTemplate={(t) => handleSaveTemplate('payloadDiagnostico', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadDiagnostico', t) : undefined}
             onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadDiagnostico')}
           />
         </div>
@@ -636,12 +681,12 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
       </section>
 
-      {/* 6. CONDUTAS, PRESCRIÇÕES & DESFECHO */}
+      {/* CONDUTAS & PRESCRIÇÕES */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              6. Condutas & Prescrições
+              CONDUTAS & PRESCRIÇÕES
             </h2>
             {susFilter && (
               <span className="text-[11px] bg-ice-500/15 text-ice-700 dark:text-ice-300 px-2 py-0.5 rounded-full font-semibold">
@@ -656,10 +701,12 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             promptKey="conduta"
             currentPrompt={prompts.conduta}
             onSavePrompt={(p) => handleSavePrompt('conduta', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('conduta', p) : undefined}
             onResetPrompt={() => handleResetSinglePrompt('conduta')}
             contextPayload={getCasePayload('payloadConduta')}
             payloadTemplate={getPayloadTemplate('payloadConduta')}
             onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConduta', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConduta', t) : undefined}
             onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConduta')}
           />
         </div>
@@ -705,7 +752,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/40 dark:bg-navy-900/60 space-y-2">
             <span className="font-bold text-slate-800 dark:text-ice-100 text-xs block uppercase tracking-wide">
-              Prescrição Interna
+              PRESCRIÇÃO INTERNA
             </span>
             <UndoableTextarea
               value={aiResults.unitMedications?.join('\n') || ''}
@@ -718,7 +765,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
 
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/40 dark:bg-navy-900/60 space-y-2">
             <span className="font-bold text-slate-800 dark:text-ice-100 text-xs block uppercase tracking-wide">
-              Prescrição para Casa
+              PRESCRIÇÃO DOMICILIAR
             </span>
             <UndoableTextarea
               value={aiResults.homeMedications?.join('\n') || ''}
@@ -732,8 +779,8 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
 
         {/* Lab & Imaging Requests */}
         <div className="space-y-1.5">
-          <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs">
-            Exames Solicitados (Laboratório & Imagem)
+          <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs uppercase tracking-wide">
+            EXAMES LABORATORIAIS E DE IMAGEM
           </label>
           <input
             type="text"
@@ -744,11 +791,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
       </section>
 
-      {/* CONDUTAS MÉDICAS (EDITÁVEL MANUALMENTE - ENVIADO AO PRONTUÁRIO) */}
+      {/* CONDUTAS */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-            Condutas Médicas
+            CONDUTAS
           </h2>
         </div>
 
@@ -759,11 +806,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         />
       </section>
 
-      {/* 7. ORIENTAÇÕES & SINAIS DE ALARME */}
+      {/* ORIENTAÇÕES E SINAIS DE ALARME */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-            7. Orientações Gerais & Sinais de Alarme
+            ORIENTAÇÕES E SINAIS DE ALARME
           </h2>
           <AIActionButton
             label="Gerar Orientações com IA"
@@ -772,24 +819,26 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             promptKey="orientacoes"
             currentPrompt={prompts.orientacoes}
             onSavePrompt={(p) => handleSavePrompt('orientacoes', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('orientacoes', p) : undefined}
             onResetPrompt={() => handleResetSinglePrompt('orientacoes')}
             contextPayload={getCasePayload('payloadOrientacoes')}
             payloadTemplate={getPayloadTemplate('payloadOrientacoes')}
             onSavePayloadTemplate={(t) => handleSaveTemplate('payloadOrientacoes', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadOrientacoes', t) : undefined}
             onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadOrientacoes')}
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <UndoableTextarea
-            label="Texto Técnico (Prontuário Médico)"
+            label="PRONTUÁRIO"
             value={aiResults.techOrientations || ''}
             onChange={(val) => setAiResults({ ...aiResults, techOrientations: val })}
             rows={3}
           />
 
           <UndoableTextarea
-            label="Linguagem Leiga (Receita Médica do Paciente)"
+            label="RECEITA"
             value={aiResults.layOrientations || ''}
             onChange={(val) => setAiResults({ ...aiResults, layOrientations: val })}
             rows={3}
@@ -798,13 +847,13 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
       </section>
 
       {/* ======================================================== */}
-      {/* 8. DESFECHO CLÍNICO (ÚLTIMO BOX DA PÁGINA)               */}
+      {/* DESFECHO (ÚLTIMO BOX DA PÁGINA)                          */}
       {/* ======================================================== */}
       <section className="bg-white dark:bg-[#202020] border border-slate-200 dark:border-[#2e2e2e] rounded-xl p-4 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              Desfecho Clínico
+              DESFECHO
             </h2>
           </div>
           {aiResults.clinicalOutcome === 'observacao' && (

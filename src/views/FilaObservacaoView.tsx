@@ -24,25 +24,14 @@ export const FilaObservacaoView: React.FC<FilaObservacaoViewProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#ececeb] dark:border-[#333]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-500">
-            <Bed className="w-5 h-5" />
+      <div className="flex items-center justify-between pb-3 border-b border-[#ececeb] dark:border-[#333]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-navy-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-ice-200 shadow-2xs">
+            <Bed className="w-4 h-4" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-ice-50 tracking-tight">
-              Fila de Leitos em Observação Clínica
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Controle em tempo real de reavaliações, metas e pendências clínicas dos pacientes em observação.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-            {activeObsPatients.length} paciente{activeObsPatients.length === 1 ? '' : 's'} no leito
-          </span>
+          <h1 className="text-base font-bold text-slate-900 dark:text-ice-50 uppercase tracking-wide">
+            OBSERVAÇÃO
+          </h1>
         </div>
       </div>
 

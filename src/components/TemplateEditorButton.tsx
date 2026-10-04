@@ -1,11 +1,12 @@
 import React from 'react';
-import { Sliders, Check, X } from 'lucide-react';
+import { Sliders, X, User, Globe } from 'lucide-react';
 
 interface TemplateEditorButtonProps {
   label: string;
   templateKey: string;
   currentTemplate: string;
   onSaveTemplate: (newTemplate: string) => void;
+  onSaveGlobalTemplate?: (newTemplate: string) => void;
   compact?: boolean;
 }
 
@@ -13,22 +14,36 @@ export const TemplateEditorButton: React.FC<TemplateEditorButtonProps> = ({
   label,
   currentTemplate,
   onSaveTemplate,
+  onSaveGlobalTemplate,
 }) => {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editedTemplate, setEditedTemplate] = React.useState(currentTemplate);
-  const [savedNotice, setSavedNotice] = React.useState(false);
+  const [savedNotice, setSavedNotice] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setEditedTemplate(currentTemplate);
   }, [currentTemplate]);
 
-  const handleSave = () => {
+  const handleSaveUser = () => {
     onSaveTemplate(editedTemplate);
-    setSavedNotice(true);
+    setSavedNotice('✓ Salvo no seu usuário!');
     setTimeout(() => {
-      setSavedNotice(false);
+      setSavedNotice(null);
       setModalOpen(false);
     }, 1200);
+  };
+
+  const handleSaveGlobal = () => {
+    if (onSaveGlobalTemplate) {
+      if (window.confirm('Tem certeza que deseja definir este template como o PADRÃO GLOBAL de todo o sistema? Todos os usuários e novos logins usarão este texto como base.')) {
+        onSaveGlobalTemplate(editedTemplate);
+        setSavedNotice('✓ Definido como Padrão Global do Sistema!');
+        setTimeout(() => {
+          setSavedNotice(null);
+          setModalOpen(false);
+        }, 1500);
+      }
+    }
   };
 
   return (
@@ -37,25 +52,25 @@ export const TemplateEditorButton: React.FC<TemplateEditorButtonProps> = ({
         type="button"
         onClick={() => setModalOpen(true)}
         className="h-7 px-2.5 inline-flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] rounded-md border border-[#e5e5e5] dark:border-[#383838] bg-white dark:bg-[#252525] transition-colors shadow-2xs text-xs font-medium"
-        title={`Editar template padrão: ${label}`}
+        title={`Editar template: ${label}`}
       >
         <Sliders className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
       </button>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-navy-850 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="px-4 py-3 bg-slate-50 dark:bg-navy-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#252525] rounded-lg shadow-2xl border border-[#ececeb] dark:border-[#333] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="px-4 py-3 bg-slate-50 dark:bg-[#202020] border-b border-[#ececeb] dark:border-[#333]/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-ice-400" />
-                <h3 className="text-sm font-semibold text-slate-800 dark:text-ice-100">
-                  Editar Template Padrão: {label}
+                <Sliders className="w-4 h-4 text-slate-500 dark:text-neutral-400" />
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-100">
+                  Editar Template: {label}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-ice-200 p-1"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-neutral-200 p-1"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -63,37 +78,48 @@ export const TemplateEditorButton: React.FC<TemplateEditorButtonProps> = ({
 
             <div className="p-4 flex-1 overflow-y-auto space-y-2">
               <p className="text-slate-500 dark:text-slate-400 text-xs">
-                Modifique a estrutura padrão. Novos atendimentos carregarão automaticamente este texto.
-                Tags como <code className="bg-slate-100 dark:bg-navy-950 dark:text-ice-300 px-1 py-0.5 rounded text-[11px]">{'{{NOME}}'}</code>, <code className="bg-slate-100 dark:bg-navy-950 dark:text-ice-300 px-1 py-0.5 rounded text-[11px]">{'{{QP}}'}</code>, etc., serão substituídas na compilação.
+                Modifique a estrutura deste template. Variáveis como <code className="bg-slate-100 dark:bg-[#1a1a1a] dark:text-neutral-300 px-1 py-0.5 rounded text-[11px]">{'{{NOME}}'}</code>, <code className="bg-slate-100 dark:bg-[#1a1a1a] dark:text-neutral-300 px-1 py-0.5 rounded text-[11px]">{'{{QP}}'}</code>, etc., serão preenchidas na compilação.
               </p>
               <textarea
                 value={editedTemplate}
                 onChange={(e) => setEditedTemplate(e.target.value)}
                 rows={14}
-                className="w-full font-mono text-xs p-3 rounded border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-ice-400 leading-relaxed bg-slate-50 dark:bg-navy-900 text-slate-800 dark:text-ice-100"
+                className="w-full font-mono text-xs p-3 rounded border border-[#e5e5e5] dark:border-[#333] focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-neutral-500 leading-relaxed bg-slate-50 dark:bg-[#202020] text-slate-800 dark:text-neutral-100"
               />
             </div>
 
-            <div className="px-4 py-3 bg-slate-50 dark:bg-navy-900 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div className="px-4 py-3 bg-slate-50 dark:bg-[#202020] border-t border-[#ececeb] dark:border-[#333]/80 flex flex-wrap items-center justify-between gap-2">
               <span className="text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-                {savedNotice && '✓ Template padrão salvo com sucesso!'}
+                {savedNotice}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white bg-white dark:bg-navy-800 border border-slate-200 dark:border-slate-700 rounded"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white bg-white dark:bg-[#2b2b2b] border border-[#e5e5e5] dark:border-[#383838] rounded"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
-                  onClick={handleSave}
-                  className="inline-flex items-center gap-1.5 bg-ice-500 hover:bg-ice-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors"
+                  onClick={handleSaveUser}
+                  className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors"
+                  title="Salvar somente para o meu usuário logado"
                 >
-                  <Check className="w-3.5 h-3.5" />
-                  Salvar como Padrão
+                  <User className="w-3.5 h-3.5" />
+                  Salvar no Meu Usuário
                 </button>
+                {onSaveGlobalTemplate && (
+                  <button
+                    type="button"
+                    onClick={handleSaveGlobal}
+                    className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors shadow-2xs"
+                    title="Definir como padrão global de todo o sistema no Firebase"
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    Definir Padrão Global
+                  </button>
+                )}
               </div>
             </div>
           </div>

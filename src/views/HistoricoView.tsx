@@ -18,31 +18,31 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
   onOpenCloudSync,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
 
   const filteredRecords = records.filter((r) => {
     const term = searchTerm.toLowerCase();
     const nome = (r.patient?.nome || '').toLowerCase();
     const qp = (r.qp || '').toLowerCase();
     const hd = (r.aiResults?.mainHypothesis || '').toLowerCase();
-    return nome.includes(term) || qp.includes(term) || hd.includes(term);
+    const matchesSearch = nome.includes(term) || qp.includes(term) || hd.includes(term);
+
+    if (!selectedDate) return matchesSearch;
+    const recordDateStr = new Date(r.savedAt).toLocaleDateString('en-CA'); // YYYY-MM-DD
+    return matchesSearch && recordDateStr === selectedDate;
   });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#ececeb] dark:border-[#333]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-ice-500/15 border border-ice-400/30 flex items-center justify-center text-ice-500">
-            <History className="w-5 h-5" />
+      <div className="flex items-center justify-between pb-3 border-b border-[#ececeb] dark:border-[#333]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-navy-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-ice-200 shadow-2xs">
+            <History className="w-4 h-4" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-ice-50 tracking-tight">
-              Histórico Geral de Atendimentos
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Todos os pacientes atendidos e salvos na memória local com busca e recuperação instantânea.
-            </p>
-          </div>
+          <h1 className="text-base font-bold text-slate-900 dark:text-ice-50 uppercase tracking-wide">
+            HISTÓRICO
+          </h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -58,21 +58,43 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
             </button>
           )}
           <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-[#252525] text-slate-700 dark:text-neutral-200 border border-[#ececeb] dark:border-[#333]">
-            Total: {records.length} atendimento{records.length === 1 ? '' : 's'}
+            Total: {records.length}
           </span>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          placeholder="Buscar por nome do paciente, queixa principal ou hipótese diagnóstica..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#252525] text-slate-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500/50 shadow-xs"
-        />
+      {/* Search Bar & Date Filter */}
+      <div className="flex flex-col sm:flex-row gap-2.5">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Buscar por paciente, queixa ou hipótese..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#252525] text-slate-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500/50 shadow-xs"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-3 py-2.5 rounded-xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#252525] text-slate-700 dark:text-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500/50 shadow-xs"
+            title="Filtrar por data do atendimento"
+          />
+          {selectedDate && (
+            <button
+              type="button"
+              onClick={() => setSelectedDate('')}
+              className="px-3 py-2.5 text-xs font-medium rounded-xl border border-slate-200 dark:border-[#333] text-slate-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-[#2e2e2e] bg-white dark:bg-[#252525] transition-colors"
+              title="Limpar filtro de data"
+            >
+              Limpar data
+            </button>
+          )}
+        </div>
       </div>
 
       {/* List */}
@@ -80,7 +102,7 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
         <div className="text-center py-16 px-6 bg-white dark:bg-[#252525] rounded-xl border border-dashed border-[#ececeb] dark:border-[#333] space-y-3">
           <History className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
           <h2 className="text-base font-semibold text-slate-700 dark:text-neutral-200">
-            {searchTerm ? 'Nenhum paciente encontrado para esta busca.' : 'Nenhum atendimento salvo ainda.'}
+            {searchTerm || selectedDate ? 'Nenhum paciente encontrado para este filtro.' : 'Nenhum atendimento salvo ainda.'}
           </h2>
           <p className="text-sm text-slate-400 dark:text-slate-500 max-w-md mx-auto">
             Os pacientes que você atender e salvar automaticamente aparecerão listados aqui com todos os dados preenchidos.
