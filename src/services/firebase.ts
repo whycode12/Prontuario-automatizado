@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, type User } from 'firebase/auth';
 import {
   getFirestore,
   collection,
@@ -22,13 +23,35 @@ export const firebaseConfig = {
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Garante que o usuario esteja autenticado de forma transparente via Firebase Auth
+export async function ensureAuth(): Promise<User> {
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+  return new Promise((resolve, reject) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubscribe();
+        resolve(user);
+      }
+    });
+
+    signInAnonymously(auth).catch((err) => {
+      unsubscribe();
+      reject(err);
+    });
+  });
+}
 
 // Salva ou atualiza um prontuario de paciente criptografado no Firestore
 export async function saveRecordToCloud(
   record: SavedPatientRecord,
   encryptionKey: string
 ): Promise<void> {
+  await ensureAuth();
   const jsonString = JSON.stringify(record);
   const encryptedPayload = await encryptData(jsonString, encryptionKey);
 
@@ -51,6 +74,7 @@ export async function saveRecordToCloud(
 export async function fetchRecordsFromCloud(
   encryptionKey: string
 ): Promise<SavedPatientRecord[]> {
+  await ensureAuth();
   const snapshot = await getDocs(collection(db, 'records'));
   const records: SavedPatientRecord[] = [];
 
@@ -74,6 +98,7 @@ export async function fetchRecordsFromCloud(
 
 // Remove um prontuario da nuvem
 export async function deleteRecordFromCloud(recordId: string): Promise<void> {
+  await ensureAuth();
   const docRef = doc(db, 'records', recordId);
   await deleteDoc(docRef);
 }
@@ -84,6 +109,7 @@ export async function saveConfigToCloud(
   prompts: SystemPrompts,
   encryptionKey: string
 ): Promise<void> {
+  await ensureAuth();
   const configPayload = JSON.stringify({ templates, prompts });
   const encryptedPayload = await encryptData(configPayload, encryptionKey);
 
@@ -98,6 +124,7 @@ export async function saveConfigToCloud(
 export async function fetchConfigFromCloud(
   encryptionKey: string
 ): Promise<{ templates?: SystemTemplates; prompts?: SystemPrompts } | null> {
+  await ensureAuth();
   const snapshot = await getDocs(collection(db, 'settings'));
   const configDoc = snapshot.docs.find((d) => d.id === 'user_config');
   if (!configDoc) return null;
