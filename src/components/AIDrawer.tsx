@@ -71,19 +71,13 @@ export const AIDrawer: React.FC<AIDrawerProps> = ({
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-[#262626] border border-[#d4d4d4] dark:border-[#404040] text-slate-700 dark:text-neutral-200 hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] flex items-center gap-1.5 transition-colors shadow-2xs"
-            title={isOpen ? 'Engavetar conteúdo gerado pela IA' : 'Abrir gaveta e ver conteúdo gerado'}
+            className="p-1 rounded-md bg-white dark:bg-[#262626] border border-[#d4d4d4] dark:border-[#404040] text-slate-700 dark:text-neutral-200 hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] flex items-center justify-center transition-colors shadow-2xs"
+            title={isOpen ? 'Recolher' : 'Expandir'}
           >
             {isOpen ? (
-              <>
-                <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
-                <span>Engavetar</span>
-              </>
+              <ChevronUp className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
             ) : (
-              <>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-                <span>Abrir gaveta</span>
-              </>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
             )}
           </button>
         </div>

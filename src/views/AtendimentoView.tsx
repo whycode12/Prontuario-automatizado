@@ -23,6 +23,50 @@ import { TemplateEditorButton } from '../components/TemplateEditorButton';
 import { AIDrawer } from '../components/AIDrawer';
 import { parseHppText } from '../data/defaults';
 
+interface AutoResizeTextareaProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+}
+
+const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+}) => {
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.max(48, textareaRef.current.scrollHeight)}px`;
+    }
+  }, [value]);
+
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs uppercase tracking-wide">
+        {label}
+      </label>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onInput={(e) => {
+          const target = e.currentTarget;
+          target.style.height = 'auto';
+          target.style.height = `${Math.max(48, target.scrollHeight)}px`;
+        }}
+        placeholder={placeholder}
+        rows={2}
+        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-xs font-sans leading-relaxed resize-y transition-[height] duration-75 overflow-hidden"
+      />
+    </div>
+  );
+};
+
 interface AtendimentoViewProps {
   patient: PatientData;
   setPatient: React.Dispatch<React.SetStateAction<PatientData>>;
@@ -58,6 +102,7 @@ interface AtendimentoViewProps {
   runAiExameFisico: () => void;
   runAiDiagnostico: () => void;
   runAiConduta: () => void;
+  runAiMelhorarCondutas: () => void;
   runAiOrientacoes: () => void;
   showToast: (msg: string) => void;
 }
@@ -97,6 +142,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   runAiExameFisico,
   runAiDiagnostico,
   runAiConduta,
+  runAiMelhorarCondutas,
   runAiOrientacoes,
   showToast,
 }) => {
@@ -132,22 +178,27 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     return imc.toFixed(1);
   }, [patient.peso, patient.altura]);
 
-  // Ranking de Hipóteses derivado da IA ou estado atual
+  // Ranking de Hipóteses estático e FIXO (gerado pela IA)
   const displayedHypotheses = useMemo(() => {
+    return aiResults.hypothesisRankings || [];
+  }, [aiResults.hypothesisRankings]);
+
+  // Controle de seleção única nos rankings
+  const [selectedHypothesisIdx, setSelectedHypothesisIdx] = React.useState<number | null>(null);
+  const [selectedCidIdx, setSelectedCidIdx] = React.useState<number | null>(null);
+
+  // Define a seleção inicial ao gerar novos resultados de IA
+  React.useEffect(() => {
     if (aiResults.hypothesisRankings && aiResults.hypothesisRankings.length > 0) {
-      return aiResults.hypothesisRankings;
+      setSelectedHypothesisIdx(0);
     }
-    const list: Array<{ nome: string; tipo?: string; prob: string }> = [];
-    if (aiResults.mainHypothesis) {
-      list.push({ nome: aiResults.mainHypothesis, tipo: 'Principal', prob: 'Alta' });
+  }, [aiResults.hypothesisRankings]);
+
+  React.useEffect(() => {
+    if (aiResults.cidRankings && aiResults.cidRankings.length > 0) {
+      setSelectedCidIdx(0);
     }
-    if (aiResults.differentialDiagnoses && aiResults.differentialDiagnoses.length > 0) {
-      aiResults.differentialDiagnoses.forEach((d, idx) => {
-        list.push({ nome: d, tipo: 'Diferencial', prob: idx === 0 ? 'Média' : 'Baixa' });
-      });
-    }
-    return list;
-  }, [aiResults.hypothesisRankings, aiResults.mainHypothesis, aiResults.differentialDiagnoses]);
+  }, [aiResults.cidRankings]);
 
   // Estilo das badges de probabilidade
   const getProbBadgeClass = (prob: string = '') => {
@@ -646,11 +697,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs">
                 HIPÓTESE DIAGNÓSTICA PRINCIPAL
               </label>
-              {aiResults.mainHypothesis && (
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                  Ativa no prontuário
-                </span>
-              )}
             </div>
             <input
               type="text"
@@ -671,13 +717,14 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 min-h-[42px] max-h-36 overflow-y-auto bg-slate-50/50 dark:bg-navy-900">
                 {displayedHypotheses.length > 0 ? (
                   displayedHypotheses.map((h, idx) => {
-                    const isSelected = (aiResults.mainHypothesis || '').trim().toLowerCase() === h.nome.trim().toLowerCase();
+                    const isSelected = selectedHypothesisIdx === idx;
                     return (
                       <div
                         key={idx}
                         onClick={() => {
+                          setSelectedHypothesisIdx(idx);
                           setAiResults((prev) => ({ ...prev, mainHypothesis: h.nome }));
-                          showToast(`Hipótese "${h.nome}" selecionada!`);
+                          showToast(`Hipótese "${h.nome}" transferida para o campo principal!`);
                         }}
                         className={`px-2.5 py-1.5 text-xs flex items-center justify-between cursor-pointer transition-colors ${
                           isSelected
@@ -725,11 +772,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs">
                 CID
               </label>
-              {aiResults.selectedCid && (
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                  CID do atendimento
-                </span>
-              )}
             </div>
             <input
               type="text"
@@ -750,16 +792,15 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 min-h-[42px] max-h-36 overflow-y-auto bg-slate-50/50 dark:bg-navy-900">
                 {aiResults.cidRankings && aiResults.cidRankings.length > 0 ? (
                   aiResults.cidRankings.map((c, idx) => {
-                    const isSelected = aiResults.selectedCid
-                      ? aiResults.selectedCid.toLowerCase().includes(c.cid.toLowerCase())
-                      : false;
+                    const isSelected = selectedCidIdx === idx;
                     return (
                       <div
                         key={idx}
                         onClick={() => {
+                          setSelectedCidIdx(idx);
                           const val = `${c.cid} - ${c.desc}`;
                           setAiResults((prev) => ({ ...prev, selectedCid: val }));
-                          showToast(`CID ${c.cid} selecionado como CID do atendimento!`);
+                          showToast(`CID ${c.cid} selecionado!`);
                         }}
                         className={`px-2.5 py-1.5 text-xs flex items-center justify-between cursor-pointer transition-colors ${
                           isSelected
@@ -899,16 +940,19 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           </div>
         </div>
 
-        {/* Lab & Imaging Requests */}
-        <div className="space-y-1.5">
-          <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs uppercase tracking-wide">
-            EXAMES LABORATORIAIS E DE IMAGEM
-          </label>
-          <input
-            type="text"
-            value={[aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join(' | ')}
-            onChange={(e) => setAiResults({ ...aiResults, orderedLabs: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-sm"
+        {/* Lab & Imaging Requests com tamanho ajustável */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AutoResizeTextarea
+            label="Exames Laboratoriais"
+            value={aiResults.orderedLabs || ''}
+            onChange={(val) => setAiResults({ ...aiResults, orderedLabs: val })}
+            placeholder="Exames laboratoriais solicitados..."
+          />
+          <AutoResizeTextarea
+            label="Exames de Imagem"
+            value={aiResults.orderedImages || ''}
+            onChange={(val) => setAiResults({ ...aiResults, orderedImages: val })}
+            placeholder="Exames de imagem solicitados..."
           />
         </div>
       </section>
@@ -919,6 +963,21 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
             CONDUTAS
           </h2>
+          <AIActionButton
+            label="Melhorar Escrita com IA"
+            onExecute={runAiMelhorarCondutas}
+            isLoading={!!aiLoading.melhorarCondutas}
+            promptKey="melhorarCondutas"
+            currentPrompt={prompts.melhorarCondutas || ''}
+            onSavePrompt={(p) => handleSavePrompt('melhorarCondutas', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('melhorarCondutas', p) : undefined}
+            onResetPrompt={() => handleResetSinglePrompt('melhorarCondutas')}
+            contextPayload={getCasePayload('payloadConduta')}
+            payloadTemplate={getPayloadTemplate('payloadConduta')}
+            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConduta', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConduta', t) : undefined}
+            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConduta')}
+          />
         </div>
 
         <UndoableTextarea
@@ -926,6 +985,22 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           onChange={setCondutas}
           rows={4}
         />
+
+        {/* Sugestão da IA para Condutas com engavetar */}
+        {aiResults.condutasSuggestion && (
+          <AIDrawer
+            title="Sugestão da IA para Condutas:"
+            onImplement={() => {
+              setCondutas(aiResults.condutasSuggestion || '');
+              showToast('Sugestão da IA aplicada em Condutas!');
+            }}
+            triggerUpdate={aiResults.condutasSuggestion}
+          >
+            <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
+              {aiResults.condutasSuggestion}
+            </p>
+          </AIDrawer>
+        )}
       </section>
 
       {/* ORIENTAÇÕES E SINAIS DE ALARME */}
@@ -951,20 +1026,45 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           />
         </div>
 
+        {/* 4 Caixas de Texto: 2 para Prontuário, 2 para Receita */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UndoableTextarea
-            label="PRONTUÁRIO"
-            value={aiResults.techOrientations || ''}
-            onChange={(val) => setAiResults({ ...aiResults, techOrientations: val })}
-            rows={3}
-          />
+          {/* Bloco 1: PRONTUÁRIO */}
+          <div className="space-y-3 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-navy-900/40">
+            <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+              PRONTUÁRIO
+            </h3>
+            <UndoableTextarea
+              label="Orientações Gerais"
+              value={aiResults.techOrientations || ''}
+              onChange={(val) => setAiResults({ ...aiResults, techOrientations: val })}
+              rows={3}
+            />
+            <UndoableTextarea
+              label="Sinais de Alarme"
+              value={aiResults.techAlarmSignals || ''}
+              onChange={(val) => setAiResults({ ...aiResults, techAlarmSignals: val })}
+              rows={3}
+            />
+          </div>
 
-          <UndoableTextarea
-            label="RECEITA"
-            value={aiResults.layOrientations || ''}
-            onChange={(val) => setAiResults({ ...aiResults, layOrientations: val })}
-            rows={3}
-          />
+          {/* Bloco 2: RECEITA (PACIENTE) */}
+          <div className="space-y-3 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-navy-900/40">
+            <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+              RECEITA (PACIENTE)
+            </h3>
+            <UndoableTextarea
+              label="Orientações Gerais"
+              value={aiResults.layOrientations || ''}
+              onChange={(val) => setAiResults({ ...aiResults, layOrientations: val })}
+              rows={3}
+            />
+            <UndoableTextarea
+              label="Sinais de Alarme"
+              value={aiResults.layAlarmSignals || ''}
+              onChange={(val) => setAiResults({ ...aiResults, layAlarmSignals: val })}
+              rows={3}
+            />
+          </div>
         </div>
       </section>
 

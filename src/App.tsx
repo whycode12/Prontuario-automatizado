@@ -1007,12 +1007,41 @@ export default function App() {
     }
   };
 
+  const runAiMelhorarCondutas = async () => {
+    setAiLoading((prev) => ({ ...prev, melhorarCondutas: true }));
+    try {
+      const jsonExample = `{"condutasRefinadas": "- Dipirona 1g EV diluído em 100ml SF 0,9% agora em 20 min\\n- Hidratação com SF 0,9% 500ml EV\\n- Reavaliação clínica e sinais vitais após término das medicações"}`;
+      const payload = `${getCasePayload('payloadConduta')}\n\n=== TEXTO ATUAL DE CONDUTAS DIGITADO PELO MÉDICO ===\n${condutas || 'Sem condutas descritas ainda'}`;
+      const response = await callGeminiApi(
+        apiKey,
+        model,
+        prompts.melhorarCondutas || DEFAULT_PROMPTS.melhorarCondutas || 'Aprimore a redação médica das condutas.',
+        payload,
+        'Analise todo o caso e o texto digitado em Condutas. Refine e melhore a redação médica das condutas mantendo padrão hospitalar/ambulatorial claro e organizado.',
+        jsonExample
+      );
+
+      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      setAiResults((prev) => ({
+        ...prev,
+        condutasSuggestion: parsed.condutasRefinadas || ''
+      }));
+      showToast('Sugestão de condutas gerada pela IA abaixo do campo!');
+    } catch (err: any) {
+      alert(`Falha na IA (Condutas): ${err.message}`);
+    } finally {
+      setAiLoading((prev) => ({ ...prev, melhorarCondutas: false }));
+    }
+  };
+
   const runAiOrientacoes = async () => {
     setAiLoading((prev) => ({ ...prev, orientacoes: true }));
     try {
       const jsonExample = `{
-  "textoTecnico": "Orientado hidratação venosa e via oral, repouso e retorno à emergência se febre alta refratária, dor lombar intensa ou piora do estado geral.",
-  "textoLeigo": "Tome bastante líquido (água/chás). Tome os remédios nos horários corretos.\\nProcure imediatamente o pronto atendimento se tiver febre acima de 38°C, vômitos que não passam, dor forte nas costas ou urina com sangue."
+  "orientacoesProntuario": "Orientado repouso relativo, hidratação oral contínua e seguimento com médico assistente / UBS.",
+  "sinaisAlarmeProntuario": "Febre persistente acima de 38,5°C refratária a antitérmicos, piora acentuada da dor, vômitos incoercíveis, síncope ou dispneia.",
+  "orientacoesReceita": "Mantenha repouso em casa e tome bastante água e sucos naturais. Tome as medicações receitadas rigorosamente nos horários indicados.",
+  "sinaisAlarmeReceita": "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não baixa com os remédios, dor intensa que piore, vômitos que impeçam beber água ou falta de ar."
 }`;
       const payload = getCasePayload('payloadOrientacoes');
       const response = await callGeminiApi(
@@ -1020,17 +1049,19 @@ export default function App() {
         model,
         prompts.orientacoes,
         payload,
-        'Gere as orientações gerais e sinais de alarme em versão técnica (prontuário) e versão leiga (receita).',
+        'Gere as orientações gerais e sinais de alarme em 4 campos distintos: orientações para prontuário, sinais de alarme para prontuário, orientações para receita e sinais de alarme para receita.',
         jsonExample
       );
 
       const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
       setAiResults((prev) => ({
         ...prev,
-        techOrientations: parsed.textoTecnico || '',
-        layOrientations: parsed.textoLeigo || ''
+        techOrientations: parsed.orientacoesProntuario || parsed.textoTecnico || '',
+        techAlarmSignals: parsed.sinaisAlarmeProntuario || '',
+        layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
+        layAlarmSignals: parsed.sinaisAlarmeReceita || ''
       }));
-      showToast('Orientações e sinais de alarme gerados!');
+      showToast('Orientações e sinais de alarme gerados pela IA!');
     } catch (err: any) {
       alert(`Falha na IA (Orientações): ${err.message}`);
     } finally {
@@ -1264,7 +1295,13 @@ export default function App() {
       .replace('{{CIDS}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
       .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
       .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
-      .replace('{{ORIENTACOES_TECNICAS}}', aiResults.techOrientations ? `\n#ORIENTAÇÕES:\n${aiResults.techOrientations}` : '');
+      .replace('{{ORIENTACOES_TECNICAS}}', [
+        aiResults.techOrientations ? `ORIENTAÇÕES GERAIS:\n${aiResults.techOrientations}` : '',
+        aiResults.techAlarmSignals ? `SINAIS DE ALARME:\n${aiResults.techAlarmSignals}` : ''
+      ].filter(Boolean).join('\n\n') ? `\n#ORIENTAÇÕES E SINAIS DE ALARME:\n${[
+        aiResults.techOrientations ? `ORIENTAÇÕES GERAIS:\n${aiResults.techOrientations}` : '',
+        aiResults.techAlarmSignals ? `SINAIS DE ALARME:\n${aiResults.techAlarmSignals}` : ''
+      ].filter(Boolean).join('\n\n')}` : '');
 
     // 2. Receita Interna
     const medsUnidadeText = (aiResults.unitMedications || []).map((m, i) => `${i + 1}. ${m}`).join('\n') || 'Nenhuma medicação prescrita na unidade.';
@@ -1284,7 +1321,7 @@ export default function App() {
       .replace('{{DATA}}', today)
       .replace('{{MEDICACOES_CASA}}', medsCasaText)
       .replace('{{ORIENTACOES_LEIGAS}}', aiResults.layOrientations || 'Manter repouso e hidratação oral contínua.')
-      .replace('{{SINAIS_ALARME_LEIGOS}}', 'Retornar ao pronto atendimento em caso de febre persistente, piora progressiva da dor ou surgimento de novos sintomas.');
+      .replace('{{SINAIS_ALARME_LEIGOS}}', aiResults.layAlarmSignals || 'Retornar ao pronto atendimento em caso de febre persistente, piora progressiva da dor ou surgimento de novos sintomas.');
 
     // 4. Passômetro e Passagem
     const passometroCompiled = templates.passometro
@@ -1332,7 +1369,13 @@ export default function App() {
         .replace('{{CIDS}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
         .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
         .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
-        .replace('{{ORIENTACOES_TECNICAS}}', aiResults.techOrientations ? `\n#ORIENTAÇÕES:\n${aiResults.techOrientations}` : '');
+        .replace('{{ORIENTACOES_TECNICAS}}', [
+          aiResults.techOrientations ? `ORIENTAÇÕES GERAIS:\n${aiResults.techOrientations}` : '',
+          aiResults.techAlarmSignals ? `SINAIS DE ALARME:\n${aiResults.techAlarmSignals}` : ''
+        ].filter(Boolean).join('\n\n') ? `\n#ORIENTAÇÕES E SINAIS DE ALARME:\n${[
+          aiResults.techOrientations ? `ORIENTAÇÕES GERAIS:\n${aiResults.techOrientations}` : '',
+          aiResults.techAlarmSignals ? `SINAIS DE ALARME:\n${aiResults.techAlarmSignals}` : ''
+        ].filter(Boolean).join('\n\n')}` : '');
       setDocuments((prev) => ({ ...prev, prontuario: prontuarioCompiled }));
       showToast('Prontuário compilado!');
     } else if (docType === 'receitaInterna') {
@@ -1354,7 +1397,7 @@ export default function App() {
         .replace('{{DATA}}', today)
         .replace('{{MEDICACOES_CASA}}', medsCasaText)
         .replace('{{ORIENTACOES_LEIGAS}}', aiResults.layOrientations || 'Manter repouso e hidratação oral contínua.')
-        .replace('{{SINAIS_ALARME_LEIGOS}}', 'Retornar ao pronto atendimento em caso de febre persistente, piora progressiva da dor ou surgimento de novos sintomas.');
+        .replace('{{SINAIS_ALARME_LEIGOS}}', aiResults.layAlarmSignals || 'Retornar ao pronto atendimento em caso de febre persistente, piora progressiva da dor ou surgimento de novos sintomas.');
       setDocuments((prev) => ({ ...prev, receitaDomiciliar: receitaDomiciliarCompiled }));
       showToast('Receituário domiciliar compilado!');
     } else if (docType === 'passagemPlantao') {
@@ -1753,6 +1796,7 @@ export default function App() {
             runAiExameFisico={runAiExameFisico}
             runAiDiagnostico={runAiDiagnostico}
             runAiConduta={runAiConduta}
+            runAiMelhorarCondutas={runAiMelhorarCondutas}
             runAiOrientacoes={runAiOrientacoes}
             showToast={showToast}
           />

@@ -55,8 +55,11 @@ export interface AIResult {
   medicalLeaveNeeded?: boolean;
   medicalLeaveDays?: string;
   medicalLeaveReason?: string;
+  condutasSuggestion?: string;
   techOrientations?: string;
+  techAlarmSignals?: string;
   layOrientations?: string;
+  layAlarmSignals?: string;
   handoffOral?: string;
   passometer?: string;
   missingReevaluationChecks?: string[];
@@ -98,6 +101,7 @@ export interface SystemTemplates {
   payloadExameFisico?: string;
   payloadDiagnostico?: string;
   payloadConduta?: string;
+  payloadMelhorarCondutas?: string;
   payloadOrientacoes?: string;
   payloadPassagemPlantao?: string;
   payloadPassometro?: string;
@@ -110,6 +114,7 @@ export interface SystemPrompts {
   exameFisico: string;
   diagnostico: string;
   conduta: string;
+  melhorarCondutas: string;
   orientacoes: string;
   passagemPlantao: string;
   passometro: string;

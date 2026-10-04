@@ -91,6 +91,7 @@ export const DEFAULT_PROMPTS: SystemPrompts = {
   exameFisico: ${sanitizeString(prompts.exameFisico)},
   diagnostico: ${sanitizeString(prompts.diagnostico)},
   conduta: ${sanitizeString(prompts.conduta)},
+  melhorarCondutas: ${sanitizeString(prompts.melhorarCondutas || '')},
   orientacoes: ${sanitizeString(prompts.orientacoes)},
   passagemPlantao: ${sanitizeString(prompts.passagemPlantao)},
   passometro: ${sanitizeString(prompts.passometro)},

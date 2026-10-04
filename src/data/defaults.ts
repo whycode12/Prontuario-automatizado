@@ -234,16 +234,23 @@ Analise todo o caso clínico até o momento.
 4. ALERTA CRÍTICO: Verifique as alergias registradas na HPP. Se qualquer medicação for contraindicada, avise explicitamente.
 5. Disclaimers clínicos objetivos: ajuste de dose para idoso frágil, disfunção renal/hepática ou cuidados essenciais de infusão.
 6. Lembrete de profilaxia antitetânica ou antirrábica se ferimento/mordedura/trauma.
-7. Exames laboratoriais e de imagem a solicitar para o caso.
+7. Exames laboratoriais e de imagem a solicitar para o caso (separados).
 8. Sugira o desfecho: alta orientada, observação, internação ou transferência, com justificativa concisa.
 9. Indique se necessita encaminhamento para UBS/Ambulatório com justificativa.
 10. Indique se necessita atestado médico, com dias sugeridos e justificativa.
 Retorne no formato JSON especificado.`,
 
+  melhorarCondutas: `Você é um médico assistente experiente em Pronto Atendimento / UPA / UBS.
+Com base no caso clínico acumulado (Identificação, QP, HMA, HPP, Sinais Vitais, Exame Físico, Hipóteses) e no texto digitado no campo de Condutas:
+1. Melhore a redação das condutas médicas, tornando-a técnica, fluida, organizada e em linguagem médica padronizada.
+Retorne no formato JSON especificado: {"condutasRefinadas": "texto organizado e técnico..."}`,
+
   orientacoes: `Você é um médico assistente.
 Com base em todo o caso clínico:
-1. Gere ORIENTAÇÕES GERAIS e SINAIS DE ALARME em TEXTO TÉCNICO para constar no Prontuário.
-2. Gere ORIENTAÇÕES GERAIS e SINAIS DE ALARME em LINGUAGEM LEIGA, clara e acessível, para constar na Receita Domiciliar do paciente (quando retornar imediatamente à UPA).
+1. Gere ORIENTAÇÕES GERAIS em TEXTO TÉCNICO para o Prontuário.
+2. Gere SINAIS DE ALARME em TEXTO TÉCNICO para o Prontuário.
+3. Gere ORIENTAÇÕES GERAIS em LINGUAGEM LEIGA para a Receita Médica do paciente.
+4. Gere SINAIS DE ALARME em LINGUAGEM LEIGA para a Receita Médica do paciente (quando retornar imediatamente à UPA/emergência).
 Mantenha objetivo, direto ao ponto e sem enrolação.
 Retorne no formato JSON especificado.`,
 
