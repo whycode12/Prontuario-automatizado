@@ -126,30 +126,40 @@ export function subscribeToCloudRecords(
   onRecordsUpdated: (records: SavedPatientRecord[]) => void
 ): () => void {
   const user = auth.currentUser;
-  if (!user) return () => {};
+  if (!user) {
+    console.warn('[Sync] subscribeToCloudRecords: nenhum médico autenticado no momento.');
+    return () => {};
+  }
 
   const recordsCol = collection(db, 'users', user.uid, 'records');
+  console.log('[Sync] Conectando ouvinte em tempo real para usuário:', user.uid);
+
   return onSnapshot(
     recordsCol,
     async (snapshot) => {
-      const records: SavedPatientRecord[] = [];
-      for (const docSnap of snapshot.docs) {
+      console.log(`[Sync] Recebida atualização do Firestore: ${snapshot.docs.length} documentos`);
+      const decryptPromises = snapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
         if (data.encryptedPayload) {
           try {
             const decryptedJson = await decryptData(data.encryptedPayload, encryptionKey);
-            const parsed = JSON.parse(decryptedJson) as SavedPatientRecord;
-            records.push(parsed);
-          } catch {
-            // Ignora se nao conseguir decifrar
+            return JSON.parse(decryptedJson) as SavedPatientRecord;
+          } catch (err) {
+            console.warn(`[Sync] Não foi possível decifrar registro ${docSnap.id}:`, err);
+            return null;
           }
         }
-      }
+        return null;
+      });
+
+      const results = await Promise.all(decryptPromises);
+      const records = results.filter((r): r is SavedPatientRecord => r !== null);
       records.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+      console.log(`[Sync] Disparando atualização local com ${records.length} pacientes`);
       onRecordsUpdated(records);
     },
     (error) => {
-      console.warn('Erro na escuta em tempo real do Firestore:', error);
+      console.error('[Sync] Erro na escuta em tempo real do Firestore:', error);
     }
   );
 }

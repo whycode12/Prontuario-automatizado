@@ -145,38 +145,45 @@ export default function App() {
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | null = null;
 
-    const unsubAuth = auth.onAuthStateChanged(async (user) => {
-      setCurrentDoctor(user);
+    const setupListener = (user: typeof auth.currentUser, key: string) => {
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
         unsubscribeSnapshot = null;
       }
-
-      const savedKey = localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY);
-      if (user && savedKey) {
-        // 1. Ouve alterações em tempo real no Firestore (se alterar no PC A, atualiza no PC B na hora)
-        unsubscribeSnapshot = subscribeToCloudRecords(savedKey, (cloudRecords) => {
-          if (cloudRecords.length > 0) {
-            setSavedRecords((prev) => {
-              const map = new Map<string, SavedPatientRecord>();
-              prev.forEach((r) => map.set(r.id, r));
-              cloudRecords.forEach((r) => map.set(r.id, r));
-              const merged = Array.from(map.values()).sort(
-                (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
-              );
-              localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
-              return merged;
-            });
-          }
+      if (user && key) {
+        console.log('[App] Ativando sincronização em tempo real para:', user.email);
+        unsubscribeSnapshot = subscribeToCloudRecords(key, (cloudRecords) => {
+          setSavedRecords((prev) => {
+            const map = new Map<string, SavedPatientRecord>();
+            prev.forEach((r) => map.set(r.id, r));
+            cloudRecords.forEach((r) => map.set(r.id, r));
+            const merged = Array.from(map.values()).sort(
+              (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+            );
+            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
+            return merged;
+          });
         });
       }
+    };
+
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      setCurrentDoctor(user);
+      const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+      setupListener(user, activeKey);
     });
+
+    // Se já houver médico e chave no estado, conecta imediatamente
+    const currentKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+    if (auth.currentUser && currentKey) {
+      setupListener(auth.currentUser, currentKey);
+    }
 
     return () => {
       unsubAuth();
       if (unsubscribeSnapshot) unsubscribeSnapshot();
     };
-  }, []);
+  }, [masterKey]);
 
   // UI Navigation & Modals
   const [settingsOpen, setSettingsOpen] = useState(false);
