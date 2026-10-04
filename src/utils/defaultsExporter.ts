@@ -1,4 +1,5 @@
 import type { SystemTemplates, SystemPrompts } from '../types';
+import { parseHppText } from '../data/defaults';
 
 export function generateDefaultsSourceCode(
   templates: SystemTemplates,
@@ -14,16 +15,19 @@ export function generateDefaultsSourceCode(
     return `\`${escaped}\``;
   };
 
+  // Extrai os valores padrão atuais a partir do template de HPP configurado
+  const parsedDefaults = parseHppText(templates.hpp || '');
+
   return `import type { SystemTemplates, SystemPrompts, HppData } from '../types';
 
 export function parseHppText(text: string): HppData {
   const result: HppData = {
-    alergias: 'Nega alergias medicamentosas conhecidas',
-    comorbidades: 'Nega',
-    muc: 'Nega medicações de uso contínuo',
-    cirurgias: 'Nega cirurgias prévias',
-    tabagismo: 'Nega',
-    etilismo: 'Nega'
+    alergias: ${sanitizeString(parsedDefaults.alergias)},
+    comorbidades: ${sanitizeString(parsedDefaults.comorbidades)},
+    muc: ${sanitizeString(parsedDefaults.muc)},
+    cirurgias: ${sanitizeString(parsedDefaults.cirurgias)},
+    tabagismo: ${sanitizeString(parsedDefaults.tabagismo)},
+    etilismo: ${sanitizeString(parsedDefaults.etilismo)}
   };
   if (!text || typeof text !== 'string') return result;
 
