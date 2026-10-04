@@ -1296,15 +1296,12 @@ export default function App() {
       .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
       .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
       .replace('{{ORIENTACOES_TECNICAS}}', [
-        aiResults.techOrientations ? `ORIENTAÇÕES GERAIS:\n${aiResults.techOrientations}` : '',
-        aiResults.techAlarmSignals ? `SINAIS DE ALARME:\n${aiResults.techAlarmSignals}` : ''
-      ].filter(Boolean).join('\n\n') ? `\n#ORIENTAÇÕES E SINAIS DE ALARME:\n${[
-        aiResults.techOrientations ? `ORIENTAÇÕES GERAIS:\n${aiResults.techOrientations}` : '',
-        aiResults.techAlarmSignals ? `SINAIS DE ALARME:\n${aiResults.techAlarmSignals}` : ''
-      ].filter(Boolean).join('\n\n')}` : '');
+        aiResults.techOrientations?.trim(),
+        aiResults.techAlarmSignals?.trim()
+      ].filter(Boolean).join('\n\n'));
 
     // 2. Receita Interna
-    const medsUnidadeText = (aiResults.unitMedications || []).map((m, i) => `${i + 1}. ${m}`).join('\n') || 'Nenhuma medicação prescrita na unidade.';
+    const medsUnidadeText = (aiResults.unitMedications || []).join('\n') || 'Nenhuma medicação prescrita na unidade.';
     const examesSolicitados = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join('\n') || 'Nenhum exame solicitado.';
     const receitaInternaCompiled = templates.receitaInterna
       .replace('{{NOME}}', patient.nome || 'Paciente')
@@ -1314,7 +1311,7 @@ export default function App() {
       .replace('{{EXAMES_SOLICITADOS}}', examesSolicitados);
 
     // 3. Receita Domiciliar
-    const medsCasaText = (aiResults.homeMedications || []).map((m, i) => `${i + 1}) ${m}`).join('\n\n') || 'Nenhuma medicação domiciliar.';
+    const medsCasaText = (aiResults.homeMedications || []).join('\n\n') || 'Nenhuma medicação domiciliar.';
     const receitaDomiciliarCompiled = templates.receitaDomiciliar
       .replace('{{NOME}}', patient.nome || 'Paciente')
       .replace('{{IDADE}}', patient.idade || '--')
@@ -1370,16 +1367,13 @@ export default function App() {
         .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
         .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
         .replace('{{ORIENTACOES_TECNICAS}}', [
-          aiResults.techOrientations ? `ORIENTAÇÕES GERAIS:\n${aiResults.techOrientations}` : '',
-          aiResults.techAlarmSignals ? `SINAIS DE ALARME:\n${aiResults.techAlarmSignals}` : ''
-        ].filter(Boolean).join('\n\n') ? `\n#ORIENTAÇÕES E SINAIS DE ALARME:\n${[
-          aiResults.techOrientations ? `ORIENTAÇÕES GERAIS:\n${aiResults.techOrientations}` : '',
-          aiResults.techAlarmSignals ? `SINAIS DE ALARME:\n${aiResults.techAlarmSignals}` : ''
-        ].filter(Boolean).join('\n\n')}` : '');
+          aiResults.techOrientations?.trim(),
+          aiResults.techAlarmSignals?.trim()
+        ].filter(Boolean).join('\n\n'));
       setDocuments((prev) => ({ ...prev, prontuario: prontuarioCompiled }));
       showToast('Prontuário compilado!');
     } else if (docType === 'receitaInterna') {
-      const medsUnidadeText = (aiResults.unitMedications || []).map((m, i) => `${i + 1}. ${m}`).join('\n') || 'Nenhuma medicação prescrita na unidade.';
+      const medsUnidadeText = (aiResults.unitMedications || []).join('\n') || 'Nenhuma medicação prescrita na unidade.';
       const examesSolicitados = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join('\n') || 'Nenhum exame solicitado.';
       const receitaInternaCompiled = templates.receitaInterna
         .replace('{{NOME}}', patient.nome || 'Paciente')
@@ -1390,7 +1384,7 @@ export default function App() {
       setDocuments((prev) => ({ ...prev, receitaInterna: receitaInternaCompiled }));
       showToast('Prescrição interna compilada!');
     } else if (docType === 'receitaDomiciliar') {
-      const medsCasaText = (aiResults.homeMedications || []).map((m, i) => `${i + 1}) ${m}`).join('\n\n') || 'Nenhuma medicação domiciliar.';
+      const medsCasaText = (aiResults.homeMedications || []).join('\n\n') || 'Nenhuma medicação domiciliar.';
       const receitaDomiciliarCompiled = templates.receitaDomiciliar
         .replace('{{NOME}}', patient.nome || 'Paciente')
         .replace('{{IDADE}}', patient.idade || '--')
