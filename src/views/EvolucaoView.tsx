@@ -30,6 +30,7 @@ interface EvolucaoViewProps {
   setEvolucaoDocument: (val: string) => void;
   generateEvolucaoDocument: () => void;
   toggleObservation: () => void;
+  hideAiBoxes?: boolean;
 }
 
 export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
@@ -56,6 +57,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   setEvolucaoDocument,
   generateEvolucaoDocument,
   toggleObservation: _toggleObservation,
+  hideAiBoxes = false,
 }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -106,7 +108,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         />
 
         {/* Sugestão de Texto da IA para Reavaliação Clínica com engavetar */}
-        {aiResults.reevaluationSuggestion && (
+        {!hideAiBoxes && aiResults.reevaluationSuggestion && (
           <AIDrawer
             title="Sugestão da IA para Reavaliação Clínica:"
             onImplement={() => {
@@ -124,7 +126,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         )}
 
         {/* Box de Checagens Faltantes Sugeridas pela IA com engavetar */}
-        {aiResults.missingReevaluationChecks && aiResults.missingReevaluationChecks.length > 0 && (
+        {!hideAiBoxes && aiResults.missingReevaluationChecks && aiResults.missingReevaluationChecks.length > 0 && (
           <AIDrawer
             title="Checagens recomendadas pela IA que faltou investigar na reavaliação:"
             variant="blue"
@@ -174,7 +176,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             />
 
             {/* Sugestão da IA para Nova Hipótese com engavetar */}
-            {aiResults.conclusionHypothesisSuggestion && (
+            {!hideAiBoxes && aiResults.conclusionHypothesisSuggestion && (
               <AIDrawer
                 title="Sugestão da IA para Hipótese:"
                 onImplement={() => {
@@ -203,7 +205,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             />
 
             {/* Sugestão da IA para Novas Condutas com engavetar */}
-            {aiResults.newConductsSuggestion && (
+            {!hideAiBoxes && aiResults.newConductsSuggestion && (
               <AIDrawer
                 title="Sugestão da IA para Condutas:"
                 onImplement={() => {

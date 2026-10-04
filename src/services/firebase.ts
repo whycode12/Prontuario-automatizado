@@ -18,6 +18,7 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import type { SavedPatientRecord, SystemTemplates, SystemPrompts } from '../types';
+import { DEFAULT_TEMPLATES, DEFAULT_PROMPTS } from '../data/defaults';
 import { encryptData, decryptData } from './crypto';
 
 export const firebaseConfig = {
@@ -196,7 +197,7 @@ export async function saveConfigToCloud(
 // Carrega configuracoes individuais deste medico
 export async function fetchConfigFromCloud(
   encryptionKey: string
-): Promise<{ templates?: SystemTemplates; prompts?: SystemPrompts } | null> {
+): Promise<{ templates: SystemTemplates; prompts: SystemPrompts } | null> {
   const user = auth.currentUser;
   if (!user) throw new Error('Nenhum médico autenticado.');
 
@@ -208,7 +209,11 @@ export async function fetchConfigFromCloud(
   if (data.encryptedPayload) {
     try {
       const decrypted = await decryptData(data.encryptedPayload, encryptionKey);
-      return JSON.parse(decrypted);
+      const parsed = JSON.parse(decrypted);
+      return {
+        templates: { ...DEFAULT_TEMPLATES, ...(parsed.templates || {}) },
+        prompts: { ...DEFAULT_PROMPTS, ...(parsed.prompts || {}) },
+      };
     } catch {
       return null;
     }
@@ -219,7 +224,7 @@ export async function fetchConfigFromCloud(
 // Ouve em tempo real as alteracoes nos templates e prompts deste medico
 export function subscribeToCloudConfig(
   encryptionKey: string,
-  onConfigUpdated: (config: { templates?: SystemTemplates; prompts?: SystemPrompts }) => void
+  onConfigUpdated: (config: { templates: SystemTemplates; prompts: SystemPrompts }) => void
 ): () => void {
   const user = auth.currentUser;
   if (!user) return () => {};
@@ -234,7 +239,10 @@ export function subscribeToCloudConfig(
         try {
           const decrypted = await decryptData(data.encryptedPayload, encryptionKey);
           const parsed = JSON.parse(decrypted);
-          onConfigUpdated(parsed);
+          onConfigUpdated({
+            templates: { ...DEFAULT_TEMPLATES, ...(parsed.templates || {}) },
+            prompts: { ...DEFAULT_PROMPTS, ...(parsed.prompts || {}) },
+          });
         } catch (err) {
           console.warn('[Sync] Não foi possível decifrar configurações da nuvem:', err);
         }
@@ -328,8 +336,8 @@ export async function saveGlobalDefaultConfig(
 
   const docRef = doc(db, 'system', 'default_config');
   const payload = removeUndefinedFields({
-    templates,
-    prompts,
+    templates: { ...DEFAULT_TEMPLATES, ...templates },
+    prompts: { ...DEFAULT_PROMPTS, ...prompts },
     updatedAt: serverTimestamp(),
     updatedBy: user.email || user.uid
   });
@@ -339,8 +347,8 @@ export async function saveGlobalDefaultConfig(
 
 // Carrega configuracoes do PADRÃO GLOBAL do sistema
 export async function fetchGlobalDefaultConfig(): Promise<{
-  templates?: SystemTemplates;
-  prompts?: SystemPrompts;
+  templates: SystemTemplates;
+  prompts: SystemPrompts;
 } | null> {
   try {
     const docRef = doc(db, 'system', 'default_config');
@@ -348,8 +356,8 @@ export async function fetchGlobalDefaultConfig(): Promise<{
     if (!docSnap.exists()) return null;
     const data = docSnap.data();
     return {
-      templates: data.templates,
-      prompts: data.prompts
+      templates: { ...DEFAULT_TEMPLATES, ...(data.templates || {}) },
+      prompts: { ...DEFAULT_PROMPTS, ...(data.prompts || {}) }
     };
   } catch (err) {
     console.warn('[Sync] Não foi possível carregar padrão global:', err);
@@ -359,7 +367,7 @@ export async function fetchGlobalDefaultConfig(): Promise<{
 
 // Ouve em tempo real alteracoes no PADRAO GLOBAL
 export function subscribeToGlobalDefaultConfig(
-  onConfigUpdated: (config: { templates?: SystemTemplates; prompts?: SystemPrompts }) => void
+  onConfigUpdated: (config: { templates: SystemTemplates; prompts: SystemPrompts }) => void
 ): () => void {
   const docRef = doc(db, 'system', 'default_config');
   return onSnapshot(
@@ -369,8 +377,8 @@ export function subscribeToGlobalDefaultConfig(
       const data = docSnap.data();
       if (data) {
         onConfigUpdated({
-          templates: data.templates,
-          prompts: data.prompts
+          templates: { ...DEFAULT_TEMPLATES, ...(data.templates || {}) },
+          prompts: { ...DEFAULT_PROMPTS, ...(data.prompts || {}) }
         });
       }
     },

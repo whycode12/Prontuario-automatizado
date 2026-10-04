@@ -14,7 +14,8 @@ import {
   ClipboardList,
   PanelLeftClose,
   PanelLeft,
-  Cloud
+  Cloud,
+  Sparkles
 } from 'lucide-react';
 
 import type {
@@ -43,6 +44,7 @@ import {
   subscribeToCloudConfig,
   saveGlobalDefaultConfig,
   fetchGlobalDefaultConfig,
+  subscribeToGlobalDefaultConfig,
   saveUserApiKey,
   fetchUserApiKey,
   subscribeToUserApiKey
@@ -63,7 +65,9 @@ const STORAGE_KEYS = {
   RECORDS: 'prontuario_saved_records',
   SUS_FILTER: 'prontuario_sus_filter_active',
   THEME: 'prontuario_color_theme',
-  ENCRYPTION_KEY: 'prontuario_master_encryption_key'
+  ENCRYPTION_KEY: 'prontuario_master_encryption_key',
+  CONFIG_SOURCE: 'prontuario_config_source',
+  HIDE_AI: 'prontuario_hide_ai'
 };
 
 function computeObservationCountdown(startedAt?: string, revaluationMinutes: number = 120) {
@@ -141,9 +145,83 @@ export default function App() {
   });
   const [currentDoctor, setCurrentDoctor] = useState(auth.currentUser);
 
+  // Config Source: 'defaults' | 'global' | 'user'
+  const [configSource, setConfigSource] = useState<'defaults' | 'global' | 'user'>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.CONFIG_SOURCE);
+    return (saved === 'defaults' || saved === 'global' || saved === 'user') ? saved : 'global';
+  });
+
+  // Ocultar boxes de IA visualmente (Atendimento e Evolução)
+  const [hideAiBoxes, setHideAiBoxes] = useState<boolean>(() => {
+    return localStorage.getItem(STORAGE_KEYS.HIDE_AI) === 'true';
+  });
+
+  const toggleHideAiBoxes = () => {
+    setHideAiBoxes((prev) => {
+      const next = !prev;
+      localStorage.setItem(STORAGE_KEYS.HIDE_AI, String(next));
+      return next;
+    });
+  };
+
+  const handleSelectConfigSource = async (source: 'defaults' | 'global' | 'user') => {
+    setConfigSource(source);
+    localStorage.setItem(STORAGE_KEYS.CONFIG_SOURCE, source);
+
+    if (source === 'defaults') {
+      setTemplates(DEFAULT_TEMPLATES);
+      setPrompts(DEFAULT_PROMPTS);
+      localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(DEFAULT_TEMPLATES));
+      localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(DEFAULT_PROMPTS));
+      showToast('Configurações redefinidas para o Padrão do Código (defaults.ts)!');
+    } else if (source === 'global') {
+      try {
+        const globalConfig = await fetchGlobalDefaultConfig();
+        if (globalConfig) {
+          if (globalConfig.templates) {
+            setTemplates(globalConfig.templates);
+            localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(globalConfig.templates));
+          }
+          if (globalConfig.prompts) {
+            setPrompts(globalConfig.prompts);
+            localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(globalConfig.prompts));
+          }
+          showToast('Padrão Global do Firebase aplicado!');
+        } else {
+          showToast('Nenhum Padrão Global encontrado no Firebase; mantendo os atuais.');
+        }
+      } catch (err: any) {
+        showToast('Erro ao buscar Padrão Global: ' + (err.message || ''));
+      }
+    } else if (source === 'user') {
+      const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+      if (auth.currentUser && activeKey) {
+        try {
+          const userConfig = await fetchConfigFromCloud(activeKey);
+          if (userConfig) {
+            if (userConfig.templates) {
+              setTemplates(userConfig.templates);
+              localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(userConfig.templates));
+            }
+            if (userConfig.prompts) {
+              setPrompts(userConfig.prompts);
+              localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(userConfig.prompts));
+            }
+            showToast('Configurações do usuário carregadas do Firebase!');
+          }
+        } catch (err: any) {
+          showToast('Erro ao carregar configurações do usuário: ' + (err.message || ''));
+        }
+      } else {
+        showToast('Modo de configurações personalizadas do usuário ativado.');
+      }
+    }
+  };
+
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | null = null;
     let unsubscribeConfig: (() => void) | null = null;
+    let unsubscribeGlobalConfig: (() => void) | null = null;
     let unsubscribeApiKey: (() => void) | null = null;
 
     const setupListener = (user: typeof auth.currentUser, key: string) => {
@@ -154,6 +232,10 @@ export default function App() {
       if (unsubscribeConfig) {
         unsubscribeConfig();
         unsubscribeConfig = null;
+      }
+      if (unsubscribeGlobalConfig) {
+        unsubscribeGlobalConfig();
+        unsubscribeGlobalConfig = null;
       }
       if (user && key) {
         console.log('[App] Ativando sincronização em tempo real para:', user.email);
@@ -170,14 +252,31 @@ export default function App() {
           });
         });
 
-        unsubscribeConfig = subscribeToCloudConfig(key, (cloudConfig) => {
-          if (cloudConfig?.templates) {
-            setTemplates((prev) => ({ ...prev, ...cloudConfig.templates }));
-            localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(cloudConfig.templates));
+        // Escuta configurações do usuário apenas se a fonte for 'user'
+        if (configSource === 'user') {
+          unsubscribeConfig = subscribeToCloudConfig(key, (cloudConfig) => {
+            if (cloudConfig?.templates) {
+              setTemplates((prev) => ({ ...prev, ...cloudConfig.templates }));
+              localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(cloudConfig.templates));
+            }
+            if (cloudConfig?.prompts) {
+              setPrompts((prev) => ({ ...prev, ...cloudConfig.prompts }));
+              localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(cloudConfig.prompts));
+            }
+          });
+        }
+      }
+
+      // Se a fonte for 'global', escuta mudanças no padrão global do Firestore
+      if (configSource === 'global') {
+        unsubscribeGlobalConfig = subscribeToGlobalDefaultConfig((globalConfig) => {
+          if (globalConfig?.templates) {
+            setTemplates((prev) => ({ ...prev, ...globalConfig.templates }));
+            localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(globalConfig.templates));
           }
-          if (cloudConfig?.prompts) {
-            setPrompts((prev) => ({ ...prev, ...cloudConfig.prompts }));
-            localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(cloudConfig.prompts));
+          if (globalConfig?.prompts) {
+            setPrompts((prev) => ({ ...prev, ...globalConfig.prompts }));
+            localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(globalConfig.prompts));
           }
         });
       }
@@ -231,9 +330,10 @@ export default function App() {
       unsubAuth();
       if (unsubscribeSnapshot) unsubscribeSnapshot();
       if (unsubscribeConfig) unsubscribeConfig();
+      if (unsubscribeGlobalConfig) unsubscribeGlobalConfig();
       if (unsubscribeApiKey) unsubscribeApiKey();
     };
-  }, [masterKey]);
+  }, [masterKey, configSource]);
 
   // UI Navigation & Modals
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1383,7 +1483,7 @@ export default function App() {
           .replace('{{SAT}}', vitals.sat || '--')
           .replace('{{TAX}}', vitals.tax || '--')
           .replace('{{EXAME_FISICO}}', exameFisico || 'Não informado')
-          .replace('{{HIPOTESE}}', aiResults.mainHypothesis ? (aiResults.selectedCid && !templates.prontuario.includes('{{CID}}') && !templates.prontuario.includes('{{CIDS}}') ? `${aiResults.mainHypothesis} (CID: ${aiResults.selectedCid})` : aiResults.mainHypothesis) : 'A esclarecer')
+          .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
           .replace('{{DIFERENCIAIS}}', aiResults.differentialDiagnoses?.length ? `Diferenciais: ${aiResults.differentialDiagnoses.join(' • ')}` : '')
           .replace('{{CID}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
           .replace('{{CIDS}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
@@ -1799,6 +1899,25 @@ export default function App() {
 
           {/* Right Status Actions */}
           <div className="flex items-center gap-2">
+            {/* Botão estético para ocultar / mostrar I.A. */}
+            {(activeTab === 'atendimento' || activeTab === 'evolucao') && (
+              <button
+                type="button"
+                onClick={toggleHideAiBoxes}
+                className={`h-8 px-2.5 rounded-lg border text-xs font-medium inline-flex items-center gap-1.5 transition-colors shadow-2xs ${
+                  hideAiBoxes
+                    ? 'bg-slate-100 dark:bg-[#202020] text-slate-500 dark:text-neutral-400 border-slate-200 dark:border-[#383838] hover:text-slate-800 dark:hover:text-white'
+                    : 'bg-white dark:bg-[#252525] text-slate-700 dark:text-neutral-200 border-slate-200 dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#2a2a2a]'
+                }`}
+                title={hideAiBoxes ? 'Mostrar boxes de Inteligência Artificial' : 'Ocultar boxes de Inteligência Artificial'}
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${hideAiBoxes ? 'text-slate-400 dark:text-neutral-500' : 'text-amber-500 dark:text-amber-400'}`} />
+                <span className="hidden sm:inline">
+                  {hideAiBoxes ? 'Mostrar IA' : 'Ocultar IA'}
+                </span>
+              </button>
+            )}
+
             {/* Salvar atendimento (Apenas ícone de disquete) */}
             <button
               type="button"
@@ -1852,6 +1971,7 @@ export default function App() {
             runAiMelhorarCondutas={runAiMelhorarCondutas}
             runAiOrientacoes={runAiOrientacoes}
             showToast={showToast}
+            hideAiBoxes={hideAiBoxes}
           />
         )}
 
@@ -1902,6 +2022,7 @@ export default function App() {
             setEvolucaoDocument={(val) => setDocuments((prev) => ({ ...prev, evolucao: val }))}
             generateEvolucaoDocument={generateEvolucaoDocument}
             toggleObservation={toggleObservation}
+            hideAiBoxes={hideAiBoxes}
           />
         )}
 
@@ -1960,6 +2081,8 @@ export default function App() {
         onSaveApiKey={handleSaveApiKey}
         model={model}
         onSaveModel={handleSaveModel}
+        configSource={configSource}
+        onSelectConfigSource={handleSelectConfigSource}
         onResetTemplates={handleResetTemplates}
         onExportDefaultsFile={handleExportDefaultsFile}
         onCopyDefaultsCode={handleCopyDefaultsCode}

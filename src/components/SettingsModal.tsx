@@ -9,6 +9,8 @@ interface SettingsModalProps {
   onSaveApiKey: (key: string) => void;
   model: string;
   onSaveModel: (model: string) => void;
+  configSource: 'defaults' | 'global' | 'user';
+  onSelectConfigSource: (source: 'defaults' | 'global' | 'user') => void;
   onResetTemplates: () => void;
   onExportDefaultsFile?: () => void;
   onCopyDefaultsCode?: () => Promise<void>;
@@ -23,6 +25,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSaveApiKey,
   model,
   onSaveModel,
+  configSource,
+  onSelectConfigSource,
   onResetTemplates,
   onExportDefaultsFile,
   onCopyDefaultsCode,
@@ -108,6 +112,78 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <option value="gemini-3.8-flash">Gemini 3.8 Flash (Mais Recente)</option>
               <option value="gemini-1.5-pro">Gemini 1.5 Pro (Raciocínio Clínico Aprofundado)</option>
             </select>
+          </div>
+
+          {/* Fonte de Templates e Prompts */}
+          <div className="pt-3 border-t border-[#ececeb] dark:border-[#333]/80 space-y-2">
+            <label className="block font-medium text-slate-700 dark:text-neutral-200 flex items-center gap-1.5">
+              <Database className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
+              Origem de Templates e Prompts
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              <label className={`flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors ${
+                configSource === 'global'
+                  ? 'border-indigo-400 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-950/20'
+                  : 'border-[#e5e5e5] dark:border-[#333] hover:bg-slate-50 dark:hover:bg-[#222]'
+              }`}>
+                <input
+                  type="radio"
+                  name="configSource"
+                  value="global"
+                  checked={configSource === 'global'}
+                  onChange={() => onSelectConfigSource('global')}
+                  className="mt-0.5"
+                />
+                <div>
+                  <span className="font-semibold text-slate-800 dark:text-neutral-200 block">Padrão Global (Firebase)</span>
+                  <span className="text-[11px] text-slate-500 dark:text-neutral-400 block">
+                    Usa os templates e prompts oficiais publicados na nuvem para todos os médicos.
+                  </span>
+                </div>
+              </label>
+
+              <label className={`flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors ${
+                configSource === 'defaults'
+                  ? 'border-indigo-400 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-950/20'
+                  : 'border-[#e5e5e5] dark:border-[#333] hover:bg-slate-50 dark:hover:bg-[#222]'
+              }`}>
+                <input
+                  type="radio"
+                  name="configSource"
+                  value="defaults"
+                  checked={configSource === 'defaults'}
+                  onChange={() => onSelectConfigSource('defaults')}
+                  className="mt-0.5"
+                />
+                <div>
+                  <span className="font-semibold text-slate-800 dark:text-neutral-200 block">Padrão do Código-Fonte (GitHub / defaults.ts)</span>
+                  <span className="text-[11px] text-slate-500 dark:text-neutral-400 block">
+                    Usa estritamente os padrões originais fixos compilados no aplicativo.
+                  </span>
+                </div>
+              </label>
+
+              <label className={`flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors ${
+                configSource === 'user'
+                  ? 'border-indigo-400 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-950/20'
+                  : 'border-[#e5e5e5] dark:border-[#333] hover:bg-slate-50 dark:hover:bg-[#222]'
+              }`}>
+                <input
+                  type="radio"
+                  name="configSource"
+                  value="user"
+                  checked={configSource === 'user'}
+                  onChange={() => onSelectConfigSource('user')}
+                  className="mt-0.5"
+                />
+                <div>
+                  <span className="font-semibold text-slate-800 dark:text-neutral-200 block">Personalizado deste Usuário (Firebase)</span>
+                  <span className="text-[11px] text-slate-500 dark:text-neutral-400 block">
+                    Sincroniza e salva suas próprias modificações individuais na sua conta da nuvem.
+                  </span>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* Padrões Globais do Sistema (Firebase) */}

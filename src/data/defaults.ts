@@ -73,18 +73,11 @@ Neurológico: Glasgow 15, pupilas isocóricas e fotorreagentes, sem déficits fo
 | Tabagismo: {{TABAGISMO}}
 | Etilismo: {{ETILISMO}}
 
-#SINAIS VITAIS:
-PA: {{PA}} mmHg | FC: {{FC}} bpm | FR: {{FR}} irpm | SatO2: {{SAT}}% | Tax: {{TAX}}ºC
-
 #EXAME FÍSICO:
+PA: {{PA}} mmHg | FC: {{FC}} bpm | FR: {{FR}} irpm | SatO2: {{SAT}}% | Tax: {{TAX}}ºC
 {{EXAME_FISICO}}
 
-#HIPÓTESE DIAGNÓSTICA:
-{{HIPOTESE}}
-{{DIFERENCIAIS}}
-
-#RESULTADO DE EXAMES:
-{{RESULTADOS_EXAMES}}
+#HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
 
 #CONDUTAS:
 {{CONDUTAS}}
@@ -316,7 +309,150 @@ TAX: {{TAX}} ºC
 {{EXAME_FISICO}}
 
 HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
-{{DIFERENCIAIS}}`
+{{DIFERENCIAIS}}`,
+  payloadPassagemPlantao: `IDENTIFICAÇÃO:
+Nome: {{NOME}}
+Idade: {{IDADE}} anos
+Sexo: {{SEXO}}
+Peso: {{PESO}}
+Altura: {{ALTURA}}
+
+QUEIXA PRINCIPAL: {{QP}}
+
+HISTÓRIA DA MOLÉSTIA ATUAL:
+{{HMA}}
+
+HISTÓRIA PATOLÓGICA PREGRESSA:
+Alergias: {{ALERGIAS}}
+Comorbidades: {{COMORBIDADES}}
+MUC (Medicações em Uso Contínuo): {{MUC}}
+Cirurgias Prévias: {{CIRURGIAS}}
+Tabagismo: {{TABAGISMO}}
+Etilismo: {{ETILISMO}}
+
+EXAME FÍSICO:
+PA: {{PA}} mmHg
+FC: {{FC}} bpm
+FR: {{FR}} irpm
+SatO2: {{SAT}} %
+TAX: {{TAX}} ºC
+{{EXAME_FISICO}}
+
+HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
+{{DIFERENCIAIS}}`,
+  payloadPassometro: `IDENTIFICAÇÃO:
+Nome: {{NOME}}
+Idade: {{IDADE}} anos
+Sexo: {{SEXO}}
+Peso: {{PESO}}
+Altura: {{ALTURA}}
+
+QUEIXA PRINCIPAL: {{QP}}
+
+HISTÓRIA DA MOLÉSTIA ATUAL:
+{{HMA}}
+
+HISTÓRIA PATOLÓGICA PREGRESSA:
+Alergias: {{ALERGIAS}}
+Comorbidades: {{COMORBIDADES}}
+MUC (Medicações em Uso Contínuo): {{MUC}}
+Cirurgias Prévias: {{CIRURGIAS}}
+Tabagismo: {{TABAGISMO}}
+Etilismo: {{ETILISMO}}
+
+EXAME FÍSICO:
+PA: {{PA}} mmHg
+FC: {{FC}} bpm
+FR: {{FR}} irpm
+SatO2: {{SAT}} %
+TAX: {{TAX}} ºC
+{{EXAME_FISICO}}
+
+HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
+
+CONDUTAS JÁ SUGERIDAS/REALIZADAS:
+{{CONDUTAS}}
+Medicações Unidade: {{MEDS_UNIDADE}}
+Medicações Casa: {{MEDS_CASA}}
+Exames Solicitados: {{EXAMES_SOLICITADOS}}
+
+RESULTADOS DE EXAMES (LABORATÓRIO / IMAGEM): {{RESULTADOS_EXAMES}}
+
+EVOLUÇÃO:
+Em observação: {{STATUS_OBSERVACAO}}
+Pendências da Reavaliação: {{PENDENCIAS_OBSERVACAO}}
+Resultados de Exames na Observação: {{RESULTADOS_EXAMES}}
+Reavaliação Clínica: {{REAVALIACAO_TEXTO}}
+Nova Hipótese / Conclusão: {{NOVA_HIPOTESE}}
+Novas Condutas: {{NOVAS_CONDUTAS}}`,
+  payloadReavaliacao: `IDENTIFICAÇÃO:
+Nome: {{NOME}}
+Idade: {{IDADE}} anos
+Sexo: {{SEXO}}
+Peso: {{PESO}}
+Altura: {{ALTURA}}
+
+QUEIXA PRINCIPAL: {{QP}}
+
+HISTÓRIA DA MOLÉSTIA ATUAL:
+{{HMA}}
+
+HISTÓRIA PATOLÓGICA PREGRESSA:
+Alergias: {{ALERGIAS}}
+Comorbidades: {{COMORBIDADES}}
+MUC (Medicações em Uso Contínuo): {{MUC}}
+Cirurgias Prévias: {{CIRURGIAS}}
+Tabagismo: {{TABAGISMO}}
+Etilismo: {{ETILISMO}}
+
+EXAME FÍSICO:
+PA: {{PA}} mmHg
+FC: {{FC}} bpm
+FR: {{FR}} irpm
+SatO2: {{SAT}} %
+TAX: {{TAX}} ºC
+{{EXAME_FISICO}}
+
+HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
+{{DIFERENCIAIS}}`,
+  payloadConclusaoObs: `IDENTIFICAÇÃO:
+Nome: {{NOME}}
+Idade: {{IDADE}} anos
+Sexo: {{SEXO}}
+Peso: {{PESO}}
+Altura: {{ALTURA}}
+
+QUEIXA PRINCIPAL: {{QP}}
+
+HISTÓRIA DA MOLÉSTIA ATUAL:
+{{HMA}}
+
+HISTÓRIA PATOLÓGICA PREGRESSA:
+Alergias: {{ALERGIAS}}
+Comorbidades: {{COMORBIDADES}}
+MUC (Medicações em Uso Contínuo): {{MUC}}
+Cirurgias Prévias: {{CIRURGIAS}}
+Tabagismo: {{TABAGISMO}}
+Etilismo: {{ETILISMO}}
+
+EXAME FÍSICO:
+PA: {{PA}} mmHg
+FC: {{FC}} bpm
+FR: {{FR}} irpm
+SatO2: {{SAT}} %
+TAX: {{TAX}} ºC
+{{EXAME_FISICO}}
+
+HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
+{{DIFERENCIAIS}}
+
+CONDUTAS:
+{{CONDUTAS}}
+
+OBSERVAÇÃO:
+Pendências da Reavaliação: {{PENDENCIAS_OBSERVACAO}}
+
+REAVALIAÇÃO CLÍNICA: {{REAVALIACAO_TEXTO}}`
 };
 
 export const DEFAULT_PROMPTS: SystemPrompts = {
@@ -360,13 +496,13 @@ Retorne no formato JSON especificado.`,
 
 Analise todo o caso clínico até o momento.
 
-1. Sugira medicações para administrar na unidade (PA) com dose e via. Enumere assim '1.'.
-2. Sugira medicações para uso domiciliar com posologia. Enumere assim '1.'.
+1. Sugira medicações para administrar na unidade (PA) com dose e via. Antes de cada medicação, enumere assim '1.'.
+2. Sugira medicações para uso domiciliar com posologia. Antes de cada medicação, enumere assim '1.'.
 3. PRIORIZE medicações disponíveis no SUS / RENAME / Farmácia Básica quando aplicável.
 4. ALERTA CRÍTICO: Verifique as alergias registradas na HPP e interação medicamentosa com medicações em uso. Se qualquer medicação for contraindicada, avise explicitamente.
 5. Disclaimers clínicos objetivos: ajuste de dose para idoso frágil, disfunção renal/hepática ou cuidados essenciais de infusão ou informações relevantes sobre cuidados com determinados fármacos.
 6. Lembrete de profilaxia antitetânica ou antirrábica se ferimento/mordedura/trauma.
-7. Exames laboratoriais e de imagem a solicitar para o caso. Enumere assim '1.'.
+7. Exames laboratoriais e de imagem a solicitar para o caso. Antes de cada exame, enumere assim '1.'.
 8. Sugira o desfecho: alta orientada, observação, internação ou transferência, com justificativa concisa.
 9. Indique se necessita encaminhamento para UBS/Ambulatório com justificativa, além de breve prognóstico mais provável do quadro.
 10. Indique se necessita atestado médico, com dias sugeridos e justificativa.
@@ -391,10 +527,12 @@ constar na Receita Domiciliar do paciente. Em orientações, faça em formato in
 3. Utilize linguagem fluida e em padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita. Mantenha objetivo, direto ao ponto e sem enrolação.
 
 Retorne no formato JSON especificado.`,
-  passagemPlantao: `Você é um médico plantonista passando caso para outro colega.
-Com base em todo o caso clínico acumulado, gere uma passagem de caso oral sintetizada, direta ao ponto, com:
-Idade, Sexo, QP, tempo de evolução, dados vitais alterados, exame físico relevante, HD principal, o que já foi feito e o status/plano atual.
-Máxima objetividade, linguagem médica fluida de beira de leito.`,
+  passagemPlantao: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil, passando um caso para outro médico plantonista para receber conselhos sobre hipótese diagnóstica e condutas do caso.
+
+Com base em todo o caso clínico acumulado, gere uma passagem de caso oral sintetizada, direta ao ponto, em texto contínuo, como se fosse para ser lido em uma conversa, com:
+Idade, Sexo, QP, tempo de evolução, dados vitais alterados, exame físico relevante, HD principal e o quais as condutas elencadas atualmente.
+
+Máxima objetividade, linguagem médica fluida de beira de leito, com linguagem humanizada e não robótica ou com aspectos de inteligência artificial, não use palavras exageradamente técnicas ou incomuns. Priorize apenas aspectos relevantes ao caso, ao entendimento de quem está ouvindo.`,
   passometro: `Você é um médico emergencista.
 Preencha o Passômetro com máxima objetividade para o caso clínico acumulado:
 - Identificação e Leito
@@ -402,12 +540,17 @@ Preencha o Passômetro com máxima objetividade para o caso clínico acumulado:
 - Condutas já realizadas
 - Pendências ativas (exames pendentes, resposta a drogas)
 - Sinais de alerta / Conduta se piorar.`,
-  reavaliacao: `Você é um médico assistente reavaliando um paciente em leito de observação de PA / UPA.
+  reavaliacao: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
+
 Com base no histórico do caso, queixa inicial, medicações administradas e no texto inicial digitado da reavaliação:
-1. Melhore e estruture a redação da Reavaliação Clínica (Estado Atual) em padrão médico de evolução (evolução dos sintomas, alívio da dor/febre, estabilidade hemodinâmica, tolerância oral).
+
+1. Melhore e estruture a redação da Reavaliação Clínica (Estado Atual) em padrão médico de evolução (evolução dos sintomas, alívio da dor/febre, estabilidade hemodinâmica, tolerância oral), de forma fluida, cronológica e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita.
+
 2. Aponte de 2 a 4 dados essenciais ou omissões que faltaram checar nesta reavaliação (ex: reavaliação de abdome pós-analgesia, diurese, saturação, novos sinais vitais).
+
 Retorne no formato JSON especificado.`,
-  conclusaoObs: `Você é um médico assistente concluindo a reavaliação de um paciente em leito de observação de PA / UPA.
+  conclusaoObs: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
+
 Com base em todo o caso (admissão, medicações recebidas, resultados de exames inseridos e estado atual da reavaliação):
 1. Defina a Conclusão / Nova Hipótese Diagnóstica (se mantida, refinada ou resolvida).
 2. Estabeleça as Novas Condutas Sugeridas (ex: alta médica com orientações/receitas domiciliares, manter em observação com nova dose, solicitar exames adicionais ou solicitar vaga de internação/transferência).

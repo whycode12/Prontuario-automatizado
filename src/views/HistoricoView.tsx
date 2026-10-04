@@ -189,7 +189,7 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onLoadRecord(rec)}
-                    className="h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors bg-ice-500 hover:bg-ice-600 text-white shadow-2xs"
+                    className="h-8 w-8 rounded-lg text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white bg-slate-100 dark:bg-[#252525] hover:bg-slate-200 dark:hover:bg-[#2e2e2e] border border-slate-200 dark:border-[#383838] transition-colors shadow-2xs flex items-center justify-center shrink-0"
                     title={isCurrent ? 'Continuar atendimento' : 'Carregar no prontuário'}
                   >
                     <ArrowRight className="w-4 h-4" />

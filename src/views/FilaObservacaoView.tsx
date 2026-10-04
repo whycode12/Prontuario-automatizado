@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bed, UserCheck, RotateCcw } from 'lucide-react';
+import { Bed, ArrowRight, RotateCcw } from 'lucide-react';
 import type { SavedPatientRecord } from '../types';
 
 interface FilaObservacaoViewProps {
@@ -35,6 +35,18 @@ function calculateTargetRevalTime(startedAt?: string, minutes: number = 120): st
   const targetH = Math.floor((total / 60) % 24);
   const targetM = total % 60;
   return `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`;
+}
+
+function formatConductsList(rawText: string): string[] {
+  if (!rawText || !rawText.trim()) return ['Acompanhamento clínico'];
+  // Separa por quebras de linha ou se tópicos estiverem com hífens no mesmo parágrafo
+  const lines = rawText
+    .split(/\n|(?<=[.;,\w])\s*-\s+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return ['Acompanhamento clínico'];
+  return lines;
 }
 
 export const FilaObservacaoView: React.FC<FilaObservacaoViewProps> = ({
@@ -147,13 +159,21 @@ export const FilaObservacaoView: React.FC<FilaObservacaoViewProps> = ({
                     <strong className="text-slate-700 dark:text-neutral-200">HD:</strong> {rec.aiResults?.mainHypothesis || rec.observation?.conclusionNewHypothesis || 'A esclarecer'}
                   </div>
 
-                  {/* Condutas */}
-                  <div className="text-xs text-slate-600 dark:text-neutral-300">
-                    <strong className="text-slate-700 dark:text-neutral-200">Condutas:</strong>{' '}
-                    {rec.observation?.newConducts ||
-                     (rec.aiResults?.unitMedications && rec.aiResults.unitMedications.length > 0
-                       ? rec.aiResults.unitMedications.join('; ')
-                       : rec.condutas || 'Acompanhamento clínico')}
+                  {/* Condutas com quebra inicial e quebra entre topicos */}
+                  <div className="text-xs text-slate-600 dark:text-neutral-300 space-y-1">
+                    <strong className="text-slate-700 dark:text-neutral-200 block">Condutas:</strong>
+                    <div className="space-y-0.5 pl-0.5">
+                      {formatConductsList(
+                        rec.observation?.newConducts ||
+                        (rec.aiResults?.unitMedications && rec.aiResults.unitMedications.length > 0
+                          ? rec.aiResults.unitMedications.join('\n')
+                          : rec.condutas || '')
+                      ).map((item, idx) => (
+                        <div key={idx} className="leading-snug">
+                          {item.startsWith('-') ? item : `- ${item}`}
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* O que reavaliar */}
@@ -168,11 +188,10 @@ export const FilaObservacaoView: React.FC<FilaObservacaoViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onSelectPatient(rec)}
-                    className="h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors bg-ice-500 hover:bg-ice-600 text-white shadow-2xs"
+                    className="h-8 w-8 rounded-lg text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white bg-slate-100 dark:bg-[#252525] hover:bg-slate-200 dark:hover:bg-[#2e2e2e] border border-slate-200 dark:border-[#383838] transition-colors shadow-2xs flex items-center justify-center shrink-0"
                     title={isSelected ? 'Abrir evolução médica' : 'Atender e evoluir paciente'}
                   >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>{isSelected ? 'Evolução' : 'Evoluir'}</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
 
                   <button

@@ -104,6 +104,7 @@ interface AtendimentoViewProps {
   runAiMelhorarCondutas: () => void;
   runAiOrientacoes: () => void;
   showToast: (msg: string) => void;
+  hideAiBoxes?: boolean;
 }
 
 export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
@@ -144,6 +145,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   runAiMelhorarCondutas,
   runAiOrientacoes,
   showToast,
+  hideAiBoxes = false,
 }) => {
   // Handler for selecting clinical outcome (Desfecho)
   const handleSelectOutcome = (dest: 'alta' | 'observacao' | 'internacao' | 'transferencia') => {
@@ -365,7 +367,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           />
 
           {/* Sugestão de Texto da IA com botão de engavetar e implementar */}
-          {aiResults.hmaSuggestion && (
+          {!hideAiBoxes && aiResults.hmaSuggestion && (
             <AIDrawer
               title="Sugestão da IA para HMA:"
               onImplement={() => {
@@ -382,7 +384,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
 
         {/* Box de Omissões Sugeridas pela IA com botão de engavetar */}
-        {aiResults.hmaMissingQuestions && aiResults.hmaMissingQuestions.length > 0 && (
+        {!hideAiBoxes && aiResults.hmaMissingQuestions && aiResults.hmaMissingQuestions.length > 0 && (
           <AIDrawer
             title="O que faltou investigar neste caso (IA):"
             variant="blue"
@@ -595,7 +597,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           />
 
           {/* Sugestão de Texto da IA para Exame Físico com engavetar */}
-          {aiResults.physicalExamSuggestion && (
+          {!hideAiBoxes && aiResults.physicalExamSuggestion && (
             <AIDrawer
               title="Sugestão da IA para Exame Físico:"
               onImplement={() => {
@@ -611,7 +613,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
 
         {/* Box de Manobras Sugeridas pela IA com engavetar */}
-        {aiResults.physicalExamMissingManeuvers && aiResults.physicalExamMissingManeuvers.length > 0 && (
+        {!hideAiBoxes && aiResults.physicalExamMissingManeuvers && aiResults.physicalExamMissingManeuvers.length > 0 && (
           <AIDrawer
             title="Manobras e partes do exame físico recomendadas para investigar (IA):"
             variant="blue"
@@ -652,7 +654,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
 
         {/* Compulsory Notification Alert com engavetar */}
-        {aiResults.isCompulsoryNotification && (
+        {!hideAiBoxes && aiResults.isCompulsoryNotification && (
           <AIDrawer
             title="ATENÇÃO (SINAN): Hipótese de Notificação Compulsória"
             icon={<ShieldAlert className="w-4 h-4 text-rose-500" />}
@@ -665,7 +667,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         )}
 
         {/* Clinical Scores Suggestion com engavetar */}
-        {aiResults.clinicalScores && aiResults.clinicalScores.length > 0 && (
+        {!hideAiBoxes && aiResults.clinicalScores && aiResults.clinicalScores.length > 0 && (
           <AIDrawer
             title="Escores Clínicos Automatizados (IA):"
             variant="indigo"
@@ -698,60 +700,62 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             />
 
             {/* Ranking de Hipóteses (Principal e Diferenciais) */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <span>Ranking de Hipóteses (IA)</span>
-              </div>
-              <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 min-h-[42px] max-h-36 overflow-y-auto bg-slate-50/50 dark:bg-navy-900">
-                {displayedHypotheses.length > 0 ? (
-                  displayedHypotheses.map((h, idx) => {
-                    const isSelected = selectedHypothesisIdx === idx;
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setSelectedHypothesisIdx(idx);
-                          setAiResults((prev) => ({ ...prev, mainHypothesis: h.nome }));
-                          showToast(`Hipótese "${h.nome}" transferida para o campo principal!`);
-                        }}
-                        className={`px-2.5 py-1.5 text-xs flex items-center justify-between cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'bg-ice-500/15 dark:bg-ice-500/20 text-ice-900 dark:text-ice-100 font-semibold border-l-2 border-l-ice-500'
-                            : 'hover:bg-slate-100 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-300'
-                        }`}
-                        title="Clique para transferir para a caixa de Hipótese Diagnóstica Principal"
-                      >
-                        <div className="truncate pr-2 flex items-center gap-1.5 min-w-0">
-                          {isSelected && <Check className="w-3.5 h-3.5 text-ice-500 shrink-0" />}
-                          <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
-                            #{idx + 1}
-                          </span>
-                          <span className="truncate text-slate-800 dark:text-ice-200">
-                            {h.nome}
-                          </span>
-                          {h.tipo && (
-                            <span className={`text-[9px] uppercase px-1 py-0.2 rounded shrink-0 font-medium ${
-                              h.tipo.toLowerCase() === 'principal'
-                                ? 'bg-ice-500/20 text-ice-700 dark:text-ice-300'
-                                : 'bg-slate-200 dark:bg-navy-800 text-slate-600 dark:text-slate-400'
-                            }`}>
-                              {h.tipo}
+            {!hideAiBoxes && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  <span>Ranking de Hipóteses (IA)</span>
+                </div>
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 min-h-[42px] max-h-36 overflow-y-auto bg-slate-50/50 dark:bg-navy-900">
+                  {displayedHypotheses.length > 0 ? (
+                    displayedHypotheses.map((h, idx) => {
+                      const isSelected = selectedHypothesisIdx === idx;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setSelectedHypothesisIdx(idx);
+                            setAiResults((prev) => ({ ...prev, mainHypothesis: h.nome }));
+                            showToast(`Hipótese "${h.nome}" transferida para o campo principal!`);
+                          }}
+                          className={`px-2.5 py-1.5 text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-ice-500/15 dark:bg-ice-500/20 text-ice-900 dark:text-ice-100 font-semibold border-l-2 border-l-ice-500'
+                              : 'hover:bg-slate-100 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                          title="Clique para transferir para a caixa de Hipótese Diagnóstica Principal"
+                        >
+                          <div className="truncate pr-2 flex items-center gap-1.5 min-w-0">
+                            {isSelected && <Check className="w-3.5 h-3.5 text-ice-500 shrink-0" />}
+                            <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
+                              #{idx + 1}
                             </span>
-                          )}
+                            <span className="truncate text-slate-800 dark:text-ice-200">
+                              {h.nome}
+                            </span>
+                            {h.tipo && (
+                              <span className={`text-[9px] uppercase px-1 py-0.2 rounded shrink-0 font-medium ${
+                                h.tipo.toLowerCase() === 'principal'
+                                  ? 'bg-ice-500/20 text-ice-700 dark:text-ice-300'
+                                  : 'bg-slate-200 dark:bg-navy-800 text-slate-600 dark:text-slate-400'
+                              }`}>
+                                {h.tipo}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getProbBadgeClass(h.prob)}`}>
+                            {h.prob}
+                          </span>
                         </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getProbBadgeClass(h.prob)}`}>
-                          {h.prob}
-                        </span>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="p-2.5 text-xs text-slate-400 dark:text-slate-500 italic text-center">
-                    Nenhuma hipótese gerada ainda.
-                  </div>
-                )}
+                      );
+                    })
+                  ) : (
+                    <div className="p-2.5 text-xs text-slate-400 dark:text-slate-500 italic text-center">
+                      Nenhuma hipótese gerada ainda.
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Coluna 2: CID */}
@@ -769,54 +773,56 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             />
 
             {/* Ranking de CIDs */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <span>Ranking de CID-10 (IA)</span>
-              </div>
-              <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 min-h-[42px] max-h-36 overflow-y-auto bg-slate-50/50 dark:bg-navy-900">
-                {aiResults.cidRankings && aiResults.cidRankings.length > 0 ? (
-                  aiResults.cidRankings.map((c, idx) => {
-                    const isSelected = selectedCidIdx === idx;
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setSelectedCidIdx(idx);
-                          const val = `${c.cid} - ${c.desc}`;
-                          setAiResults((prev) => ({ ...prev, selectedCid: val }));
-                        }}
-                        className={`px-2.5 py-1.5 text-xs flex items-center justify-between cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'bg-ice-500/15 dark:bg-ice-500/20 text-ice-900 dark:text-ice-100 font-semibold border-l-2 border-l-ice-500'
-                            : 'hover:bg-slate-100 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-300'
-                        }`}
-                        title="Clique para definir este CID no atendimento"
-                      >
-                        <div className="truncate pr-2 flex items-center gap-1.5 min-w-0">
-                          {isSelected && <Check className="w-3.5 h-3.5 text-ice-500 shrink-0" />}
-                          <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
-                            #{idx + 1}
-                          </span>
-                          <span className="font-mono font-bold text-slate-800 dark:text-ice-200 shrink-0">
-                            {c.cid}
-                          </span>
-                          <span className="truncate text-slate-600 dark:text-slate-300">
-                            {c.desc}
+            {!hideAiBoxes && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  <span>Ranking de CID-10 (IA)</span>
+                </div>
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 min-h-[42px] max-h-36 overflow-y-auto bg-slate-50/50 dark:bg-navy-900">
+                  {aiResults.cidRankings && aiResults.cidRankings.length > 0 ? (
+                    aiResults.cidRankings.map((c, idx) => {
+                      const isSelected = selectedCidIdx === idx;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setSelectedCidIdx(idx);
+                            const val = `${c.cid} - ${c.desc}`;
+                            setAiResults((prev) => ({ ...prev, selectedCid: val }));
+                          }}
+                          className={`px-2.5 py-1.5 text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-ice-500/15 dark:bg-ice-500/20 text-ice-900 dark:text-ice-100 font-semibold border-l-2 border-l-ice-500'
+                              : 'hover:bg-slate-100 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                          title="Clique para definir este CID no atendimento"
+                        >
+                          <div className="truncate pr-2 flex items-center gap-1.5 min-w-0">
+                            {isSelected && <Check className="w-3.5 h-3.5 text-ice-500 shrink-0" />}
+                            <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
+                              #{idx + 1}
+                            </span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-ice-200 shrink-0">
+                              {c.cid}
+                            </span>
+                            <span className="truncate text-slate-600 dark:text-slate-300">
+                              {c.desc}
+                            </span>
+                          </div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getProbBadgeClass(c.prob)}`}>
+                            {c.prob}
                           </span>
                         </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getProbBadgeClass(c.prob)}`}>
-                          {c.prob}
-                        </span>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="p-2.5 text-xs text-slate-400 dark:text-slate-500 italic text-center">
-                    Nenhum CID gerado ainda.
-                  </div>
-                )}
+                      );
+                    })
+                  ) : (
+                    <div className="p-2.5 text-xs text-slate-400 dark:text-slate-500 italic text-center">
+                      Nenhum CID gerado ainda.
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
@@ -852,7 +858,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
 
         {/* Tetanus/Rabies Warning if present com engavetar */}
-        {aiResults.tetanusRabiesAlert && (
+        {!hideAiBoxes && aiResults.tetanusRabiesAlert && (
           <AIDrawer
             title="Alerta de Profilaxia Antitetânica / Antirrábica (IA):"
             variant="blue"
@@ -864,7 +870,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         )}
 
         {/* Safety Disclaimers com engavetar */}
-        {aiResults.medicationDisclaimers && aiResults.medicationDisclaimers.length > 0 && (
+        {!hideAiBoxes && aiResults.medicationDisclaimers && aiResults.medicationDisclaimers.length > 0 && (
           <AIDrawer
             title="Alertas de Segurança Farmacológica (IA):"
             variant="blue"
@@ -960,7 +966,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         />
 
         {/* Sugestão da IA para Condutas com engavetar */}
-        {aiResults.condutasSuggestion && (
+        {!hideAiBoxes && aiResults.condutasSuggestion && (
           <AIDrawer
             title="Sugestão da IA para Condutas:"
             onImplement={() => {
