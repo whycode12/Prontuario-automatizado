@@ -189,62 +189,23 @@ Resultados de Exames na Observação: {{RESULTADOS_EXAMES}}
 Reavaliação Clínica: {{REAVALIACAO_TEXTO}}
 Nova Hipótese / Conclusão: {{NOVA_HIPOTESE}}
 Novas Condutas: {{NOVAS_CONDUTAS}}`,
-  payloadHma: `=== DADOS DO PACIENTE ===
+  payloadHma: `IDENTIFICAÇÃO:
 Nome: {{NOME}}
 Idade: {{IDADE}} anos
 Sexo: {{SEXO}}
 Peso: {{PESO}}
-Altura: {{ALTURA}} {{IMC}}
-D
-=== QUEIXA PRINCIPAL ===
-{{QP}}
+Altura: {{ALTURA}}
 
-=== HISTÓRIA DA MOLÉSTIA ATUAL (HMA) ===
-{{HMA}}
+QUEIXA PRINCIPAL: {{QP}}
 
-=== HISTÓRIA PATOLÓGICA PREGRESSA (HPP) ===
-Alergias: {{ALERGIAS}}
-Comorbidades: {{COMORBIDADES}}
-MUC (Medicações em Uso Contínuo): {{MUC}}
-Cirurgias Prévias: {{CIRURGIAS}}
-Tabagismo: {{TABAGISMO}}
-Etilismo: {{ETILISMO}}
-
-=== SINAIS VITAIS ===
-PA: {{PA}} mmHg
-FC: {{FC}} bpm
-FR: {{FR}} irpm
-SatO2: {{SAT}} %
-TAX: {{TAX}} ºC
-
-=== EXAME FÍSICO ===
-{{EXAME_FISICO}}
-
-=== RESULTADOS DE EXAMES (LABORATÓRIO / IMAGEM) ===
-{{RESULTADOS_EXAMES}}
-
-=== HIPÓTESE DIAGNÓSTICA (ATÉ AGORA) ===
-{{HIPOTESE}}
-{{DIFERENCIAIS}}
-
-=== CONDUTAS JÁ SUGERIDAS/REALIZADAS ===
-Medicações Unidade: {{MEDS_UNIDADE}}
-Medicações Casa: {{MEDS_CASA}}
-Exames Solicitados: {{EXAMES_SOLICITADOS}}
-
-=== STATUS DE OBSERVAÇÃO ===
-Em observação: {{STATUS_OBSERVACAO}}
-Pendências da Reavaliação: {{PENDENCIAS_OBSERVACAO}}
-Resultados de Exames na Observação: {{RESULTADOS_EXAMES}}
-Reavaliação Clínica: {{REAVALIACAO_TEXTO}}
-Nova Hipótese / Conclusão: {{NOVA_HIPOTESE}}
-Novas Condutas: {{NOVAS_CONDUTAS}}`,
+HISTÓRIA DA MOLÉSTIA ATUAL:
+{{HMA}}`,
   payloadExameFisico: `IDENTIFICAÇÃO:
 Nome: {{NOME}}
 Idade: {{IDADE}} anos
 Sexo: {{SEXO}}
 Peso: {{PESO}}
-Altura: {{ALTURA}} {{IMC}}
+Altura: {{ALTURA}}
 
 QUEIXA PRINCIPAL: {{QP}}
 
@@ -361,16 +322,27 @@ HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
 export const DEFAULT_PROMPTS: SystemPrompts = {
   hma: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
 Com base nos dados do paciente (Idade, Sexo, Peso, Altura, Queixa Principal e texto inicial da HMA), realize duas tarefas de forma direta, concisa e sem prolixidade:
+
 1. Melhore a redação da HMA tornando-a técnica, fluida, cronológica e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita.
+
 2. Sugira perguntas ou dados de anamnese essenciais que faltaram investigar para este caso específico, levando em consideração todo o caso, apresente as perguntas em ordem de prioridade ao caso.
+
 Retorne no formato JSON especificado.`,
   exameFisico: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
 
 Com base nos dados do paciente (Idade, Sexo, Peso, Altura, Queixa Principal e texto inicial da HMA), realize duas tarefas de forma direta, concisa e sem prolixidade:
 
-1. Melhore a redação da HMA tornando-a técnica, fluida, cronológica e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita.
+1. Melhore a redação da HMA tornando-a técnica, fluida, cronológica e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita. Porém, compare o exame físico do caso com o template padrão abaixo e só altere o que for diferente do template padrão, que se tratam de coisas que eu adicionei ao caso gostaria que você revisasse.
 
 2. Sugira perguntas ou dados de anamnese essenciais que faltaram investigar para este caso específico, levando em consideração todo o caso, apresente as perguntas em ordem de prioridade ao caso.
+
+Template padrão:
+'BEG, afebril, hidratado, corado, anictérico, acianótico, hemodinamicamente estável.
+AR: Eupneico, sem sinais de esforço respiratório. Sons respiratórios normais, sem RA.
+ACV: RCR 2T, BNF, sem sopros. Pulsos periféricos cheios e simétricos. TEC <3s. Extremidades bem aquecidas e perfundidas.
+AGI: Abdome plano, normotenso, RHA+, indolor a palpação superficial e profunda, sem sinais de irritação peritoneal. Murphy/Blumberg/Giordano negativos. Não palpo massas ou visceromegalias
+MMII: Panturrilhas livres, sem edema.
+Neurológico: Glasgow 15, pupilas isocóricas e fotorreagentes, sem déficits focais, sem sinais meníngeos.'
 
 Retorne no formato JSON especificado.`,
   diagnostico: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
