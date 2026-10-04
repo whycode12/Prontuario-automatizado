@@ -1,5 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, type User } from 'firebase/auth';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  type User
+} from 'firebase/auth';
 import {
   getFirestore,
   collection,
@@ -12,7 +18,6 @@ import {
 import type { SavedPatientRecord, SystemTemplates, SystemPrompts } from '../types';
 import { encryptData, decryptData } from './crypto';
 
-// Configuracao fornecida pelo usuario
 export const firebaseConfig = {
   apiKey: "AIzaSyANpSQZGQAeB5h19HIlkbu_fZ2ONinSRkQ",
   authDomain: "prontuario-automatizado.firebaseapp.com",
@@ -26,36 +31,53 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Garante que o usuario esteja autenticado de forma transparente via Firebase Auth
-export async function ensureAuth(): Promise<User> {
-  if (auth.currentUser) {
-    return auth.currentUser;
+// Converte login simples (CRM ou usuario) em formato aceito pelo Firebase Auth
+export function normalizeUserEmail(usernameOrEmail: string): string {
+  const clean = usernameOrEmail.trim().toLowerCase();
+  if (clean.includes('@')) {
+    return clean;
   }
-  return new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        unsubscribe();
-        resolve(user);
-      }
-    });
-
-    signInAnonymously(auth).catch((err) => {
-      unsubscribe();
-      reject(err);
-    });
-  });
+  // Se digitar apenas CRM ou nome de usuario (ex: thiago ou 123456sp), converte para login seguro
+  return `${clean.replace(/[^a-z0-9]/g, '')}@prontuario.med.br`;
 }
 
-// Salva ou atualiza um prontuario de paciente criptografado no Firestore
+// Cria conta para novo medico
+export async function registerDoctor(usernameOrEmail: string, password: string): Promise<User> {
+  const email = normalizeUserEmail(usernameOrEmail);
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  return cred.user;
+}
+
+// Faz login do medico
+export async function loginDoctor(usernameOrEmail: string, password: string): Promise<User> {
+  const email = normalizeUserEmail(usernameOrEmail);
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  return cred.user;
+}
+
+// Faz logout
+export async function logoutDoctor(): Promise<void> {
+  await signOut(auth);
+}
+
+// Retorna o UID do medico conectado
+export function getCurrentUserId(): string | null {
+  return auth.currentUser ? auth.currentUser.uid : null;
+}
+
+// Salva prontuario isolado no espaco deste medico especifico
+// Path: users/{userId}/records/{recordId}
 export async function saveRecordToCloud(
   record: SavedPatientRecord,
   encryptionKey: string
 ): Promise<void> {
-  await ensureAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nenhum médico autenticado.');
+
   const jsonString = JSON.stringify(record);
   const encryptedPayload = await encryptData(jsonString, encryptionKey);
 
-  const docRef = doc(db, 'records', record.id);
+  const docRef = doc(db, 'users', user.uid, 'records', record.id);
   await setDoc(
     docRef,
     {
@@ -63,19 +85,21 @@ export async function saveRecordToCloud(
       encryptedPayload,
       updatedAt: serverTimestamp(),
       savedAt: record.savedAt,
-      // Marcador de integridade
       isEncrypted: Boolean(encryptionKey)
     },
     { merge: true }
   );
 }
 
-// Carrega todos os prontuarios da nuvem e descriptografa usando a chave
+// Carrega somente os pacientes do medico conectado
 export async function fetchRecordsFromCloud(
   encryptionKey: string
 ): Promise<SavedPatientRecord[]> {
-  await ensureAuth();
-  const snapshot = await getDocs(collection(db, 'records'));
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nenhum médico autenticado.');
+
+  const recordsCol = collection(db, 'users', user.uid, 'records');
+  const snapshot = await getDocs(recordsCol);
   const records: SavedPatientRecord[] = [];
 
   for (const docSnap of snapshot.docs) {
@@ -86,47 +110,52 @@ export async function fetchRecordsFromCloud(
         const parsed = JSON.parse(decryptedJson) as SavedPatientRecord;
         records.push(parsed);
       } catch (err) {
-        console.warn(`Nao foi possivel descriptografar o registro ${docSnap.id}: chave incorreta`);
+        console.warn(`Registro ${docSnap.id} não pôde ser decifrado`);
       }
     }
   }
 
-  // Ordena por data decrescente
   records.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
   return records;
 }
 
-// Remove um prontuario da nuvem
+// Remove prontuario do espaco deste medico
 export async function deleteRecordFromCloud(recordId: string): Promise<void> {
-  await ensureAuth();
-  const docRef = doc(db, 'records', recordId);
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nenhum médico autenticado.');
+
+  const docRef = doc(db, 'users', user.uid, 'records', recordId);
   await deleteDoc(docRef);
 }
 
-// Salva configuracoes (templates e prompts) na nuvem
+// Salva configuracoes individuais deste medico
 export async function saveConfigToCloud(
   templates: SystemTemplates,
   prompts: SystemPrompts,
   encryptionKey: string
 ): Promise<void> {
-  await ensureAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nenhum médico autenticado.');
+
   const configPayload = JSON.stringify({ templates, prompts });
   const encryptedPayload = await encryptData(configPayload, encryptionKey);
 
-  const docRef = doc(db, 'settings', 'user_config');
+  const docRef = doc(db, 'users', user.uid, 'settings', 'config');
   await setDoc(docRef, {
     encryptedPayload,
     updatedAt: serverTimestamp()
   });
 }
 
-// Carrega configuracoes da nuvem
+// Carrega configuracoes individuais deste medico
 export async function fetchConfigFromCloud(
   encryptionKey: string
 ): Promise<{ templates?: SystemTemplates; prompts?: SystemPrompts } | null> {
-  await ensureAuth();
-  const snapshot = await getDocs(collection(db, 'settings'));
-  const configDoc = snapshot.docs.find((d) => d.id === 'user_config');
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nenhum médico autenticado.');
+
+  const snapshot = await getDocs(collection(db, 'users', user.uid, 'settings'));
+  const configDoc = snapshot.docs.find((d) => d.id === 'config');
   if (!configDoc) return null;
 
   const data = configDoc.data();

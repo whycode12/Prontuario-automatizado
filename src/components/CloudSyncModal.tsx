@@ -4,14 +4,22 @@ import {
   Lock,
   UploadCloud,
   DownloadCloud,
-  ShieldCheck,
   AlertCircle,
   Key,
   CheckCircle2,
   RefreshCw,
   FileDown,
-  FileUp
+  FileUp,
+  User,
+  LogOut,
+  UserCheck
 } from 'lucide-react';
+import {
+  auth,
+  loginDoctor,
+  registerDoctor,
+  logoutDoctor
+} from '../services/firebase';
 
 interface CloudSyncModalProps {
   isOpen: boolean;
@@ -36,39 +44,90 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   onExportLocalBackup,
   onImportLocalBackup,
 }) => {
-  const [keyInput, setKeyInput] = useState(encryptionKey);
-  const [showKey, setShowKey] = useState(false);
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+
+  // Form de Login / Cadastro
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+
+  // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   React.useEffect(() => {
-    setKeyInput(encryptionKey);
-  }, [encryptionKey]);
+    const unsub = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user);
+    });
+    return () => unsub();
+  }, []);
 
   if (!isOpen) return null;
 
-  const handleSaveKey = () => {
-    if (!keyInput.trim()) {
-      setStatusMessage({ type: 'error', text: 'Informe uma senha mestra para criptografar seus dados.' });
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!usernameInput.trim() || !passwordInput.trim()) {
+      setStatusMessage({ type: 'error', text: 'Preencha o identificador (CRM/Usuário/E-mail) e a senha.' });
       return;
     }
-    onSaveEncryptionKey(keyInput.trim());
-    setStatusMessage({ type: 'success', text: 'Senha mestra salva com sucesso!' });
-    setTimeout(() => setStatusMessage(null), 3000);
+    if (passwordInput.length < 6) {
+      setStatusMessage({ type: 'error', text: 'A senha deve ter no mínimo 6 caracteres.' });
+      return;
+    }
+
+    setAuthLoading(true);
+    setStatusMessage(null);
+    try {
+      if (isRegisterMode) {
+        await registerDoctor(usernameInput.trim(), passwordInput);
+        onSaveEncryptionKey(passwordInput);
+        setStatusMessage({ type: 'success', text: 'Conta de médico criada com sucesso!' });
+      } else {
+        await loginDoctor(usernameInput.trim(), passwordInput);
+        onSaveEncryptionKey(passwordInput);
+        setStatusMessage({ type: 'success', text: 'Login realizado com sucesso!' });
+      }
+      setUsernameInput('');
+      setPasswordInput('');
+    } catch (err: any) {
+      const code = err.code || '';
+      if (code === 'auth/email-already-in-use') {
+        setStatusMessage({ type: 'error', text: 'Esse usuário já existe. Alterne para Entrar.' });
+      } else if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+        setStatusMessage({ type: 'error', text: 'Usuário ou senha incorretos.' });
+      } else {
+        setStatusMessage({ type: 'error', text: err.message || 'Falha na autenticação.' });
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutDoctor();
+      setStatusMessage({ type: 'success', text: 'Desconectado com sucesso.' });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message });
+    }
   };
 
   const handleUpload = async () => {
-    if (!keyInput.trim()) {
-      setStatusMessage({ type: 'error', text: 'Defina e salve sua senha mestra antes de enviar para a nuvem.' });
+    if (!currentUser) {
+      setStatusMessage({ type: 'error', text: 'Você precisa estar logado para enviar à nuvem.' });
       return;
     }
-    onSaveEncryptionKey(keyInput.trim());
+    if (!encryptionKey) {
+      setStatusMessage({ type: 'error', text: 'Chave de criptografia ausente. Faça login novamente.' });
+      return;
+    }
     setIsSyncing(true);
     setStatusMessage(null);
     try {
       await onSyncToCloud();
-      setStatusMessage({ type: 'success', text: 'Todos os atendimentos foram criptografados e salvos no Firebase!' });
+      setStatusMessage({ type: 'success', text: 'Atendimentos criptografados e salvos no seu espaço exclusivo!' });
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: `Falha no envio: ${err.message || 'Erro ao conectar ao Firebase'}` });
     } finally {
@@ -77,18 +136,21 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   };
 
   const handleDownload = async () => {
-    if (!keyInput.trim()) {
-      setStatusMessage({ type: 'error', text: 'Informe sua senha mestra para descriptografar os dados da nuvem.' });
+    if (!currentUser) {
+      setStatusMessage({ type: 'error', text: 'Você precisa estar logado para baixar da nuvem.' });
       return;
     }
-    onSaveEncryptionKey(keyInput.trim());
+    if (!encryptionKey) {
+      setStatusMessage({ type: 'error', text: 'Chave de criptografia ausente. Faça login novamente.' });
+      return;
+    }
     setIsPulling(true);
     setStatusMessage(null);
     try {
       await onPullFromCloud();
-      setStatusMessage({ type: 'success', text: 'Dados baixados e descriptografados com sucesso no seu navegador!' });
+      setStatusMessage({ type: 'success', text: 'Seus pacientes foram baixados e restaurados no navegador!' });
     } catch (err: any) {
-      setStatusMessage({ type: 'error', text: `Falha no download: ${err.message || 'Verifique sua senha mestra'}` });
+      setStatusMessage({ type: 'error', text: `Falha no download: ${err.message || 'Erro de sincronização'}` });
     } finally {
       setIsPulling(false);
     }
@@ -105,67 +167,17 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-neutral-100 flex items-center gap-2">
-                Nuvem Firebase & Criptografia Ponta a Ponta
+                Acesso Individual por Médico & Nuvem Segura
               </h2>
               <p className="text-xs text-slate-500 dark:text-neutral-400">
-                Sincronize seus atendimentos entre dispositivos com segurança militar (AES-256).
+                Cada médico acessa exclusivamente seus próprios pacientes com isolamento total.
               </p>
             </div>
           </div>
         </div>
 
         {/* Body */}
-        <div className="p-5 space-y-5 text-xs text-slate-700 dark:text-neutral-300">
-          {/* Banner de Segurança */}
-          <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <span className="font-bold text-emerald-900 dark:text-emerald-200 block text-xs">
-                Arquitetura Zero-Knowledge (Sigilo Médico CFM / LGPD)
-              </span>
-              <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/80 leading-relaxed">
-                Os dados do paciente são criptografados no seu navegador <strong>antes</strong> de saírem para o Firebase. Nem o Google nem terceiros conseguem ler seus prontuários sem a sua Senha Mestra.
-              </p>
-            </div>
-          </div>
-
-          {/* Campo de Senha Mestra */}
-          <div className="space-y-2 bg-slate-50 dark:bg-[#1a1a1a] p-3.5 rounded-xl border border-slate-200 dark:border-[#2e2e2e]">
-            <div className="flex items-center justify-between">
-              <label className="font-semibold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-amber-500" />
-                Senha Mestra de Criptografia
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="text-[11px] text-slate-500 dark:text-neutral-400 hover:underline"
-              >
-                {showKey ? 'Ocultar' : 'Mostrar'}
-              </button>
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                placeholder="Crie ou digite sua senha mestra..."
-                className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-[#383838] bg-white dark:bg-[#252525] text-slate-800 dark:text-neutral-100 text-xs focus:outline-none focus:ring-1 focus:ring-ice-400"
-              />
-              <button
-                type="button"
-                onClick={handleSaveKey}
-                className="px-3 py-2 bg-white dark:bg-[#2a2a2a] border border-slate-300 dark:border-[#3a3a3a] rounded-lg hover:bg-slate-100 dark:hover:bg-[#333] font-medium text-xs transition-colors"
-              >
-                Salvar
-              </button>
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-neutral-500">
-              * Guarde essa senha com você. Você usará essa mesma senha para abrir seus dados em outro computador.
-            </p>
-          </div>
-
+        <div className="p-5 space-y-4 text-xs text-slate-700 dark:text-neutral-300">
           {/* Status Message */}
           {statusMessage && (
             <div
@@ -184,14 +196,101 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             </div>
           )}
 
-          {/* Ações de Sincronização */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            {/* Upload para o Firebase */}
+          {/* SESSÃO: MÉDICO CONECTADO OU FORMULÁRIO DE LOGIN */}
+          {currentUser ? (
+            <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-emerald-950 dark:text-emerald-200 block text-xs">
+                    Médico Conectado:
+                  </span>
+                  <span className="text-[11px] text-emerald-800/90 dark:text-emerald-300/80 font-mono">
+                    {currentUser.email?.replace('@prontuario.med.br', '')}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800 bg-white dark:bg-[#252525] text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                title="Sair desta conta"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sair</span>
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleAuthSubmit} className="space-y-3 bg-slate-50 dark:bg-[#1a1a1a] p-4 rounded-xl border border-slate-200 dark:border-[#2e2e2e]">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-800 dark:text-neutral-200 text-xs flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-ice-500" />
+                  {isRegisterMode ? 'Cadastrar Novo Médico' : 'Entrar com Conta de Médico'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterMode(!isRegisterMode)}
+                  className="text-xs text-ice-600 dark:text-ice-400 hover:underline font-medium"
+                >
+                  {isRegisterMode ? 'Já tem conta? Entrar' : 'Não tem conta? Cadastrar'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-neutral-400 mb-1">
+                    CRM ou Nome de Usuário
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    placeholder="Ex: thiago ou 123456sp"
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-[#383838] bg-white dark:bg-[#252525] text-slate-800 dark:text-neutral-100 text-xs focus:outline-none focus:ring-1 focus:ring-ice-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-neutral-400 mb-1">
+                    Senha Pessoal
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="Mínimo 6 caracteres..."
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-[#383838] bg-white dark:bg-[#252525] text-slate-800 dark:text-neutral-100 text-xs focus:outline-none focus:ring-1 focus:ring-ice-400"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-2 bg-ice-500 hover:bg-ice-600 text-white rounded-lg font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {authLoading ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Key className="w-3.5 h-3.5" />
+                )}
+                <span>{isRegisterMode ? 'Criar Conta de Médico' : 'Entrar no Meu Espaço'}</span>
+              </button>
+            </form>
+          )}
+
+          {/* Sincronização em Nuvem (Disponível quando logado) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <button
               type="button"
-              disabled={isSyncing || isPulling}
+              disabled={!currentUser || isSyncing || isPulling}
               onClick={handleUpload}
-              className="p-3.5 rounded-xl border border-ice-500/30 bg-ice-50/40 dark:bg-ice-950/20 hover:bg-ice-500/10 dark:hover:bg-ice-900/40 flex flex-col items-center justify-center text-center gap-2 transition-all group disabled:opacity-50"
+              className="p-3.5 rounded-xl border border-ice-500/30 bg-ice-50/40 dark:bg-ice-950/20 hover:bg-ice-500/10 dark:hover:bg-ice-900/40 flex flex-col items-center justify-center text-center gap-2 transition-all group disabled:opacity-40"
             >
               <div className="w-8 h-8 rounded-lg bg-ice-500 text-white flex items-center justify-center shadow-xs">
                 {isSyncing ? (
@@ -202,20 +301,19 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               </div>
               <div>
                 <span className="font-bold text-slate-900 dark:text-neutral-100 text-xs block">
-                  Enviar para a Nuvem
+                  Enviar para Meu Espaço
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-neutral-400 block mt-0.5">
-                  Criptografa e sobe os {localRecordsCount} registros deste navegador
+                  Sobe os {localRecordsCount} registros deste navegador
                 </span>
               </div>
             </button>
 
-            {/* Download do Firebase */}
             <button
               type="button"
-              disabled={isSyncing || isPulling}
+              disabled={!currentUser || isSyncing || isPulling}
               onClick={handleDownload}
-              className="p-3.5 rounded-xl border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] flex flex-col items-center justify-center text-center gap-2 transition-all group disabled:opacity-50"
+              className="p-3.5 rounded-xl border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] flex flex-col items-center justify-center text-center gap-2 transition-all group disabled:opacity-40"
             >
               <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#333] text-slate-700 dark:text-neutral-200 flex items-center justify-center shadow-xs">
                 {isPulling ? (
@@ -226,26 +324,26 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               </div>
               <div>
                 <span className="font-bold text-slate-900 dark:text-neutral-100 text-xs block">
-                  Baixar da Nuvem
+                  Baixar Meus Pacientes
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-neutral-400 block mt-0.5">
-                  Restaura e mescla atendimentos salvos no Firebase
+                  Restaura apenas os pacientes deste médico
                 </span>
               </div>
             </button>
           </div>
 
-          {/* Backup de Emergência em Arquivo Local */}
+          {/* Backup Offline em Arquivo */}
           <div className="pt-3 border-t border-slate-200 dark:border-[#2e2e2e] space-y-2">
             <span className="font-semibold text-slate-800 dark:text-neutral-200 text-xs block">
-              🛡️ Cópia de Emergência Offline (Caso esqueça a senha da nuvem)
+              🛡️ Cópia de Emergência Offline (Exportar / Importar Arquivo)
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={onExportLocalBackup}
                 className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] text-slate-700 dark:text-neutral-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
-                title="Baixar arquivo de backup com todos os dados"
+                title="Baixar arquivo com todos os dados"
               >
                 <FileDown className="w-3.5 h-3.5 text-slate-500" />
                 <span>Exportar Arquivo (.json)</span>
@@ -268,16 +366,13 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                 />
               </label>
             </div>
-            <p className="text-[10px] text-slate-400 dark:text-neutral-500">
-              * Baixe um arquivo leve no seu computador como segurança extra. Se você esquecer a senha mestra, basta restaurar esse arquivo.
-            </p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="p-4 bg-slate-50 dark:bg-[#1c1c1c] border-t border-slate-200 dark:border-[#2e2e2e] flex items-center justify-between">
           <span className="text-[11px] text-slate-400 dark:text-neutral-500 flex items-center gap-1">
-            <Lock className="w-3 h-3" /> Conexão direta com Firestore
+            <Lock className="w-3 h-3" /> Isolamento por UID + Criptografia AES-256
           </span>
           <button
             type="button"

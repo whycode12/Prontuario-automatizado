@@ -33,6 +33,7 @@ import { buildCaseContextPayload, callGeminiApi } from './services/gemini';
 import { SettingsModal } from './components/SettingsModal';
 import { CloudSyncModal } from './components/CloudSyncModal';
 import {
+  auth,
   saveRecordToCloud,
   fetchRecordsFromCloud,
   deleteRecordFromCloud,
@@ -138,6 +139,14 @@ export default function App() {
   const [masterKey, setMasterKey] = useState<string>(() => {
     return localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
   });
+  const [currentDoctor, setCurrentDoctor] = useState(auth.currentUser);
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      setCurrentDoctor(user);
+    });
+    return () => unsub();
+  }, []);
 
   // UI Navigation & Modals
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1265,15 +1274,19 @@ export default function App() {
             className={`w-full flex items-center ${
               sidebarOpen ? 'justify-between px-2.5 py-1.5' : 'justify-center p-2'
             } rounded-md text-xs text-slate-600 dark:text-neutral-400 hover:bg-[#efefee] dark:hover:bg-[#262626] hover:text-slate-900 dark:hover:text-white transition-colors`}
-            title="Nuvem Firebase (Criptografia AES-256)"
+            title={currentDoctor ? `Médico: ${currentDoctor.email?.replace('@prontuario.med.br', '')}` : "Nuvem Firebase (Entrar / Cadastrar)"}
           >
             <div className="flex items-center gap-2 truncate">
-              <Cloud className="w-3.5 h-3.5 text-ice-500 shrink-0" />
-              {sidebarOpen && <span className="truncate">Nuvem Firebase</span>}
+              <Cloud className={`w-3.5 h-3.5 shrink-0 ${currentDoctor ? 'text-emerald-500' : 'text-slate-400 dark:text-neutral-500'}`} />
+              {sidebarOpen && (
+                <span className="truncate">
+                  {currentDoctor ? currentDoctor.email?.replace('@prontuario.med.br', '') : 'Nuvem / Login'}
+                </span>
+              )}
             </div>
             {sidebarOpen && (
-              <span className="text-[10px] font-semibold text-ice-500 uppercase">
-                {masterKey ? 'Ativo' : 'Off'}
+              <span className={`text-[10px] font-semibold uppercase ${currentDoctor ? 'text-emerald-500' : 'text-slate-400'}`}>
+                {currentDoctor ? 'Online' : 'Entrar'}
               </span>
             )}
           </button>
