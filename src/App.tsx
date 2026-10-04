@@ -38,7 +38,8 @@ import {
   fetchRecordsFromCloud,
   deleteRecordFromCloud,
   saveConfigToCloud,
-  fetchConfigFromCloud
+  fetchConfigFromCloud,
+  subscribeToCloudRecords
 } from './services/firebase';
 
 import { AtendimentoView } from './views/AtendimentoView';
@@ -142,13 +143,19 @@ export default function App() {
   const [currentDoctor, setCurrentDoctor] = useState(auth.currentUser);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(async (user) => {
+    let unsubscribeSnapshot: (() => void) | null = null;
+
+    const unsubAuth = auth.onAuthStateChanged(async (user) => {
       setCurrentDoctor(user);
-      // Se o médico estiver autenticado e houver chave salva, sincroniza os pacientes automaticamente
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+      }
+
       const savedKey = localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY);
       if (user && savedKey) {
-        try {
-          const cloudRecords = await fetchRecordsFromCloud(savedKey);
+        // 1. Ouve alterações em tempo real no Firestore (se alterar no PC A, atualiza no PC B na hora)
+        unsubscribeSnapshot = subscribeToCloudRecords(savedKey, (cloudRecords) => {
           if (cloudRecords.length > 0) {
             setSavedRecords((prev) => {
               const map = new Map<string, SavedPatientRecord>();
@@ -161,12 +168,14 @@ export default function App() {
               return merged;
             });
           }
-        } catch (err) {
-          console.warn('Erro ao sincronizar dados na inicialização:', err);
-        }
+        });
       }
     });
-    return () => unsub();
+
+    return () => {
+      unsubAuth();
+      if (unsubscribeSnapshot) unsubscribeSnapshot();
+    };
   }, []);
 
   // UI Navigation & Modals
@@ -355,9 +364,10 @@ export default function App() {
       showToast(patient.nome ? `Atendimento de ${patient.nome} atualizado!` : 'Atendimento salvo com sucesso!');
     }
 
-    // Se tiver chave mestra configurada, sincroniza silenciosamente com o Firebase na nuvem
-    if (masterKey.trim()) {
-      saveRecordToCloud(recordToSave, masterKey.trim()).catch((err) => {
+    // Sincroniza silenciosamente com o Firebase na nuvem
+    const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+    if (activeKey) {
+      saveRecordToCloud(recordToSave, activeKey).catch((err) => {
         console.warn('Erro ao salvar no Firebase:', err);
       });
     }

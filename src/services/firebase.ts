@@ -13,7 +13,8 @@ import {
   setDoc,
   getDocs,
   deleteDoc,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from 'firebase/firestore';
 import type { SavedPatientRecord, SystemTemplates, SystemPrompts } from '../types';
 import { encryptData, decryptData } from './crypto';
@@ -117,6 +118,40 @@ export async function fetchRecordsFromCloud(
 
   records.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
   return records;
+}
+
+// Ouve em tempo real as mudanças no Firestore e atualiza automaticamente em outros PCs
+export function subscribeToCloudRecords(
+  encryptionKey: string,
+  onRecordsUpdated: (records: SavedPatientRecord[]) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const recordsCol = collection(db, 'users', user.uid, 'records');
+  return onSnapshot(
+    recordsCol,
+    async (snapshot) => {
+      const records: SavedPatientRecord[] = [];
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        if (data.encryptedPayload) {
+          try {
+            const decryptedJson = await decryptData(data.encryptedPayload, encryptionKey);
+            const parsed = JSON.parse(decryptedJson) as SavedPatientRecord;
+            records.push(parsed);
+          } catch {
+            // Ignora se nao conseguir decifrar
+          }
+        }
+      }
+      records.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+      onRecordsUpdated(records);
+    },
+    (error) => {
+      console.warn('Erro na escuta em tempo real do Firestore:', error);
+    }
+  );
 }
 
 // Remove prontuario do espaco deste medico
