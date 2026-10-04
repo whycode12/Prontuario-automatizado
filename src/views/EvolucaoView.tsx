@@ -1,0 +1,353 @@
+import React from 'react';
+import { Bed, AlertTriangle, ArrowDownToLine, Sparkles } from 'lucide-react';
+import type { ObservationData, AIResult, SystemTemplates, SystemPrompts } from '../types';
+import { UndoableTextarea } from '../components/UndoableTextarea';
+import { AIActionButton } from '../components/AIActionButton';
+import { TemplateEditorButton } from '../components/TemplateEditorButton';
+
+interface EvolucaoViewProps {
+  patientName: string;
+  observation: ObservationData;
+  setObservation: React.Dispatch<React.SetStateAction<ObservationData>>;
+  examResults: string;
+  setExamResults: (val: string) => void;
+  aiResults: AIResult;
+  aiLoading: Record<string, boolean>;
+  prompts: SystemPrompts;
+  templates: SystemTemplates;
+  getCasePayload: (key: keyof SystemTemplates) => string;
+  getPayloadTemplate: (key: keyof SystemTemplates) => string;
+  handleSavePrompt: (key: keyof SystemPrompts, value: string) => void;
+  handleResetSinglePrompt: (key: keyof SystemPrompts) => void;
+  handleSaveTemplate: (key: keyof SystemTemplates, value: string) => void;
+  handleResetSinglePayloadTemplate: (key: keyof SystemTemplates) => void;
+  runAiReavaliacao: () => void;
+  runAiConclusaoObs: () => void;
+  evolucaoDocument: string;
+  setEvolucaoDocument: (val: string) => void;
+  generateEvolucaoDocument: () => void;
+  toggleObservation: () => void;
+}
+
+export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
+  patientName,
+  observation,
+  setObservation,
+  examResults,
+  setExamResults,
+  aiResults,
+  aiLoading,
+  prompts,
+  templates,
+  getCasePayload,
+  getPayloadTemplate,
+  handleSavePrompt,
+  handleResetSinglePrompt,
+  handleSaveTemplate,
+  handleResetSinglePayloadTemplate,
+  runAiReavaliacao,
+  runAiConclusaoObs,
+  evolucaoDocument,
+  setEvolucaoDocument,
+  generateEvolucaoDocument,
+  toggleObservation,
+}) => {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* 1. Header Box: Patient status in observation */}
+      <section className="bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-xl p-4 space-y-3 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Bed className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-amber-950 dark:text-amber-100 uppercase tracking-wide">
+                Controle do Leito: {patientName ? `Paciente ${patientName}` : 'Paciente Atual'}
+              </h2>
+              <span className="text-xs text-amber-800/80 dark:text-amber-300">
+                Início: <strong>{observation.startedAt || 'Não iniciado'}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleObservation}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs ${
+                observation.inObservation
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
+                  : 'bg-white dark:bg-navy-900 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-navy-800'
+              }`}
+            >
+              {observation.inObservation ? 'EM OBSERVAÇÃO CLÍNICA' : '+ Colocar em Observação'}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm pt-1">
+          <div>
+            <label className="block text-amber-900 dark:text-amber-300 text-xs font-semibold mb-1">
+              Tempo para Reavaliação
+            </label>
+            <select
+              value={observation.revaluationTimeMinutes}
+              onChange={(e) =>
+                setObservation({ ...observation, revaluationTimeMinutes: Number(e.target.value) })
+              }
+              className="w-full px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+            >
+              <option value={30}>30 minutos (Rápida)</option>
+              <option value={60}>1 hora (60 min)</option>
+              <option value={120}>2 horas (120 min)</option>
+              <option value={240}>4 horas (240 min)</option>
+              <option value={360}>6 horas (360 min)</option>
+            </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-amber-900 dark:text-amber-300 text-xs font-semibold mb-1">
+              O que Reavaliar na Observação (Pendências / Alvos Clínicos)
+            </label>
+            <input
+              type="text"
+              value={observation.whatToReevaluate}
+              onChange={(e) => setObservation({ ...observation, whatToReevaluate: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Resultados de Exames Realizados (Laboratório & Imagem) */}
+      <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-2">
+        <div className="flex items-center justify-between pb-1">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+              Resultados de Exames Realizados (Laboratório & Imagem)
+            </h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Insira os laudos ou dados brutos dos exames liberados. A IA usará esses resultados na reavaliação.
+            </p>
+          </div>
+        </div>
+        <UndoableTextarea
+          value={examResults}
+          onChange={setExamResults}
+          rows={3}
+        />
+      </section>
+
+      {/* 3. Reavaliação Clínica com IA */}
+      <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+            Reavaliação Clínica (Estado Atual do Paciente)
+          </h2>
+          <AIActionButton
+            label="Aprimorar Reavaliação com IA"
+            onExecute={runAiReavaliacao}
+            isLoading={!!aiLoading.reavaliacao}
+            promptKey="reavaliacao"
+            currentPrompt={prompts.reavaliacao}
+            onSavePrompt={(p) => handleSavePrompt('reavaliacao', p)}
+            onResetPrompt={() => handleResetSinglePrompt('reavaliacao')}
+            contextPayload={getCasePayload('payloadReavaliacao')}
+            payloadTemplate={getPayloadTemplate('payloadReavaliacao')}
+            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadReavaliacao', t)}
+            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadReavaliacao')}
+          />
+        </div>
+
+        <UndoableTextarea
+          value={observation.clinicalReevaluationText}
+          onChange={(val) => setObservation({ ...observation, clinicalReevaluationText: val })}
+          rows={4}
+        />
+
+        {/* Sugestão de Texto da IA para Reavaliação Clínica */}
+        {aiResults.reevaluationSuggestion && (
+          <div className="p-3 rounded-lg border border-[#e5e5e5] dark:border-[#333] bg-[#fbfbfa] dark:bg-[#202020] space-y-2 animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
+                Sugestão da IA para Reavaliação Clínica:
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setObservation((prev) => ({
+                    ...prev,
+                    clinicalReevaluationText: aiResults.reevaluationSuggestion || ''
+                  }));
+                }}
+                className="px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-[#262626] border border-[#d4d4d4] dark:border-[#3e3e3e] text-slate-700 dark:text-neutral-200 hover:bg-[#f0f0f0] dark:hover:bg-[#303030] flex items-center gap-1.5 transition-colors shadow-2xs"
+                title="Substituir texto da Reavaliação por esta sugestão"
+              >
+                <ArrowDownToLine className="w-3.5 h-3.5" />
+                <span>Implementar no campo</span>
+              </button>
+            </div>
+            <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
+              {aiResults.reevaluationSuggestion}
+            </p>
+          </div>
+        )}
+
+        {/* Box de Checagens Faltantes Sugeridas pela IA */}
+        {aiResults.missingReevaluationChecks && aiResults.missingReevaluationChecks.length > 0 && (
+          <div className="bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 rounded-lg p-3 text-xs space-y-1.5 animate-in fade-in">
+            <span className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 text-xs">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              Checagens recomendadas pela IA que faltou investigar na reavaliação:
+            </span>
+            <ul className="list-disc list-inside text-amber-800 dark:text-amber-200 space-y-0.5 pl-1 text-xs">
+              {aiResults.missingReevaluationChecks.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      {/* 4. Conclusão / Nova Hipótese & Novas Condutas com IA */}
+      <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+            Conclusão / Nova Hipótese & Novas Condutas
+          </h2>
+          <AIActionButton
+            label="Sugerir Nova Hipótese & Condutas (IA)"
+            onExecute={runAiConclusaoObs}
+            isLoading={!!aiLoading.conclusaoObs}
+            promptKey="conclusaoObs"
+            currentPrompt={prompts.conclusaoObs}
+            onSavePrompt={(p) => handleSavePrompt('conclusaoObs', p)}
+            onResetPrompt={() => handleResetSinglePrompt('conclusaoObs')}
+            contextPayload={getCasePayload('payloadConclusaoObs')}
+            payloadTemplate={getPayloadTemplate('payloadConclusaoObs')}
+            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConclusaoObs', t)}
+            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConclusaoObs')}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs mb-1.5">
+              Conclusão / Nova Hipótese Diagnóstica
+            </label>
+            <UndoableTextarea
+              value={observation.conclusionNewHypothesis}
+              onChange={(val) => setObservation({ ...observation, conclusionNewHypothesis: val })}
+              rows={3}
+            />
+
+            {/* Sugestão da IA para Nova Hipótese */}
+            {aiResults.conclusionHypothesisSuggestion && (
+              <div className="mt-2.5 p-3 rounded-lg border border-[#e5e5e5] dark:border-[#333] bg-[#fbfbfa] dark:bg-[#202020] space-y-2 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
+                    Sugestão da IA para Hipótese:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setObservation((prev) => ({
+                        ...prev,
+                        conclusionNewHypothesis: aiResults.conclusionHypothesisSuggestion || ''
+                      }));
+                    }}
+                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-[#262626] border border-[#d4d4d4] dark:border-[#3e3e3e] text-slate-700 dark:text-neutral-200 hover:bg-[#f0f0f0] dark:hover:bg-[#303030] flex items-center gap-1.5 transition-colors shadow-2xs"
+                    title="Substituir texto da Hipótese por esta sugestão"
+                  >
+                    <ArrowDownToLine className="w-3.5 h-3.5" />
+                    <span>Implementar no campo</span>
+                  </button>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
+                  {aiResults.conclusionHypothesisSuggestion}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs mb-1.5">
+              Novas Condutas Sugeridas (Alta, Prescrição ou Internação)
+            </label>
+            <UndoableTextarea
+              value={observation.newConducts}
+              onChange={(val) => setObservation({ ...observation, newConducts: val })}
+              rows={3}
+            />
+
+            {/* Sugestão da IA para Novas Condutas */}
+            {aiResults.newConductsSuggestion && (
+              <div className="mt-2.5 p-3 rounded-lg border border-[#e5e5e5] dark:border-[#333] bg-[#fbfbfa] dark:bg-[#202020] space-y-2 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
+                    Sugestão da IA para Condutas:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setObservation((prev) => ({
+                        ...prev,
+                        newConducts: aiResults.newConductsSuggestion || ''
+                      }));
+                    }}
+                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-[#262626] border border-[#d4d4d4] dark:border-[#3e3e3e] text-slate-700 dark:text-neutral-200 hover:bg-[#f0f0f0] dark:hover:bg-[#303030] flex items-center gap-1.5 transition-colors shadow-2xs"
+                    title="Substituir texto das Condutas por esta sugestão"
+                  >
+                    <ArrowDownToLine className="w-3.5 h-3.5" />
+                    <span>Implementar no campo</span>
+                  </button>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
+                  {aiResults.newConductsSuggestion}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Documento Final #EVOLUÇÃO MÉDICA */}
+      <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 tracking-wide uppercase">
+              Evolução Médica da Reavaliação (Documento Final)
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <TemplateEditorButton
+              label="Evolução"
+              templateKey="evolucao"
+              currentTemplate={templates.evolucao}
+              onSaveTemplate={(t) => handleSaveTemplate('evolucao', t)}
+            />
+            <button
+              type="button"
+              onClick={generateEvolucaoDocument}
+              className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-slate-900 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+            >
+              <span>Compilar Evolução</span>
+            </button>
+          </div>
+        </div>
+
+        <UndoableTextarea
+          value={evolucaoDocument}
+          onChange={setEvolucaoDocument}
+          rows={10}
+          placeholder="Clique em 'Compilar Evolução' para preencher automaticamente com os dados do caso..."
+          className="font-mono text-xs leading-relaxed"
+        />
+      </section>
+    </div>
+  );
+};
