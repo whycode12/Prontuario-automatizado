@@ -42,7 +42,10 @@ import {
   subscribeToCloudRecords,
   subscribeToCloudConfig,
   saveGlobalDefaultConfig,
-  fetchGlobalDefaultConfig
+  fetchGlobalDefaultConfig,
+  saveUserApiKey,
+  fetchUserApiKey,
+  subscribeToUserApiKey
 } from './services/firebase';
 import { downloadDefaultsFile, copyDefaultsCodeToClipboard } from './utils/defaultsExporter';
 
@@ -149,6 +152,7 @@ export default function App() {
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | null = null;
     let unsubscribeConfig: (() => void) | null = null;
+    let unsubscribeApiKey: (() => void) | null = null;
 
     const setupListener = (user: typeof auth.currentUser, key: string) => {
       if (unsubscribeSnapshot) {
@@ -187,22 +191,55 @@ export default function App() {
       }
     };
 
+    const setupApiKeyListener = (user: typeof auth.currentUser) => {
+      if (unsubscribeApiKey) {
+        unsubscribeApiKey();
+        unsubscribeApiKey = null;
+      }
+      if (user) {
+        // Tenta carregar do cache local específico deste usuário
+        const userCachedKey = localStorage.getItem(`${STORAGE_KEYS.API_KEY}_${user.uid}`);
+        if (userCachedKey) {
+          setApiKey(userCachedKey);
+        }
+        // Busca da nuvem (Firestore)
+        fetchUserApiKey().then((cloudKey) => {
+          if (cloudKey) {
+            setApiKey(cloudKey);
+            localStorage.setItem(`${STORAGE_KEYS.API_KEY}_${user.uid}`, cloudKey);
+            localStorage.setItem(STORAGE_KEYS.API_KEY, cloudKey);
+          }
+        });
+        // Conecta escuta em tempo real da apiKey na nuvem
+        unsubscribeApiKey = subscribeToUserApiKey((newKey) => {
+          if (newKey) {
+            setApiKey(newKey);
+            localStorage.setItem(`${STORAGE_KEYS.API_KEY}_${user.uid}`, newKey);
+            localStorage.setItem(STORAGE_KEYS.API_KEY, newKey);
+          }
+        });
+      }
+    };
+
     const unsubAuth = auth.onAuthStateChanged((user) => {
       setCurrentDoctor(user);
       const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
       setupListener(user, activeKey);
+      setupApiKeyListener(user);
     });
 
-    // Se já houver médico e chave no estado, conecta imediatamente
+    // Se já houver médico conectado, inicia listeners
     const currentKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
-    if (auth.currentUser && currentKey) {
-      setupListener(auth.currentUser, currentKey);
+    if (auth.currentUser) {
+      if (currentKey) setupListener(auth.currentUser, currentKey);
+      setupApiKeyListener(auth.currentUser);
     }
 
     return () => {
       unsubAuth();
       if (unsubscribeSnapshot) unsubscribeSnapshot();
       if (unsubscribeConfig) unsubscribeConfig();
+      if (unsubscribeApiKey) unsubscribeApiKey();
     };
   }, [masterKey]);
 
@@ -281,10 +318,21 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Sync to local storage
-  const handleSaveApiKey = (key: string) => {
+  // Sync to local storage & cloud
+  const handleSaveApiKey = async (key: string) => {
     setApiKey(key);
     localStorage.setItem(STORAGE_KEYS.API_KEY, key);
+    if (auth.currentUser) {
+      localStorage.setItem(`${STORAGE_KEYS.API_KEY}_${auth.currentUser.uid}`, key);
+      try {
+        await saveUserApiKey(key);
+        showToast('Chave de API salva na sua conta na nuvem!');
+      } catch (err: any) {
+        console.warn('[Sync] Erro ao salvar chave de API na nuvem:', err);
+      }
+    } else {
+      showToast('Chave de API salva localmente neste navegador.');
+    }
   };
   const handleSaveModel = (m: string) => {
     setModel(m);

@@ -246,6 +246,61 @@ export function subscribeToCloudConfig(
   );
 }
 
+// Salva a chave de API individual deste usuário na nuvem (Firebase)
+export async function saveUserApiKey(apiKey: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nenhum médico autenticado.');
+
+  const docRef = doc(db, 'users', user.uid, 'settings', 'apiKey');
+  await setDoc(
+    docRef,
+    {
+      apiKey: apiKey.trim(),
+      updatedAt: serverTimestamp(),
+      updatedBy: user.email || user.uid
+    },
+    { merge: true }
+  );
+}
+
+// Carrega a chave de API salva deste médico na nuvem
+export async function fetchUserApiKey(): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) return null;
+
+  try {
+    const docRef = doc(db, 'users', user.uid, 'settings', 'apiKey');
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return null;
+    const data = docSnap.data();
+    return typeof data.apiKey === 'string' ? data.apiKey : null;
+  } catch (err) {
+    console.warn('[Sync] Erro ao carregar apiKey do usuário:', err);
+    return null;
+  }
+}
+
+// Ouve atualizações em tempo real da chave de API do médico conectado
+export function subscribeToUserApiKey(onApiKeyUpdated: (key: string) => void): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const docRef = doc(db, 'users', user.uid, 'settings', 'apiKey');
+  return onSnapshot(
+    docRef,
+    (docSnap) => {
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
+      if (data && typeof data.apiKey === 'string') {
+        onApiKeyUpdated(data.apiKey);
+      }
+    },
+    (err) => {
+      console.warn('[Sync] Erro na escuta em tempo real da chave de API:', err);
+    }
+  );
+}
+
 // Helper para limpar campos undefined antes de enviar ao Firestore (o Firestore não aceita valores undefined)
 function removeUndefinedFields<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;

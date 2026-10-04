@@ -1,5 +1,6 @@
 import React from 'react';
 import { Settings, Key, X, Check, Database, Bot, Globe, CloudDownload, Download, Copy, Code2 } from 'lucide-react';
+import { auth } from '../services/firebase';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -80,7 +81,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-full px-2.5 py-1.5 rounded border border-[#e5e5e5] dark:border-[#383838] focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-neutral-500 font-mono text-xs bg-white dark:bg-[#202020] text-slate-800 dark:text-neutral-100"
             />
             <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-1">
-              A chave fica salva exclusivamente na memória local do seu navegador e nunca é enviada para servidores terceiros.
+              {auth.currentUser ? (
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  ☁️ Sincronizada com o seu usuário ({auth.currentUser.email || 'conectado'}). Carregada automaticamente em todos os seus computadores.
+                </span>
+              ) : (
+                <span>
+                  Salva neste navegador. Faça login na nuvem para sincronizá-la automaticamente entre seus computadores.
+                </span>
+              )}
             </p>
           </div>
 
