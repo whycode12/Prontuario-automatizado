@@ -8,7 +8,9 @@ import {
   AlertCircle,
   Key,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  FileDown,
+  FileUp
 } from 'lucide-react';
 
 interface CloudSyncModalProps {
@@ -19,6 +21,8 @@ interface CloudSyncModalProps {
   onSyncToCloud: () => Promise<void>;
   onPullFromCloud: () => Promise<void>;
   localRecordsCount: number;
+  onExportLocalBackup: () => void;
+  onImportLocalBackup: (file: File) => Promise<void>;
 }
 
 export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
@@ -29,6 +33,8 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   onSyncToCloud,
   onPullFromCloud,
   localRecordsCount,
+  onExportLocalBackup,
+  onImportLocalBackup,
 }) => {
   const [keyInput, setKeyInput] = useState(encryptionKey);
   const [showKey, setShowKey] = useState(false);
@@ -227,6 +233,44 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                 </span>
               </div>
             </button>
+          </div>
+
+          {/* Backup de Emergência em Arquivo Local */}
+          <div className="pt-3 border-t border-slate-200 dark:border-[#2e2e2e] space-y-2">
+            <span className="font-semibold text-slate-800 dark:text-neutral-200 text-xs block">
+              🛡️ Cópia de Emergência Offline (Caso esqueça a senha da nuvem)
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onExportLocalBackup}
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] text-slate-700 dark:text-neutral-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                title="Baixar arquivo de backup com todos os dados"
+              >
+                <FileDown className="w-3.5 h-3.5 text-slate-500" />
+                <span>Exportar Arquivo (.json)</span>
+              </button>
+
+              <label className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] text-slate-700 dark:text-neutral-200 text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
+                <FileUp className="w-3.5 h-3.5 text-slate-500" />
+                <span>Restaurar de Arquivo</span>
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      await onImportLocalBackup(file);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-neutral-500">
+              * Baixe um arquivo leve no seu computador como segurança extra. Se você esquecer a senha mestra, basta restaurar esse arquivo.
+            </p>
           </div>
         </div>
 

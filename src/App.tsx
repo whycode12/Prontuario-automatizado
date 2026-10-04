@@ -462,6 +462,58 @@ export default function App() {
     showToast('Senha mestra de criptografia salva com sucesso!');
   };
 
+  // Exporta todos os atendimentos e templates em um arquivo JSON de emergencia
+  const handleExportLocalBackup = () => {
+    const backupData = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      records: savedRecords,
+      templates,
+      prompts
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup_prontuario_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Arquivo de backup exportado com sucesso!');
+  };
+
+  // Importa e restaura backup a partir de um arquivo JSON
+  const handleImportLocalBackup = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed.records)) {
+        setSavedRecords((prev) => {
+          const map = new Map<string, SavedPatientRecord>();
+          prev.forEach((r) => map.set(r.id, r));
+          parsed.records.forEach((r: SavedPatientRecord) => map.set(r.id, r));
+          const merged = Array.from(map.values()).sort(
+            (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+          );
+          localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
+          return merged;
+        });
+      }
+      if (parsed.templates) {
+        setTemplates(parsed.templates);
+        localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(parsed.templates));
+      }
+      if (parsed.prompts) {
+        setPrompts(parsed.prompts);
+        localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(parsed.prompts));
+      }
+      showToast('Dados restaurados com sucesso a partir do arquivo!');
+    } catch (err: any) {
+      alert(`Falha ao ler o arquivo de backup: ${err.message}`);
+    }
+  };
+
   const handleDeleteRecord = (id: string) => {
     const updated = savedRecords.filter((r) => r.id !== id);
     setSavedRecords(updated);
@@ -1415,6 +1467,8 @@ export default function App() {
         onSyncToCloud={handleSyncToCloud}
         onPullFromCloud={handlePullFromCloud}
         localRecordsCount={savedRecords.length}
+        onExportLocalBackup={handleExportLocalBackup}
+        onImportLocalBackup={handleImportLocalBackup}
       />
 
       {/* Settings Modal */}
