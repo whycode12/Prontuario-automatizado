@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import {
-  AlertTriangle,
   ShieldAlert,
   Home,
   Bed,
@@ -157,12 +156,10 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           inObservation: true,
           startedAt: prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         }));
-        showToast('Paciente colocado em observação clínica e registrado no leito!');
       }
     } else {
       if (observation.inObservation) {
         setObservation((prev) => ({ ...prev, inObservation: false }));
-        showToast('Paciente retirado do leito de observação.');
       }
     }
   };
@@ -224,7 +221,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           {/* Nome */}
           <div className="sm:col-span-2 lg:col-span-5">
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
-              Nome Completo ou Iniciais
+              Nome
             </label>
             <input
               type="text"
@@ -388,11 +385,10 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         {aiResults.hmaMissingQuestions && aiResults.hmaMissingQuestions.length > 0 && (
           <AIDrawer
             title="O que faltou investigar neste caso (IA):"
-            icon={<AlertTriangle className="w-4 h-4 text-amber-500" />}
-            variant="amber"
+            variant="blue"
             triggerUpdate={aiResults.hmaMissingQuestions}
           >
-            <ul className="list-disc list-inside text-amber-800 dark:text-amber-200 space-y-0.5 pl-1 text-xs">
+            <ul className="list-disc list-inside text-blue-800 dark:text-ice-300 space-y-0.5 pl-1 text-xs">
               {aiResults.hmaMissingQuestions.map((q, idx) => (
                 <li key={idx}>{q}</li>
               ))}
@@ -414,12 +410,10 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             onSaveTemplate={(t) => {
               handleSaveTemplate('hpp', t);
               setHpp(parseHppText(t));
-              showToast('Template de HPP atualizado e aplicado aos campos!');
             }}
             onSaveGlobalTemplate={handleSaveGlobalTemplate ? (t) => {
               handleSaveGlobalTemplate('hpp', t);
               setHpp(parseHppText(t));
-              showToast('Template de HPP definido como padrão global!');
             } : undefined}
           />
         </div>
@@ -606,7 +600,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               title="Sugestão da IA para Exame Físico:"
               onImplement={() => {
                 setExameFisico(aiResults.physicalExamSuggestion || '');
-                showToast('Sugestão da IA aplicada no Exame Físico!');
               }}
               triggerUpdate={aiResults.physicalExamSuggestion}
             >
@@ -791,7 +784,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                           setSelectedCidIdx(idx);
                           const val = `${c.cid} - ${c.desc}`;
                           setAiResults((prev) => ({ ...prev, selectedCid: val }));
-                          showToast(`CID ${c.cid} selecionado!`);
                         }}
                         className={`px-2.5 py-1.5 text-xs flex items-center justify-between cursor-pointer transition-colors ${
                           isSelected
@@ -863,9 +855,9 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         {aiResults.tetanusRabiesAlert && (
           <AIDrawer
             title="Alerta de Profilaxia Antitetânica / Antirrábica (IA):"
-            variant="amber"
+            variant="blue"
           >
-            <span className="text-xs text-amber-900 dark:text-amber-200 font-semibold">
+            <span className="text-xs text-blue-900 dark:text-ice-200 font-medium">
               💉 {aiResults.tetanusRabiesAlert}
             </span>
           </AIDrawer>
@@ -875,26 +867,18 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         {aiResults.medicationDisclaimers && aiResults.medicationDisclaimers.length > 0 && (
           <AIDrawer
             title="Alertas de Segurança Farmacológica (IA):"
-            variant="amber"
+            variant="blue"
             triggerUpdate={aiResults.medicationDisclaimers}
           >
             <div className="space-y-1.5 text-xs">
               {aiResults.medicationDisclaimers.map((d, idx) => (
                 <div
                   key={idx}
-                  className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 ${
-                    d.type === 'contraindication'
-                      ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 font-semibold'
-                      : 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'
-                  }`}
+                  className="p-2.5 rounded-lg border text-xs flex items-start gap-2.5 bg-blue-50/50 dark:bg-navy-900/60 border-blue-200/60 dark:border-blue-900/50 text-blue-950 dark:text-ice-200"
                 >
-                  {d.type === 'contraindication' ? (
-                    <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  )}
+                  <ShieldAlert className="w-4 h-4 text-blue-600 dark:text-ice-300 shrink-0 mt-0.5" />
                   <div>
-                    <strong>{d.med}:</strong> {d.note}
+                    <strong className="font-semibold">{d.med}:</strong> {d.note}
                   </div>
                 </div>
               ))}
@@ -1071,12 +1055,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               DESFECHO
             </h2>
           </div>
-          {aiResults.clinicalOutcome === 'observacao' && (
-            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 bg-amber-500/10 dark:bg-amber-400/10 px-2.5 py-1 rounded-md border border-amber-500/20">
-              <Bed className="w-3.5 h-3.5" />
-              Paciente em Leito de Observação
-            </span>
-          )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -1137,15 +1115,15 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           </button>
         </div>
 
-        {/* CAMPOS OBRIGATÓRIOS AO DEFINIR OBSERVAÇÃO */}
+        {/* CAMPOS AO DEFINIR OBSERVAÇÃO */}
         {aiResults.clinicalOutcome === 'observacao' && (
-          <div className="p-3.5 rounded-lg border border-amber-200/80 dark:border-amber-900/60 bg-amber-50/40 dark:bg-[#23201a] space-y-3 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between text-xs font-semibold text-amber-900 dark:text-amber-300">
+          <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-[#202020] space-y-3 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-ice-100">
               <span className="flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                Parâmetros Obrigatórios da Observação / Leito
+                <Bed className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                Observação
               </span>
-              <span className="text-[11px] font-normal text-amber-700/90 dark:text-amber-400/80">
+              <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
                 Início: {observation.startedAt || 'agora'}
               </span>
             </div>
@@ -1154,7 +1132,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               {/* Em quanto tempo reavaliar */}
               <div>
                 <label className="block text-slate-700 dark:text-neutral-300 text-xs font-medium mb-1">
-                  Em quanto tempo reavaliar? <span className="text-amber-600 dark:text-amber-400 font-bold">*</span>
+                  Em quanto tempo reavaliar
                 </label>
                 <div className="relative">
                   <select
@@ -1165,13 +1143,16 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                         revaluationTimeMinutes: Number(e.target.value),
                       }))
                     }
-                    className="w-full px-3 py-2 rounded-lg border border-amber-300/80 dark:border-amber-800/80 bg-white dark:bg-[#1a1a1a] text-slate-800 dark:text-neutral-200 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1a1a1a] text-slate-800 dark:text-neutral-200 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400 font-medium"
                   >
-                    <option value={30}>30 minutos (Rápida)</option>
-                    <option value={60}>1 hora (60 min)</option>
-                    <option value={120}>2 horas (120 min)</option>
-                    <option value={240}>4 horas (240 min)</option>
-                    <option value={360}>6 horas (360 min)</option>
+                    <option value={30}>30 minutos</option>
+                    <option value={60}>1 hora</option>
+                    <option value={90}>1 hora e meia</option>
+                    <option value={120}>2 horas</option>
+                    <option value={150}>2 horas e meia</option>
+                    <option value={180}>3 horas</option>
+                    <option value={240}>4 horas</option>
+                    <option value={360}>6 horas</option>
                   </select>
                 </div>
               </div>
@@ -1179,11 +1160,10 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               {/* O que reavaliar */}
               <div className="md:col-span-2">
                 <label className="block text-slate-700 dark:text-neutral-300 text-xs font-medium mb-1">
-                  O que reavaliar? (Pendências / Alvos Clínicos) <span className="text-amber-600 dark:text-amber-400 font-bold">*</span>
+                  O que reavaliar
                 </label>
                 <input
                   type="text"
-                  required
                   value={observation.whatToReevaluate || ''}
                   onChange={(e) =>
                     setObservation((prev) => ({
@@ -1191,18 +1171,8 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                       whatToReevaluate: e.target.value,
                     }))
                   }
-                  placeholder="Ex: Checar resposta analgésica, curva térmica, hemograma e EAS..."
-                  className={`w-full px-3 py-2 rounded-lg border bg-white dark:bg-[#1a1a1a] text-slate-800 dark:text-neutral-200 text-xs focus:outline-none transition-colors ${
-                    !observation.whatToReevaluate?.trim()
-                      ? 'border-amber-400 dark:border-amber-600/90 focus:ring-1 focus:ring-amber-500'
-                      : 'border-slate-300 dark:border-[#383838] focus:ring-1 focus:ring-neutral-400'
-                  }`}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-[#383838] bg-white dark:bg-[#1a1a1a] text-slate-800 dark:text-neutral-200 text-xs focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-colors"
                 />
-                {!observation.whatToReevaluate?.trim() && (
-                  <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
-                    <span>⚠️ Defina o alvo clínico para orientar a equipe no leito de reavaliação.</span>
-                  </p>
-                )}
               </div>
             </div>
           </div>

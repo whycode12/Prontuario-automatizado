@@ -97,7 +97,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
             <button
               type="button"
               onClick={compileAllDocuments}
-              className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+              className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
               title="Compilar Todos os Documentos da Página"
             >
               <Layers className="w-4 h-4" />
@@ -105,7 +105,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
             <button
               type="button"
               onClick={() => compileSingleDocument('prontuario')}
-              className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+              className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
               title="Compilar Prontuário"
             >
               <FileText className="w-4 h-4" />
@@ -120,7 +120,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
             <button
               type="button"
               onClick={() => copyToClipboard(documents.prontuario, 'prontuario')}
-              className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+              className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
               title="Copiar Prontuário Completo"
             >
               {copiedSection === 'prontuario' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -128,7 +128,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
             <button
               type="button"
               onClick={() => handlePrint(documents.prontuario, 'Prontuário de Atendimento')}
-              className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+              className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
               title="Imprimir Prontuário"
             >
               <Printer className="w-4 h-4" />
@@ -157,7 +157,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => compileSingleDocument('receitaInterna')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Compilar Prescrição Interna"
               >
                 <FileText className="w-4 h-4" />
@@ -172,7 +172,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => copyToClipboard(documents.receitaInterna, 'interna')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Copiar Prescrição da Unidade"
               >
                 {copiedSection === 'interna' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -180,7 +180,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => handlePrint(documents.receitaInterna, 'Prescrição Unidade')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Imprimir Prescrição da Unidade"
               >
                 <Printer className="w-4 h-4" />
@@ -207,7 +207,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => compileSingleDocument('receitaDomiciliar')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Compilar Receituário Domiciliar"
               >
                 <FileText className="w-4 h-4" />
@@ -222,7 +222,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => copyToClipboard(documents.receitaDomiciliar, 'domiciliar')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Copiar Receita Domiciliar"
               >
                 {copiedSection === 'domiciliar' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -230,7 +230,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => handlePrint(documents.receitaDomiciliar, 'Receituário Domiciliar')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Imprimir Receita Domiciliar"
               >
                 <Printer className="w-4 h-4" />
@@ -260,7 +260,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => compileSingleDocument('passagemPlantao')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Compilar Passagem de Caso"
               >
                 <FileText className="w-4 h-4" />
@@ -290,7 +290,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => copyToClipboard(documents.passagemPlantao, 'passagem')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Copiar Passagem Oral"
               >
                 {copiedSection === 'passagem' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -317,7 +317,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => compileSingleDocument('passometro')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Compilar Passômetro"
               >
                 <FileText className="w-4 h-4" />
@@ -347,7 +347,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <button
                 type="button"
                 onClick={() => copyToClipboard(documents.passometro, 'passometro')}
-                className="p-2 text-slate-500 hover:text-slate-800 dark:text-neutral-400 dark:hover:text-neutral-200 rounded-lg border border-slate-200 dark:border-[#383838] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors"
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
                 title="Copiar Passômetro"
               >
                 {copiedSection === 'passometro' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}

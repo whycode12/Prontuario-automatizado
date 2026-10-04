@@ -193,24 +193,24 @@ export const AIActionButton: React.FC<AIActionProps> = ({
 
   return (
     <>
-      <div className="inline-flex items-center rounded-md border border-[#e5e5e5] dark:border-[#383838] bg-white dark:bg-[#252525] shadow-2xs overflow-hidden h-7">
+      <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] shadow-2xs overflow-hidden h-8">
         <button
           type="button"
           onClick={onExecute}
           disabled={isLoading}
-          className="h-full px-2 text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors disabled:opacity-50 flex items-center justify-center"
+          className="h-full px-2.5 text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors disabled:opacity-50 flex items-center justify-center"
           title={`Executar IA: ${label}`}
         >
-          <Sparkles className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <Sparkles className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
 
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="h-full border-l border-[#e5e5e5] dark:border-[#383838] px-2 text-slate-400 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-white hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors flex items-center justify-center"
+          className="h-full border-l border-slate-200 dark:border-[#383838] px-2.5 text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors flex items-center justify-center"
           title={`Ver prompt e dados enviados (${label})`}
         >
-          <Edit3 className="w-3.5 h-3.5" />
+          <Edit3 className="w-4 h-4" />
         </button>
       </div>
 

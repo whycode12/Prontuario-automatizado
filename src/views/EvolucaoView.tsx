@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bed, AlertTriangle } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import type { ObservationData, AIResult, SystemTemplates, SystemPrompts } from '../types';
 import { UndoableTextarea } from '../components/UndoableTextarea';
 import { AIActionButton } from '../components/AIActionButton';
@@ -33,7 +33,7 @@ interface EvolucaoViewProps {
 }
 
 export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
-  patientName,
+  patientName: _patientName,
   observation,
   setObservation,
   examResults,
@@ -55,75 +55,10 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   evolucaoDocument,
   setEvolucaoDocument,
   generateEvolucaoDocument,
-  toggleObservation,
+  toggleObservation: _toggleObservation,
 }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* 1. Header Box: Patient status in observation */}
-      <section className="bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-xl p-4 space-y-3 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <Bed className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-amber-950 dark:text-amber-100 uppercase tracking-wide">
-                Controle do Leito: {patientName ? `Paciente ${patientName}` : 'Paciente Atual'}
-              </h2>
-              <span className="text-xs text-amber-800/80 dark:text-amber-300">
-                Início: <strong>{observation.startedAt || 'Não iniciado'}</strong>
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleObservation}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs ${
-                observation.inObservation
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
-                  : 'bg-white dark:bg-navy-900 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-navy-800'
-              }`}
-            >
-              {observation.inObservation ? 'EM OBSERVAÇÃO CLÍNICA' : '+ Colocar em Observação'}
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm pt-1">
-          <div>
-            <label className="block text-amber-900 dark:text-amber-300 text-xs font-semibold mb-1">
-              Tempo para Reavaliação
-            </label>
-            <select
-              value={observation.revaluationTimeMinutes}
-              onChange={(e) =>
-                setObservation({ ...observation, revaluationTimeMinutes: Number(e.target.value) })
-              }
-              className="w-full px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-            >
-              <option value={30}>30 minutos (Rápida)</option>
-              <option value={60}>1 hora (60 min)</option>
-              <option value={120}>2 horas (120 min)</option>
-              <option value={240}>4 horas (240 min)</option>
-              <option value={360}>6 horas (360 min)</option>
-            </select>
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-amber-900 dark:text-amber-300 text-xs font-semibold mb-1">
-              O que Reavaliar na Observação (Pendências / Alvos Clínicos)
-            </label>
-            <input
-              type="text"
-              value={observation.whatToReevaluate}
-              onChange={(e) => setObservation({ ...observation, whatToReevaluate: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-            />
-          </div>
-        </div>
-      </section>
 
       {/* RESULTADOS DE EXAMES */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-2">
@@ -192,11 +127,10 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         {aiResults.missingReevaluationChecks && aiResults.missingReevaluationChecks.length > 0 && (
           <AIDrawer
             title="Checagens recomendadas pela IA que faltou investigar na reavaliação:"
-            icon={<AlertTriangle className="w-4 h-4 text-amber-500" />}
-            variant="amber"
+            variant="blue"
             triggerUpdate={aiResults.missingReevaluationChecks}
           >
-            <ul className="list-disc list-inside text-amber-800 dark:text-amber-200 space-y-0.5 pl-1 text-xs">
+            <ul className="list-disc list-inside text-blue-800 dark:text-ice-300 space-y-0.5 pl-1 text-xs">
               {aiResults.missingReevaluationChecks.map((item, idx) => (
                 <li key={idx}>{item}</li>
               ))}
@@ -230,8 +164,8 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs mb-1.5">
-              Conclusão / Nova Hipótese Diagnóstica
+            <label className="block text-slate-700 dark:text-neutral-300 font-semibold text-xs mb-1.5">
+              Nova hipótese diagnóstica
             </label>
             <UndoableTextarea
               value={observation.conclusionNewHypothesis}
@@ -259,8 +193,8 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs mb-1.5">
-              Novas Condutas Sugeridas (Alta, Prescrição ou Internação)
+            <label className="block text-slate-700 dark:text-neutral-300 font-semibold text-xs mb-1.5">
+              Novas condutas
             </label>
             <UndoableTextarea
               value={observation.newConducts}
@@ -308,9 +242,10 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             <button
               type="button"
               onClick={generateEvolucaoDocument}
-              className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-slate-900 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+              className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
+              title="Compilar Evolução"
             >
-              <span>Compilar Evolução</span>
+              <FileText className="w-4 h-4" />
             </button>
           </div>
         </div>

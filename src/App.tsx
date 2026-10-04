@@ -7,7 +7,7 @@ import {
   Settings,
   Pill,
   Bed,
-  CheckCircle2,
+  AlertCircle,
   Sun,
   Moon,
   Stethoscope,
@@ -67,46 +67,38 @@ const STORAGE_KEYS = {
 };
 
 function computeObservationCountdown(startedAt?: string, revaluationMinutes: number = 120) {
-  if (!startedAt) {
-    return {
-      status: 'ok' as const,
-      text: `Reavaliar em ${revaluationMinutes} min`,
-      badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-    };
-  }
-  const match = startedAt.match(/^(\d{1,2}):(\d{2})$/);
-  if (match) {
-    const now = new Date();
-    const start = new Date();
-    start.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
-    let diffMinutes = Math.floor((now.getTime() - start.getTime()) / (1000 * 60));
-    if (diffMinutes < 0) diffMinutes += 24 * 60;
-    const remaining = revaluationMinutes - diffMinutes;
-    if (remaining > 20) {
-      return {
-        status: 'ok' as const,
-        text: `Faltam ~${remaining} min (Previsto ${revaluationMinutes}m)`,
-        badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-      };
-    } else if (remaining > 0) {
-      return {
-        status: 'soon' as const,
-        text: `⚠️ Reavaliar em breve! Faltam ~${remaining} min`,
-        badgeClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700 font-semibold animate-pulse'
-      };
-    } else {
-      return {
-        status: 'overdue' as const,
-        text: `🚨 HORA DE REAVALIAR! (Atrasado ${Math.abs(remaining)} min)`,
-        badgeClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-700 font-bold animate-pulse'
-      };
+  let remaining = revaluationMinutes;
+  if (startedAt) {
+    const match = startedAt.match(/^(\d{1,2}):(\d{2})$/);
+    if (match) {
+      const now = new Date();
+      const start = new Date();
+      start.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
+      let diffMinutes = Math.floor((now.getTime() - start.getTime()) / (1000 * 60));
+      if (diffMinutes < 0) diffMinutes += 24 * 60;
+      remaining = revaluationMinutes - diffMinutes;
     }
   }
-  return {
-    status: 'ok' as const,
-    text: `Reavaliar em ${revaluationMinutes} min`,
-    badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-  };
+
+  let status: 'ok' | 'soon' | 'overdue' = 'ok';
+  let text = `${remaining} min`;
+  let badgeClass = 'text-[11px] font-medium px-2 py-0.5 rounded border border-slate-200 dark:border-[#383838] bg-slate-50 dark:bg-[#202020] text-slate-600 dark:text-neutral-300';
+
+  if (remaining > 20) {
+    status = 'ok';
+    text = `${remaining} min`;
+    badgeClass = 'text-[11px] font-medium px-2 py-0.5 rounded border border-slate-200 dark:border-[#383838] bg-slate-50 dark:bg-[#202020] text-slate-600 dark:text-neutral-300';
+  } else if (remaining > 0) {
+    status = 'soon';
+    text = `${remaining} min`;
+    badgeClass = 'text-[11px] font-medium px-2 py-0.5 rounded border border-amber-300/70 dark:border-amber-800/70 bg-amber-50/50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300';
+  } else {
+    status = 'overdue';
+    text = `Atrasado ${Math.abs(remaining)}m`;
+    badgeClass = 'text-[11px] font-medium px-2 py-0.5 rounded border border-rose-300/70 dark:border-rose-900/70 bg-rose-50/50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300';
+  }
+
+  return { status, text, badgeClass, remaining };
 }
 
 export default function App() {
@@ -310,12 +302,14 @@ export default function App() {
     evolucao: ''
   });
 
-  // Notification Toast
+  // Notification Toast - Interface silenciosa (apenas erros críticos reais do sistema)
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, isError = false) => {
+    const isCritical = isError || msg.toLowerCase().startsWith('erro') || msg.toLowerCase().startsWith('falha');
+    if (!isCritical) return;
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 4000);
   };
 
   // Sync to local storage & cloud
@@ -756,14 +750,31 @@ export default function App() {
     }
   };
 
+  // Undo state para exclusão do histórico
+  const [lastDeletedRecord, setLastDeletedRecord] = useState<SavedPatientRecord | null>(null);
+
   const handleDeleteRecord = (id: string) => {
+    const toDelete = savedRecords.find((r) => r.id === id);
+    if (toDelete) {
+      setLastDeletedRecord(toDelete);
+    }
     const updated = savedRecords.filter((r) => r.id !== id);
     setSavedRecords(updated);
     localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(updated));
     if (masterKey.trim()) {
       deleteRecordFromCloud(id).catch((err) => console.warn('Erro ao deletar da nuvem:', err));
     }
-    showToast('Registro excluído do histórico.');
+  };
+
+  const handleRestoreDeletedRecord = () => {
+    if (!lastDeletedRecord) return;
+    const restored = [lastDeletedRecord, ...savedRecords];
+    setSavedRecords(restored);
+    localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(restored));
+    if (masterKey.trim()) {
+      saveRecordToCloud(lastDeletedRecord, masterKey).catch((err) => console.warn(err));
+    }
+    setLastDeletedRecord(null);
   };
 
   const handleLoadRecord = (rec: SavedPatientRecord) => {
@@ -1190,7 +1201,11 @@ export default function App() {
     }
   };
 
+  // Undo state para liberação de leito de observação
+  const [lastDischargedRecordId, setLastDischargedRecordId] = useState<string | null>(null);
+
   const handleDischargeFromObservation = (recordId: string) => {
+    setLastDischargedRecordId(recordId);
     if (recordId === currentRecordId) {
       setObservation((prev) => ({ ...prev, inObservation: false }));
     }
@@ -1210,7 +1225,30 @@ export default function App() {
       localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(updated));
       return updated;
     });
-    showToast('Paciente liberado do leito de observação.');
+  };
+
+  const handleRestoreDischargedPatient = () => {
+    if (!lastDischargedRecordId) return;
+    if (lastDischargedRecordId === currentRecordId) {
+      setObservation((prev) => ({ ...prev, inObservation: true }));
+    }
+    setSavedRecords((prev) => {
+      const updated = prev.map((r) => {
+        if (r.id === lastDischargedRecordId) {
+          return {
+            ...r,
+            observation: {
+              ...r.observation,
+              inObservation: true
+            }
+          };
+        }
+        return r;
+      });
+      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(updated));
+      return updated;
+    });
+    setLastDischargedRecordId(null);
   };
 
   // Active observation queue
@@ -1238,6 +1276,19 @@ export default function App() {
       : []),
     ...savedObsPatients.filter((r) => r.id !== currentRecordId)
   ];
+
+  // Fila de observação ordenada por urgência (mais atrasados ou com menor tempo restante primeiro)
+  const sortedActiveObsPatients = [...activeObsPatients].sort((a, b) => {
+    const cdA = computeObservationCountdown(
+      a.observation?.startedAt,
+      a.observation?.revaluationTimeMinutes || 120
+    );
+    const cdB = computeObservationCountdown(
+      b.observation?.startedAt,
+      b.observation?.revaluationTimeMinutes || 120
+    );
+    return cdA.remaining - cdB.remaining;
+  });
 
   // Verifica em tempo real se há pacientes que já passaram do horário de reavaliação
   const overdueCount = activeObsPatients.filter((r) => {
@@ -1435,10 +1486,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#191919] text-slate-800 dark:text-[#d4d4d4] flex font-sans transition-colors duration-150 antialiased selection:bg-ice-500/20">
-      {/* Toast Notification */}
+      {/* Toast Notification - Apenas erros críticos */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-[#252525] text-white border border-[#383838] text-xs font-medium px-3.5 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-5 right-5 z-50 bg-[#252525] text-white border border-rose-500/40 text-xs font-medium px-3.5 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <AlertCircle className="w-4 h-4 text-rose-400" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -1856,7 +1907,7 @@ export default function App() {
 
         {activeTab === 'observacao' && (
           <FilaObservacaoView
-            activeObsPatients={activeObsPatients}
+            activeObsPatients={sortedActiveObsPatients}
             currentRecordId={currentRecordId}
             onSelectPatient={(rec) => {
               if (rec.id !== currentRecordId) {
@@ -1865,6 +1916,8 @@ export default function App() {
               setActiveTab('evolucao');
             }}
             onDischargePatient={handleDischargeFromObservation}
+            onRestorePatient={handleRestoreDischargedPatient}
+            canRestore={!!lastDischargedRecordId}
             computeCountdown={computeObservationCountdown}
           />
         )}
@@ -1878,6 +1931,8 @@ export default function App() {
               setActiveTab('atendimento');
             }}
             onDeleteRecord={handleDeleteRecord}
+            onRestoreRecord={handleRestoreDeletedRecord}
+            canRestore={!!lastDeletedRecord}
             onOpenCloudSync={() => setCloudSyncOpen(true)}
           />
         )}

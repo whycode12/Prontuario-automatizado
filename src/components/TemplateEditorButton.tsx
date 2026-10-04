@@ -51,10 +51,10 @@ export const TemplateEditorButton: React.FC<TemplateEditorButtonProps> = ({
       <button
         type="button"
         onClick={() => setModalOpen(true)}
-        className="h-7 px-2.5 inline-flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] rounded-md border border-[#e5e5e5] dark:border-[#383838] bg-white dark:bg-[#252525] transition-colors shadow-2xs text-xs font-medium"
+        className="h-8 px-2.5 inline-flex items-center justify-center text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] transition-colors shadow-2xs"
         title={`Editar template: ${label}`}
       >
-        <Sliders className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
+        <Sliders className="w-4 h-4" />
       </button>
 
       {modalOpen && (

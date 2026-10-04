@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { History, Search, Trash2, ArrowRight, UserCheck, Calendar, Bed, Cloud } from 'lucide-react';
+import { History, Search, Trash2, ArrowRight, Calendar, Bed, Cloud, RotateCcw } from 'lucide-react';
 import type { SavedPatientRecord } from '../types';
 
 interface HistoricoViewProps {
@@ -7,6 +7,8 @@ interface HistoricoViewProps {
   currentRecordId: string;
   onLoadRecord: (record: SavedPatientRecord) => void;
   onDeleteRecord: (id: string) => void;
+  onRestoreRecord?: () => void;
+  canRestore?: boolean;
   onOpenCloudSync?: () => void;
 }
 
@@ -15,6 +17,8 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
   currentRecordId,
   onLoadRecord,
   onDeleteRecord,
+  onRestoreRecord,
+  canRestore,
   onOpenCloudSync,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,8 +29,7 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
     const nome = (r.patient?.nome || '').toLowerCase();
     const qp = (r.qp || '').toLowerCase();
     const hd = (r.aiResults?.mainHypothesis || '').toLowerCase();
-    const cid = (r.aiResults?.selectedCid || '').toLowerCase();
-    const matchesSearch = nome.includes(term) || qp.includes(term) || hd.includes(term) || cid.includes(term);
+    const matchesSearch = nome.includes(term) || qp.includes(term) || hd.includes(term);
 
     if (!selectedDate) return matchesSearch;
     const recordDateStr = new Date(r.savedAt).toLocaleDateString('en-CA'); // YYYY-MM-DD
@@ -47,18 +50,29 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {canRestore && onRestoreRecord && (
+            <button
+              type="button"
+              onClick={onRestoreRecord}
+              className="h-8 px-2.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] text-slate-700 dark:text-neutral-200 hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] flex items-center gap-1.5 transition-colors shadow-2xs"
+              title="Restaurar último paciente excluído"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Desfazer</span>
+            </button>
+          )}
           {onOpenCloudSync && (
             <button
               type="button"
               onClick={onOpenCloudSync}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-[#252525] border border-[#ececeb] dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#2e2e2e] text-slate-700 dark:text-neutral-200 flex items-center gap-1.5 transition-colors shadow-xs"
+              className="h-8 px-2.5 rounded-lg text-xs font-medium bg-white dark:bg-[#252525] border border-[#ececeb] dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#2e2e2e] text-slate-700 dark:text-neutral-200 flex items-center gap-1.5 transition-colors shadow-2xs"
               title="Sincronizar com Firebase na nuvem"
             >
               <Cloud className="w-3.5 h-3.5 text-ice-500" />
-              <span>Nuvem Criptografada</span>
+              <span>Nuvem</span>
             </button>
           )}
-          <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-[#252525] text-slate-700 dark:text-neutral-200 border border-[#ececeb] dark:border-[#333]">
+          <span className="h-8 px-2.5 rounded-lg text-xs font-medium inline-flex items-center justify-center bg-slate-100 dark:bg-[#252525] text-slate-700 dark:text-neutral-200 border border-[#ececeb] dark:border-[#333]">
             Total: {records.length}
           </span>
         </div>
@@ -70,10 +84,9 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Buscar por paciente, queixa ou hipótese..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#252525] text-slate-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500/50 shadow-xs"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#252525] text-slate-800 dark:text-neutral-100 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-400 shadow-2xs"
           />
         </div>
 
@@ -82,7 +95,7 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-2.5 rounded-xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#252525] text-slate-700 dark:text-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500/50 shadow-xs"
+            className="px-3 py-2.5 rounded-xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#252525] text-slate-700 dark:text-neutral-200 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-400 shadow-2xs"
             title="Filtrar por data do atendimento"
           />
           {selectedDate && (
@@ -106,7 +119,7 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
             {searchTerm || selectedDate ? 'Nenhum paciente encontrado para este filtro.' : 'Nenhum atendimento salvo ainda.'}
           </h2>
           <p className="text-sm text-slate-400 dark:text-slate-500 max-w-md mx-auto">
-            Os pacientes que você atender e salvar automaticamente aparecerão listados aqui com todos os dados preenchidos.
+            Os pacientes que você atender e salvar aparecerão listados aqui.
           </p>
         </div>
       ) : (
@@ -149,7 +162,6 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
                       </h3>
                       <span className="text-xs text-slate-500 dark:text-slate-400">
                         {rec.patient.idade ? `${rec.patient.idade} anos` : 'Idade --'}
-                        {rec.patient.sexo ? ` ⬢ Sexo ${rec.patient.sexo}` : ''}
                       </span>
                     </div>
 
@@ -164,24 +176,10 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
                     <strong className="text-slate-700 dark:text-neutral-200">QP:</strong> {rec.qp || 'Não informada'}
                   </div>
 
-                  {/* HD & CID */}
-                  {(rec.aiResults?.mainHypothesis || rec.aiResults?.selectedCid) && (
-                    <div className="text-xs text-slate-600 dark:text-neutral-300 flex items-center flex-wrap gap-1">
-                      {rec.aiResults.mainHypothesis && (
-                        <span><strong className="text-slate-700 dark:text-neutral-200">HD:</strong> {rec.aiResults.mainHypothesis}</span>
-                      )}
-                      {rec.aiResults.selectedCid && (
-                        <span className="font-mono text-[10px] bg-slate-100 dark:bg-navy-900 text-slate-700 dark:text-ice-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                          CID: {rec.aiResults.selectedCid}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Sinais Vitais Resumo */}
-                  {(rec.vitals.pa || rec.vitals.fc) && (
-                    <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
-                      PA: {rec.vitals.pa || '--'} | FC: {rec.vitals.fc || '--'} | Sat: {rec.vitals.sat || '--'}%
+                  {/* HD */}
+                  {rec.aiResults?.mainHypothesis && (
+                    <div className="text-xs text-slate-600 dark:text-neutral-300">
+                      <strong className="text-slate-700 dark:text-neutral-200">HD:</strong> {rec.aiResults.mainHypothesis}
                     </div>
                   )}
                 </div>
@@ -191,20 +189,15 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onLoadRecord(rec)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors bg-ice-500 hover:bg-ice-600 text-white shadow-xs"
+                    className="h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors bg-ice-500 hover:bg-ice-600 text-white shadow-2xs"
+                    title={isCurrent ? 'Continuar atendimento' : 'Carregar no prontuário'}
                   >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>{isCurrent ? 'Continuar Atendimento' : 'Carregar no Prontuário'}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-4 h-4" />
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(`Excluir permanentemente o registro de ${rec.patient.nome || 'paciente'}?`)) {
-                        onDeleteRecord(rec.id);
-                      }
-                    }}
+                    onClick={() => onDeleteRecord(rec.id)}
                     className="p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                     title="Excluir do histórico"
                   >
