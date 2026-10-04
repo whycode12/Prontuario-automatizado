@@ -200,10 +200,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           {/* Altura */}
           <div className="lg:col-span-1.5">
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
-              Altura (m)
+              Altura (cm)
             </label>
             <input
               type="text"
+              placeholder="ex: 175"
               value={patient.altura}
               onChange={(e) => setPatient({ ...patient, altura: e.target.value })}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50"

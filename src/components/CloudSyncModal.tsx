@@ -87,7 +87,14 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       } else {
         await loginDoctor(usernameInput.trim(), passwordInput);
         onSaveEncryptionKey(passwordInput);
-        setStatusMessage({ type: 'success', text: 'Login realizado com sucesso!' });
+        setStatusMessage({ type: 'success', text: 'Login realizado! Sincronizando seus pacientes...' });
+        // Baixa automaticamente os dados do Firebase
+        try {
+          await onPullFromCloud();
+          setStatusMessage({ type: 'success', text: 'Conectado! Seus pacientes foram sincronizados com sucesso.' });
+        } catch {
+          // Se for primeira vez ou vazio, nao quebra
+        }
       }
       setUsernameInput('');
       setPasswordInput('');

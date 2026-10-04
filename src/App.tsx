@@ -142,8 +142,29 @@ export default function App() {
   const [currentDoctor, setCurrentDoctor] = useState(auth.currentUser);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((user) => {
+    const unsub = auth.onAuthStateChanged(async (user) => {
       setCurrentDoctor(user);
+      // Se o médico estiver autenticado e houver chave salva, sincroniza os pacientes automaticamente
+      const savedKey = localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY);
+      if (user && savedKey) {
+        try {
+          const cloudRecords = await fetchRecordsFromCloud(savedKey);
+          if (cloudRecords.length > 0) {
+            setSavedRecords((prev) => {
+              const map = new Map<string, SavedPatientRecord>();
+              prev.forEach((r) => map.set(r.id, r));
+              cloudRecords.forEach((r) => map.set(r.id, r));
+              const merged = Array.from(map.values()).sort(
+                (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+              );
+              localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
+              return merged;
+            });
+          }
+        } catch (err) {
+          console.warn('Erro ao sincronizar dados na inicialização:', err);
+        }
+      }
     });
     return () => unsub();
   }, []);
