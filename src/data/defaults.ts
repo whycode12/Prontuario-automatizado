@@ -83,7 +83,12 @@ PA: {{PA}} mmHg | FC: {{FC}} bpm | FR: {{FR}} irpm | SatO2: {{SAT}}% | Tax: {{TA
 
 #CONDUTAS:
 {{CONDUTAS}}
-{{ORIENTACOES_TECNICAS}}`,
+
+#ORIENTAÇÕES:
+{{ORIENTACOES_PRONTUARIO}}
+
+#SINAIS DE ALARME:
+{{ALARME_PRONTUARIO}}`,
   receitaInterna: `PRESCRIÇÃO INTERNA
 Paciente: {{NOME}} | Idade: {{IDADE}} anos | Data: {{DATA}}
 
@@ -98,9 +103,9 @@ USO ORAL / DOMICILIAR:
 {{MEDICACOES_CASA}}
 
 --------------------------------------------------
-ORIENTAÇÕES GERAIS: {{ORIENTACOES_LEIGAS}}
+ORIENTAÇÕES GERAIS: {{ORIENTACOES_PACIENTE}}
 
-SINAIS DE ALARME: {{SINAIS_ALARME_LEIGOS}}`,
+SINAIS DE ALARME: {{ALARME_PACIENTE}}`,
   passagemPlantao: `PASSAGEM DE CASO CLÍNICO:
 Paciente {{NOME}}, {{IDADE}} anos, sexo {{SEXO}}.
 Quadro principal: {{QP}}

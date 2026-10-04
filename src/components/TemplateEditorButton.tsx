@@ -80,6 +80,15 @@ export const TemplateEditorButton: React.FC<TemplateEditorButtonProps> = ({
               <p className="text-slate-500 dark:text-slate-400 text-xs">
                 Modifique a estrutura deste template. Variáveis como <code className="bg-slate-100 dark:bg-[#1a1a1a] dark:text-neutral-300 px-1 py-0.5 rounded text-[11px]">{'{{NOME}}'}</code>, <code className="bg-slate-100 dark:bg-[#1a1a1a] dark:text-neutral-300 px-1 py-0.5 rounded text-[11px]">{'{{QP}}'}</code>, etc., serão preenchidas na compilação.
               </p>
+              <div className="p-2.5 rounded bg-blue-50/70 dark:bg-navy-900 border border-blue-200/80 dark:border-blue-800/60 text-xs text-blue-900 dark:text-ice-200 space-y-1">
+                <span className="font-semibold text-[11px]">Tags de Orientações e Sinais de Alarme (puxe individualmente onde desejar):</span>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">{'{{orientacoes_prontuario}}'}</span>
+                  <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">{'{{alarme_prontuario}}'}</span>
+                  <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">{'{{orientacoes_paciente}}'}</span>
+                  <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">{'{{alarme_paciente}}'}</span>
+                </div>
+              </div>
               <textarea
                 value={editedTemplate}
                 onChange={(e) => setEditedTemplate(e.target.value)}

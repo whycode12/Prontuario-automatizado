@@ -98,7 +98,11 @@ Pendências da Reavaliação: {{PENDENCIAS_OBSERVACAO}}`;
     .replace('{{PENDENCIAS_OBSERVACAO}}', observation.whatToReevaluate || 'N/A')
     .replace('{{REAVALIACAO_TEXTO}}', observation.clinicalReevaluationText || 'Não informada')
     .replace('{{NOVA_HIPOTESE}}', observation.conclusionNewHypothesis || 'Não informada')
-    .replace('{{NOVAS_CONDUTAS}}', observation.newConducts || 'Não informadas');
+    .replace('{{NOVAS_CONDUTAS}}', observation.newConducts || 'Não informadas')
+    .replace('{{ORIENTACOES_PRONTUARIO}}', aiResults.techOrientations || 'Não informadas')
+    .replace('{{ALARME_PRONTUARIO}}', aiResults.techAlarmSignals || 'Não informados')
+    .replace('{{ORIENTACOES_PACIENTE}}', aiResults.layOrientations || 'Não informadas')
+    .replace('{{ALARME_PACIENTE}}', aiResults.layAlarmSignals || 'Não informados');
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

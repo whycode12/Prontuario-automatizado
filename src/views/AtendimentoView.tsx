@@ -6,7 +6,8 @@ import {
   Bed,
   Building2,
   Ambulance,
-  Check
+  Check,
+  Tag
 } from 'lucide-react';
 import type {
   PatientData,
@@ -186,6 +187,14 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   // Controle de seleção única nos rankings
   const [selectedHypothesisIdx, setSelectedHypothesisIdx] = React.useState<number | null>(null);
   const [selectedCidIdx, setSelectedCidIdx] = React.useState<number | null>(null);
+  const [copiedTag, setCopiedTag] = React.useState<string | null>(null);
+
+  const handleCopyTag = (tag: string) => {
+    navigator.clipboard.writeText(tag);
+    setCopiedTag(tag);
+    showToast(`Tag ${tag} copiada! Cole em qualquer template.`);
+    setTimeout(() => setCopiedTag(null), 2000);
+  };
 
   // Define a seleção inicial ao gerar novos resultados de IA
   React.useEffect(() => {
@@ -1030,17 +1039,44 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Bloco 1: PRONTUÁRIO */}
           <div className="space-y-3 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-navy-900/40">
-            <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              PRONTUÁRIO
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+                PRONTUÁRIO
+              </h3>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                Linguagem técnica
+              </span>
+            </div>
             <UndoableTextarea
               label="Orientações Gerais"
+              headerRight={
+                <button
+                  type="button"
+                  onClick={() => handleCopyTag('{{orientacoes_prontuario}}')}
+                  className="font-mono text-[10px] text-blue-700 dark:text-ice-200 bg-blue-100/70 dark:bg-navy-800 hover:bg-blue-200/80 dark:hover:bg-blue-900/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-700/60 transition-colors flex items-center gap-1"
+                  title="Clique para copiar a tag {{orientacoes_prontuario}}"
+                >
+                  <Tag className="w-2.5 h-2.5" />
+                  <span>{copiedTag === '{{orientacoes_prontuario}}' ? 'Copiado!' : '{{orientacoes_prontuario}}'}</span>
+                </button>
+              }
               value={aiResults.techOrientations || ''}
               onChange={(val) => setAiResults({ ...aiResults, techOrientations: val })}
               rows={3}
             />
             <UndoableTextarea
               label="Sinais de Alarme"
+              headerRight={
+                <button
+                  type="button"
+                  onClick={() => handleCopyTag('{{alarme_prontuario}}')}
+                  className="font-mono text-[10px] text-blue-700 dark:text-ice-200 bg-blue-100/70 dark:bg-navy-800 hover:bg-blue-200/80 dark:hover:bg-blue-900/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-700/60 transition-colors flex items-center gap-1"
+                  title="Clique para copiar a tag {{alarme_prontuario}}"
+                >
+                  <Tag className="w-2.5 h-2.5" />
+                  <span>{copiedTag === '{{alarme_prontuario}}' ? 'Copiado!' : '{{alarme_prontuario}}'}</span>
+                </button>
+              }
               value={aiResults.techAlarmSignals || ''}
               onChange={(val) => setAiResults({ ...aiResults, techAlarmSignals: val })}
               rows={3}
@@ -1049,17 +1085,44 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
 
           {/* Bloco 2: RECEITA (PACIENTE) */}
           <div className="space-y-3 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-navy-900/40">
-            <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              RECEITA (PACIENTE)
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+                RECEITA (PACIENTE)
+              </h3>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                Linguagem leiga
+              </span>
+            </div>
             <UndoableTextarea
               label="Orientações Gerais"
+              headerRight={
+                <button
+                  type="button"
+                  onClick={() => handleCopyTag('{{orientacoes_paciente}}')}
+                  className="font-mono text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/40 hover:bg-emerald-200/80 dark:hover:bg-emerald-900/50 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-700/60 transition-colors flex items-center gap-1"
+                  title="Clique para copiar a tag {{orientacoes_paciente}}"
+                >
+                  <Tag className="w-2.5 h-2.5" />
+                  <span>{copiedTag === '{{orientacoes_paciente}}' ? 'Copiado!' : '{{orientacoes_paciente}}'}</span>
+                </button>
+              }
               value={aiResults.layOrientations || ''}
               onChange={(val) => setAiResults({ ...aiResults, layOrientations: val })}
               rows={3}
             />
             <UndoableTextarea
               label="Sinais de Alarme"
+              headerRight={
+                <button
+                  type="button"
+                  onClick={() => handleCopyTag('{{alarme_paciente}}')}
+                  className="font-mono text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/40 hover:bg-emerald-200/80 dark:hover:bg-emerald-900/50 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-700/60 transition-colors flex items-center gap-1"
+                  title="Clique para copiar a tag {{alarme_paciente}}"
+                >
+                  <Tag className="w-2.5 h-2.5" />
+                  <span>{copiedTag === '{{alarme_paciente}}' ? 'Copiado!' : '{{alarme_paciente}}'}</span>
+                </button>
+              }
               value={aiResults.layAlarmSignals || ''}
               onChange={(val) => setAiResults({ ...aiResults, layAlarmSignals: val })}
               rows={3}
