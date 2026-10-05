@@ -182,22 +182,26 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     return aiResults.hypothesisRankings || [];
   }, [aiResults.hypothesisRankings]);
 
-  // Controle de seleção única nos rankings
-  const [selectedHypothesisIdx, setSelectedHypothesisIdx] = React.useState<number | null>(null);
-  const [selectedCidIdx, setSelectedCidIdx] = React.useState<number | null>(null);
-
-  // Define a seleção inicial ao gerar novos resultados de IA
-  React.useEffect(() => {
-    if (aiResults.hypothesisRankings && aiResults.hypothesisRankings.length > 0) {
-      setSelectedHypothesisIdx(0);
+  // Controle de seleção nos rankings baseado no valor atualmente definido
+  const selectedHypothesisIdx = React.useMemo(() => {
+    if (!aiResults.mainHypothesis || !aiResults.hypothesisRankings || aiResults.hypothesisRankings.length === 0) {
+      return null;
     }
-  }, [aiResults.hypothesisRankings]);
+    const idx = aiResults.hypothesisRankings.findIndex((h) => h.nome.trim().toLowerCase() === aiResults.mainHypothesis?.trim().toLowerCase());
+    return idx >= 0 ? idx : null;
+  }, [aiResults.mainHypothesis, aiResults.hypothesisRankings]);
 
-  React.useEffect(() => {
-    if (aiResults.cidRankings && aiResults.cidRankings.length > 0) {
-      setSelectedCidIdx(0);
+  const selectedCidIdx = React.useMemo(() => {
+    if (!aiResults.selectedCid || !aiResults.cidRankings || aiResults.cidRankings.length === 0) {
+      return null;
     }
-  }, [aiResults.cidRankings]);
+    const currentVal = aiResults.selectedCid.trim().toLowerCase();
+    const idx = aiResults.cidRankings.findIndex((c) => {
+      const full = `${c.cid} - ${c.desc}`.toLowerCase();
+      return full === currentVal || c.cid.toLowerCase() === currentVal;
+    });
+    return idx >= 0 ? idx : null;
+  }, [aiResults.selectedCid, aiResults.cidRankings]);
 
   // Estilo das badges de probabilidade
   const getProbBadgeClass = (prob: string = '') => {
@@ -713,7 +717,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                         <div
                           key={idx}
                           onClick={() => {
-                            setSelectedHypothesisIdx(idx);
                             setAiResults((prev) => ({ ...prev, mainHypothesis: h.nome }));
                             showToast(`Hipótese "${h.nome}" transferida para o campo principal!`);
                           }}
@@ -786,7 +789,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                         <div
                           key={idx}
                           onClick={() => {
-                            setSelectedCidIdx(idx);
                             const val = `${c.cid} - ${c.desc}`;
                             setAiResults((prev) => ({ ...prev, selectedCid: val }));
                           }}
@@ -1185,7 +1187,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         )}
 
         {/* Encaminhamentos e Atestado */}
-        {(aiResults.referralNeeded || aiResults.medicalLeaveNeeded) && (
+        {!hideAiBoxes && (aiResults.referralNeeded || aiResults.medicalLeaveNeeded) && (
           <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-300">
             {aiResults.referralNeeded && (
               <span>

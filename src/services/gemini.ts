@@ -10,7 +10,8 @@ export function buildCaseContextPayload(
   examResults: string,
   aiResults: AIResult,
   observation: ObservationData,
-  template?: string
+  template?: string,
+  condutas?: string
 ): string {
   const baseTemplate = template || `=== DADOS DO PACIENTE ===
 Nome: {{NOME}}
@@ -99,6 +100,7 @@ Pendências da Reavaliação: {{PENDENCIAS_OBSERVACAO}}`;
     .replace('{{REAVALIACAO_TEXTO}}', observation.clinicalReevaluationText || 'Não informada')
     .replace('{{NOVA_HIPOTESE}}', observation.conclusionNewHypothesis || 'Não informada')
     .replace('{{NOVAS_CONDUTAS}}', observation.newConducts || 'Não informadas')
+    .replace('{{CONDUTAS}}', condutas || 'Não informadas')
     .replace('{{ORIENTACOES_PRONTUARIO}}', aiResults.techOrientations || 'Não informadas')
     .replace('{{ALARME_PRONTUARIO}}', aiResults.techAlarmSignals || 'Não informados')
     .replace('{{ORIENTACOES_PACIENTE}}', aiResults.layOrientations || 'Não informadas')

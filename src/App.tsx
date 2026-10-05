@@ -583,7 +583,8 @@ export default function App() {
       examResults,
       aiResults,
       observation,
-      tpl
+      tpl,
+      condutas
     );
   };
 
@@ -1904,17 +1905,14 @@ export default function App() {
               <button
                 type="button"
                 onClick={toggleHideAiBoxes}
-                className={`h-8 px-2.5 rounded-lg border text-xs font-medium inline-flex items-center gap-1.5 transition-colors shadow-2xs ${
+                className={`h-8 w-8 rounded-lg border text-xs font-medium inline-flex items-center justify-center transition-colors shadow-2xs ${
                   hideAiBoxes
-                    ? 'bg-slate-100 dark:bg-[#202020] text-slate-500 dark:text-neutral-400 border-slate-200 dark:border-[#383838] hover:text-slate-800 dark:hover:text-white'
-                    : 'bg-white dark:bg-[#252525] text-slate-700 dark:text-neutral-200 border-slate-200 dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#2a2a2a]'
+                    ? 'bg-slate-100 dark:bg-[#202020] text-slate-400 dark:text-neutral-500 border-slate-200 dark:border-[#383838] hover:text-slate-700 dark:hover:text-neutral-300 hover:bg-slate-200/60 dark:hover:bg-[#282828]'
+                    : 'bg-white dark:bg-[#252525] text-slate-600 dark:text-neutral-300 border-slate-200 dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] hover:text-slate-900 dark:hover:text-white'
                 }`}
-                title={hideAiBoxes ? 'Mostrar boxes de Inteligência Artificial' : 'Ocultar boxes de Inteligência Artificial'}
+                title={hideAiBoxes ? 'Mostrar Inteligência Artificial' : 'Ocultar Inteligência Artificial'}
               >
-                <Sparkles className={`w-3.5 h-3.5 ${hideAiBoxes ? 'text-slate-400 dark:text-neutral-500' : 'text-amber-500 dark:text-amber-400'}`} />
-                <span className="hidden sm:inline">
-                  {hideAiBoxes ? 'Mostrar IA' : 'Ocultar IA'}
-                </span>
+                <Sparkles className="w-3.5 h-3.5" />
               </button>
             )}
 

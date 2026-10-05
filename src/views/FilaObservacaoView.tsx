@@ -163,12 +163,7 @@ export const FilaObservacaoView: React.FC<FilaObservacaoViewProps> = ({
                   <div className="text-xs text-slate-600 dark:text-neutral-300 space-y-1">
                     <strong className="text-slate-700 dark:text-neutral-200 block">Condutas:</strong>
                     <div className="space-y-0.5 pl-0.5">
-                      {formatConductsList(
-                        rec.observation?.newConducts ||
-                        (rec.aiResults?.unitMedications && rec.aiResults.unitMedications.length > 0
-                          ? rec.aiResults.unitMedications.join('\n')
-                          : rec.condutas || '')
-                      ).map((item, idx) => (
+                      {formatConductsList(rec.condutas || '').map((item, idx) => (
                         <div key={idx} className="leading-snug">
                           {item.startsWith('-') ? item : `- ${item}`}
                         </div>

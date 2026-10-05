@@ -2,12 +2,12 @@ import type { SystemTemplates, SystemPrompts, HppData } from '../types';
 
 export function parseHppText(text: string): HppData {
   const result: HppData = {
-    alergias: 'Nega alergias medicamentosas conhecidas',
-    comorbidades: 'Nega',
-    muc: 'Nega medicações de uso contínuo',
-    cirurgias: 'Nega cirurgias prévias',
-    tabagismo: 'Nega',
-    etilismo: 'Nega'
+    alergias: `Nega alergias medicamentosas conhecidas.`,
+    comorbidades: `Nega.`,
+    muc: `Nega medicações de uso contínuo.`,
+    cirurgias: `Nega cirurgias prévias.`,
+    tabagismo: `Nega.`,
+    etilismo: `Nega.`
   };
   if (!text || typeof text !== 'string') return result;
 
@@ -49,10 +49,10 @@ export function parseHppText(text: string): HppData {
 }
 
 export const DEFAULT_TEMPLATES: SystemTemplates = {
-  hpp: `Alergias: Nega alergias medicamentosas conhecidas
+  hpp: `Alergias: Nega alergias medicamentosas conhecidas.
 Comorbidades: Nega.
-MUC: Nega medicações de uso contínuo
-Cirurgias prévias: Nega cirurgias prévias
+MUC: Nega medicações de uso contínuo.
+Cirurgias prévias: Nega cirurgias prévias.
 Tabagismo: Nega.
 Etilismo: Nega.`,
   exameFisico: `BEG, afebril, hidratado, corado, anictérico, acianótico, hemodinamicamente estável.
@@ -339,7 +339,10 @@ TAX: {{TAX}} ºC
 {{EXAME_FISICO}}
 
 HIPÓTESE DIAGNÓSTICA: {{HIPOTESE}}
-{{DIFERENCIAIS}}`,
+{{DIFERENCIAIS}}
+
+CONDUTAS:
+{{CONDUTAS}}`,
   payloadPassometro: `IDENTIFICAÇÃO:
 Nome: {{NOME}}
 Idade: {{IDADE}} anos
