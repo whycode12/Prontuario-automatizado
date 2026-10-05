@@ -24,7 +24,11 @@ export function generateEvolucaoText(
   contextData: TagContextData
 ): string {
   const medsUnidade = (contextData.aiResults.unitMedications || [])
-    .map((m, i) => `${i + 1}. ${m}`)
+    .map((m, i) => {
+      const trimmed = m.trim();
+      const cleaned = trimmed.replace(/^\s*(?:\d+[\.\)\-:]|\-|\*)\s*/, '');
+      return `${i + 1}. ${cleaned}`;
+    })
     .join('\n') || 'Nenhuma medicação administrada registrada';
 
   return replaceTemplateTags(templateEvolucao, {

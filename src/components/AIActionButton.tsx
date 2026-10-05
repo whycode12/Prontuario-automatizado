@@ -59,7 +59,7 @@ export const DEFAULT_JSON_SCHEMAS: Record<string, string> = {
       { med: "Dipirona", type: "contraindication", note: "ATENÇÃO: Paciente relata alergia se houver, não prescrever!" }
     ],
     alertaProfilaxiaVacinal: "Avaliar VAT se ferimento perfurocortante.",
-    examesLaboratorio: "EAS / Urina 1, Urocultura com antibiograma se falha terapêutica",
+    examesLaboratorio: "1. EAS / Urina 1\n2. Urocultura com antibiograma se falha terapêutica",
     examesImagem: "Sem indicação no momento",
     desfechoSugerido: "alta",
     motivoDesfecho: "Boa resposta clínica esperada, ausência de sinais de sepse ou abdome cirúrgico.",

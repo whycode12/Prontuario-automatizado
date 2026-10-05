@@ -15,7 +15,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   Cloud,
-  Sparkles
+  Sparkles,
+  Terminal
 } from 'lucide-react';
 
 import type {
@@ -33,6 +34,7 @@ import { DEFAULT_TEMPLATES, DEFAULT_PROMPTS, parseHppText } from './data/default
 import { buildCaseContextPayload } from './services/gemini';
 import { SettingsModal } from './components/SettingsModal';
 import { CloudSyncModal } from './components/CloudSyncModal';
+import { AiLogModal } from './components/AiLogModal';
 import {
   auth,
   saveRecordToCloud,
@@ -341,6 +343,7 @@ export default function App() {
   // UI Navigation & Modals
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cloudSyncOpen, setCloudSyncOpen] = useState(false);
+  const [aiLogModalOpen, setAiLogModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
     return localStorage.getItem('prontuario_sidebar_open') !== 'false';
   });
@@ -932,7 +935,8 @@ export default function App() {
     susFilter,
     setAiResults,
     setDocuments,
-    showToast
+    showToast,
+    openAiLogModal: () => setAiLogModalOpen(true)
   });
 
 
@@ -1440,6 +1444,16 @@ export default function App() {
               </button>
             )}
 
+            {/* Console de Logs da IA */}
+            <button
+              type="button"
+              onClick={() => setAiLogModalOpen(true)}
+              className="h-8 w-8 rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-slate-50 dark:hover:bg-[#2a2a2a] text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors shadow-2xs"
+              title="Logs de Execução da I.A."
+            >
+              <Terminal className="w-3.5 h-3.5" />
+            </button>
+
             {/* Salvar atendimento (Apenas ícone de disquete) */}
             <button
               type="button"
@@ -1610,6 +1624,12 @@ export default function App() {
         onCopyDefaultsCode={handleCopyDefaultsCode}
         onSaveAllAsGlobalDefault={handleSaveAllAsGlobalDefault}
         onPullGlobalDefaults={handlePullGlobalDefaults}
+      />
+
+      {/* AI Log Console Modal */}
+      <AiLogModal
+        isOpen={aiLogModalOpen}
+        onClose={() => setAiLogModalOpen(false)}
       />
     </div>
   );

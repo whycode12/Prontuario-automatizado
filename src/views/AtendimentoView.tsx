@@ -22,49 +22,7 @@ import { TemplateEditorButton } from '../components/TemplateEditorButton';
 import { AIDrawer } from '../components/AIDrawer';
 import { parseHppText } from '../data/defaults';
 
-interface AutoResizeTextareaProps {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  placeholder?: string;
-}
 
-const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
-  label,
-  value,
-  onChange,
-  placeholder,
-}) => {
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-
-  React.useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.max(48, textareaRef.current.scrollHeight)}px`;
-    }
-  }, [value]);
-
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs uppercase tracking-wide">
-        {label}
-      </label>
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onInput={(e) => {
-          const target = e.currentTarget;
-          target.style.height = 'auto';
-          target.style.height = `${Math.max(48, target.scrollHeight)}px`;
-        }}
-        placeholder={placeholder}
-        rows={2}
-        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-xs font-sans leading-relaxed resize-y transition-[height] duration-75 overflow-hidden"
-      />
-    </div>
-  );
-};
 
 interface AtendimentoViewProps {
   patient: PatientData;
@@ -923,18 +881,29 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           </div>
         </div>
 
-        {/* Lab & Imaging Requests com tamanho ajustável */}
+        {/* Lab & Imaging Requests */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <AutoResizeTextarea
-            label="Exames Laboratoriais"
-            value={aiResults.orderedLabs || ''}
-            onChange={(val) => setAiResults({ ...aiResults, orderedLabs: val })}
-          />
-          <AutoResizeTextarea
-            label="Exames de Imagem"
-            value={aiResults.orderedImages || ''}
-            onChange={(val) => setAiResults({ ...aiResults, orderedImages: val })}
-          />
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/40 dark:bg-navy-900/60 space-y-2">
+            <span className="font-bold text-slate-800 dark:text-ice-100 text-xs block uppercase tracking-wide">
+              EXAMES LABORATORIAIS
+            </span>
+            <UndoableTextarea
+              value={aiResults.orderedLabs || ''}
+              onChange={(val) => setAiResults({ ...aiResults, orderedLabs: val })}
+              rows={3}
+            />
+          </div>
+
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/40 dark:bg-navy-900/60 space-y-2">
+            <span className="font-bold text-slate-800 dark:text-ice-100 text-xs block uppercase tracking-wide">
+              EXAMES DE IMAGEM
+            </span>
+            <UndoableTextarea
+              value={aiResults.orderedImages || ''}
+              onChange={(val) => setAiResults({ ...aiResults, orderedImages: val })}
+              rows={3}
+            />
+          </div>
         </div>
       </section>
 

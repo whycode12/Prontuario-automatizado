@@ -56,7 +56,7 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   const examesSolicitados = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join('\n') || 'Nenhum exame solicitado.';
   const examesSolicitadosLinha = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join(' | ') || 'Nenhum';
 
-  const medsUnidadeText = (aiResults.unitMedications || []).join('\n') || 'Nenhuma medicação prescrita na unidade.';
+  const medsUnidadeText = (aiResults.unitMedications || []).join('\n\n') || 'Nenhuma medicação prescrita na unidade.';
   const medsUnidadeLinha = (aiResults.unitMedications || []).join('; ') || 'Nenhuma';
   const medsCasaText = (aiResults.homeMedications || []).join('\n\n') || 'Nenhuma medicação domiciliar.';
   const medsCasaLinha = (aiResults.homeMedications || []).join('; ') || 'Nenhuma';

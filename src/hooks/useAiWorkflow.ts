@@ -3,6 +3,7 @@ import type { SystemPrompts, SystemTemplates, AIResult, FinalDocuments } from '.
 import { callGeminiApi } from '../services/gemini';
 import { safeJsonParse } from '../utils/jsonSafe';
 import { DEFAULT_PROMPTS } from '../data/defaults';
+import { addAiLog, updateAiLog } from '../utils/aiLogger';
 
 interface UseAiWorkflowParams {
   apiKey: string;
@@ -14,6 +15,7 @@ interface UseAiWorkflowParams {
   setAiResults: React.Dispatch<React.SetStateAction<AIResult>>;
   setDocuments: React.Dispatch<React.SetStateAction<FinalDocuments>>;
   showToast: (msg: string) => void;
+  openAiLogModal?: () => void;
 }
 
 export function useAiWorkflow({
@@ -25,13 +27,50 @@ export function useAiWorkflow({
   susFilter,
   setAiResults,
   setDocuments,
-  showToast
+  showToast,
+  openAiLogModal
 }: UseAiWorkflowParams) {
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
 
-  const runAiHma = async () => {
-    setAiLoading((prev) => ({ ...prev, hma: true }));
+  const executeAiAction = async (
+    actionName: string,
+    loadingKey: string,
+    actionFn: (logId: string) => Promise<void>
+  ) => {
+    setAiLoading((prev) => ({ ...prev, [loadingKey]: true }));
+    const startTime = Date.now();
+    const currentModel = (model || '').trim() || 'gemini-3.1-flash-lite';
+    const logId = addAiLog({
+      action: actionName,
+      model: currentModel,
+      status: 'running',
+      message: `Enviando requisição clínica para o modelo ${currentModel}...`
+    });
+
     try {
+      await actionFn(logId);
+      updateAiLog(logId, {
+        status: 'success',
+        durationMs: Date.now() - startTime,
+        message: `${actionName} processado com sucesso.`
+      });
+    } catch (err: any) {
+      const errMsg = err?.message || 'Falha na comunicação com a API do Google';
+      updateAiLog(logId, {
+        status: 'error',
+        durationMs: Date.now() - startTime,
+        message: `Erro na execução: ${errMsg}`,
+        errorDetails: err?.stack || String(err)
+      });
+      openAiLogModal?.();
+      showToast(`Falha na IA (${actionName}): ${errMsg}`);
+    } finally {
+      setAiLoading((prev) => ({ ...prev, [loadingKey]: false }));
+    }
+  };
+
+  const runAiHma = async () => {
+    await executeAiAction('Sugestão de HMA', 'hma', async () => {
       const jsonExample = `{"hmaRefinada": "texto fluido e técnico...", "perguntasFaltantes": ["Pergunta 1", "Pergunta 2"]}`;
       const payload = getCasePayload('payloadHma');
       const response = await callGeminiApi(
@@ -50,16 +89,11 @@ export function useAiWorkflow({
         hmaMissingQuestions: parsed.perguntasFaltantes || []
       }));
       showToast('Sugestão de HMA gerada pela IA abaixo do campo.');
-    } catch (err: any) {
-      alert(`Falha na IA (HMA): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, hma: false }));
-    }
+    });
   };
 
   const runAiExameFisico = async () => {
-    setAiLoading((prev) => ({ ...prev, exame: true }));
-    try {
+    await executeAiAction('Exame Físico', 'exame', async () => {
       const jsonExample = `{"exameRefinado": "BEG, (...)", "manobrasFaltantes": ["Manobra 1", "Manobra 2"]}`;
       const payload = getCasePayload('payloadExameFisico');
       const response = await callGeminiApi(
@@ -78,16 +112,11 @@ export function useAiWorkflow({
         physicalExamMissingManeuvers: parsed.manobrasFaltantes || []
       }));
       showToast('Sugestão de exame físico gerada pela IA abaixo do campo.');
-    } catch (err: any) {
-      alert(`Falha na IA (Exame Físico): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, exame: false }));
-    }
+    });
   };
 
   const runAiDiagnostico = async () => {
-    setAiLoading((prev) => ({ ...prev, diagnostico: true }));
-    try {
+    await executeAiAction('Diagnóstico e CIDs', 'diagnostico', async () => {
       const jsonExample = `{
   "hipotesePrincipal": "Cistite Aguda Não Complicada",
   "rankingHipoteses": [
@@ -172,16 +201,11 @@ export function useAiWorkflow({
         clinicalScores: parsed.escoresClinicos || []
       }));
       showToast('Diagnósticos e CID gerados pela IA!');
-    } catch (err: any) {
-      alert(`Falha na IA (Diagnóstico): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, diagnostico: false }));
-    }
+    });
   };
 
   const runAiConduta = async () => {
-    setAiLoading((prev) => ({ ...prev, conduta: true }));
-    try {
+    await executeAiAction('Condutas e Prescrições', 'conduta', async () => {
       const jsonExample = `{
   "medicacoesUnidade": ["Cetoprofeno 100mg EV em SF 0,9% 100ml", "Dipirona 1g EV"],
   "medicacoesCasa": ["Fosfomicina Trometamol 3g dose única VO", "Dipirona 500mg VO até de 6/6h se dor"],
@@ -190,7 +214,7 @@ export function useAiWorkflow({
     {"med": "Dipirona", "type": "contraindication", "note": "ATENÇÃO: Paciente relata alergia se houver, não prescrever!"}
   ],
   "alertaProfilaxiaVacinal": "Avaliar VAT se ferimento perfurocortante.",
-  "examesLaboratorio": "EAS / Urina 1, Urocultura com antibiograma se falha",
+  "examesLaboratorio": "1. EAS / Urina 1\\n2. Urocultura com antibiograma se falha",
   "examesImagem": "Sem indicação no momento",
   "desfechoSugerido": "alta",
   "motivoDesfecho": "Boa resposta clínica esperada, ausência de sinais de sepse ou abdome cirúrgico.",
@@ -215,32 +239,48 @@ export function useAiWorkflow({
       );
 
       const parsed = safeJsonParse(response);
+      const formatExamList = (val: any): string => {
+        if (!val) return '';
+        if (Array.isArray(val)) {
+          return val.map((item) => String(item).trim()).filter(Boolean).join('\n');
+        }
+        if (typeof val === 'string') {
+          const trimmed = val.trim();
+          if (trimmed.includes('\n')) return trimmed;
+          if (trimmed.includes(',')) {
+            return trimmed
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .join('\n');
+          }
+          return trimmed;
+        }
+        return String(val);
+      };
+
       setAiResults((prev) => ({
         ...prev,
         unitMedications: parsed.medicacoesUnidade || [],
         homeMedications: parsed.medicacoesCasa || [],
         medicationDisclaimers: parsed.disclaimers || [],
         tetanusRabiesAlert: parsed.alertaProfilaxiaVacinal || '',
-        orderedLabs: parsed.examesLaboratorio || '',
-        orderedImages: parsed.examesImagem || '',
+        orderedLabs: formatExamList(parsed.examesLaboratorio),
+        orderedImages: formatExamList(parsed.examesImagem),
         clinicalOutcome: parsed.desfechoSugerido || 'alta',
         outcomeReason: parsed.motivoDesfecho || '',
         referralNeeded: !!parsed.encaminhamentoUbs,
+        referralReason: parsed.motivoEncaminhamento || '',
         medicalLeaveNeeded: !!parsed.atestadoNecessario,
         medicalLeaveDays: parsed.diasAtestado || '',
         medicalLeaveReason: parsed.motivoAtestado || ''
       }));
       showToast('Condutas, prescrições e alertas de segurança gerados!');
-    } catch (err: any) {
-      alert(`Falha na IA (Condutas): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, conduta: false }));
-    }
+    });
   };
 
   const runAiMelhorarCondutas = async () => {
-    setAiLoading((prev) => ({ ...prev, melhorarCondutas: true }));
-    try {
+    await executeAiAction('Refinar Condutas', 'melhorarCondutas', async () => {
       const jsonExample = `{"condutasRefinadas": "- Dipirona 1g EV diluído em 100ml SF 0,9% agora em 20 min\\n- Hidratação com SF 0,9% 500ml EV\\n- Reavaliação clínica e sinais vitais após término das medicações"}`;
       const payload = `${getCasePayload('payloadConduta')}\n\n=== TEXTO ATUAL DE CONDUTAS DIGITADO PELO MÉDICO ===\n${condutas || 'Sem condutas descritas ainda'}`;
       const response = await callGeminiApi(
@@ -258,16 +298,11 @@ export function useAiWorkflow({
         condutasSuggestion: parsed.condutasRefinadas || ''
       }));
       showToast('Sugestão de condutas gerada pela IA abaixo do campo!');
-    } catch (err: any) {
-      alert(`Falha na IA (Condutas): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, melhorarCondutas: false }));
-    }
+    });
   };
 
   const runAiOrientacoes = async () => {
-    setAiLoading((prev) => ({ ...prev, orientacoes: true }));
-    try {
+    await executeAiAction('Orientações e Alarmes', 'orientacoes', async () => {
       const jsonExample = `{
   "orientacoesProntuario": "Orientado repouso relativo, hidratação oral contínua e seguimento com médico assistente / UBS.",
   "sinaisAlarmeProntuario": "Febre persistente acima de 38,5°C refratária a antitérmicos, piora acentuada da dor, vômitos incoercíveis, síncope ou dispneia.",
@@ -293,16 +328,11 @@ export function useAiWorkflow({
         layAlarmSignals: parsed.sinaisAlarmeReceita || ''
       }));
       showToast('Orientações e sinais de alarme gerados pela IA!');
-    } catch (err: any) {
-      alert(`Falha na IA (Orientações): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, orientacoes: false }));
-    }
+    });
   };
 
   const runAiPassagemPlantao = async () => {
-    setAiLoading((prev) => ({ ...prev, passagem: true }));
-    try {
+    await executeAiAction('Passagem de Plantão', 'passagem', async () => {
       const payload = getCasePayload('payloadPassagemPlantao');
       const response = await callGeminiApi(
         apiKey,
@@ -313,16 +343,11 @@ export function useAiWorkflow({
       );
       setDocuments((prev: FinalDocuments) => ({ ...prev, passagemPlantao: response.trim() }));
       showToast('Passagem de plantão oral gerada!');
-    } catch (err: any) {
-      alert(`Falha na IA (Passagem de plantão): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, passagem: false }));
-    }
+    });
   };
 
   const runAiPassometro = async () => {
-    setAiLoading((prev) => ({ ...prev, passometro: true }));
-    try {
+    await executeAiAction('Passômetro', 'passometro', async () => {
       const payload = getCasePayload('payloadPassometro');
       const response = await callGeminiApi(
         apiKey,
@@ -333,16 +358,11 @@ export function useAiWorkflow({
       );
       setDocuments((prev: FinalDocuments) => ({ ...prev, passometro: response.trim() }));
       showToast('Passômetro gerado pela IA!');
-    } catch (err: any) {
-      alert(`Falha na IA (Passômetro): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, passometro: false }));
-    }
+    });
   };
 
   const runAiReavaliacao = async () => {
-    setAiLoading((prev) => ({ ...prev, reavaliacao: true }));
-    try {
+    await executeAiAction('Reavaliação Clínica', 'reavaliacao', async () => {
       const jsonExample = `{
   "reavaliacaoRefinada": "Paciente mantido em repouso e sob analgesia venosa. No momento, refere melhora expressiva do quadro álgico (EVA 2/10), nega novos picos febris ou episódios de êmese. Aceitando hidratação oral. Mantém estabilidade hemodinâmica.",
   "checagensFaltantes": ["Aferir novos sinais vitais de controle", "Palpação abdominal de controle pós-analgesia", "Checar débito urinário"]
@@ -364,16 +384,11 @@ export function useAiWorkflow({
         missingReevaluationChecks: parsed.checagensFaltantes || []
       }));
       showToast('Sugestão de reavaliação gerada pela IA abaixo do campo.');
-    } catch (err: any) {
-      alert(`Falha na IA (Reavaliação): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, reavaliacao: false }));
-    }
+    });
   };
 
   const runAiConclusaoObs = async () => {
-    setAiLoading((prev) => ({ ...prev, conclusaoObs: true }));
-    try {
+    await executeAiAction('Conclusão da Observação', 'conclusaoObs', async () => {
       const jsonExample = `{
   "novaHipotese": "Cistite aguda não complicada com boa resposta inicial a sintomáticos e hidratação.",
   "novasCondutas": "- Alta médica da observação com receitas e orientações domiciliares.\\n- Fosfomicina 3g dose única VO hoje à noite.\\n- Dipirona 500mg VO de 6/6h se dor ou febre.\\n- Manter hidratação vigorosa e retorno à UBS para seguimento.\\n- Sinais de alarme orientados (febre refratária, dor lombar ou vômitos)."
@@ -398,11 +413,7 @@ export function useAiWorkflow({
         newConductsSuggestion: novasCondutas
       }));
       showToast('Sugestão de nova hipótese e condutas gerada abaixo dos campos.');
-    } catch (err: any) {
-      alert(`Falha na IA (Conclusão da Observação): ${err.message}`);
-    } finally {
-      setAiLoading((prev) => ({ ...prev, conclusaoObs: false }));
-    }
+    });
   };
 
   return {
