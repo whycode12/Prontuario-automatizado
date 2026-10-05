@@ -1369,6 +1369,7 @@ export default function App() {
             hpp,
             exameFisico,
             examResults,
+            condutas,
             aiResults,
             observation,
             documents
