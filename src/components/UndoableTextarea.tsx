@@ -28,23 +28,13 @@ export const UndoableTextarea: React.FC<UndoableTextareaProps> = ({
   const [copied, setCopied] = React.useState(false);
 
   // Auto-resize textarea height to fit content smoothly
-  const adjustHeight = React.useCallback(() => {
+  React.useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       const minPx = rows * 28 + 16;
       textareaRef.current.style.height = `${Math.max(textareaRef.current.scrollHeight, minPx)}px`;
     }
-  }, [rows]);
-
-  React.useLayoutEffect(() => {
-    adjustHeight();
-  }, [value, adjustHeight]);
-
-  React.useEffect(() => {
-    adjustHeight();
-    const timer = setTimeout(adjustHeight, 50);
-    return () => clearTimeout(timer);
-  }, [value, adjustHeight]);
+  }, [value, rows]);
 
   React.useEffect(() => {
     if (value !== history[historyIndex]) {
@@ -113,7 +103,7 @@ export const UndoableTextarea: React.FC<UndoableTextareaProps> = ({
         onChange={handleTextChange}
         rows={rows}
         placeholder={placeholder}
-        className={`w-full text-sm p-3 rounded-lg border border-[#e5e5e5] dark:border-[#333] focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-neutral-500 font-sans leading-relaxed bg-white dark:bg-[#202020] text-slate-800 dark:text-neutral-100 placeholder-slate-400 dark:placeholder-neutral-500 transition-colors resize-none overflow-hidden ${className}`}
+        className={`w-full text-sm p-3 rounded-lg border border-[#e5e5e5] dark:border-[#333] focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-neutral-500 font-sans leading-relaxed bg-white dark:bg-[#202020] text-slate-800 dark:text-neutral-100 placeholder-slate-400 dark:placeholder-neutral-500 transition-all resize-none overflow-hidden ${className}`}
       />
     </div>
   );

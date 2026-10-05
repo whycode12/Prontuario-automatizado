@@ -127,7 +127,7 @@ export default function App() {
 
   // Settings & Storage State
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(STORAGE_KEYS.API_KEY) || '');
-  const [model, setModel] = useState<string>(() => localStorage.getItem(STORAGE_KEYS.MODEL) || 'gemini-1.5-flash');
+  const [model, setModel] = useState<string>(() => localStorage.getItem(STORAGE_KEYS.MODEL) || 'gemini-3.8-flash');
   const [templates, setTemplates] = useState<SystemTemplates>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
     return saved ? { ...DEFAULT_TEMPLATES, ...JSON.parse(saved) } : DEFAULT_TEMPLATES;
