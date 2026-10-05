@@ -98,19 +98,16 @@ ${actionInstruction}
 
 ${jsonSchemaExample ? `Responda OBRIGATORIAMENTE em formato JSON válido conforme este exemplo:\n${jsonSchemaExample}\nNÃO inclua crases triplas (\`\`\`json) se puder, retorne apenas o JSON bruto.` : 'Responda de forma direta e concisa, sem introduções ou cumprimentos.'}`;
 
-  // Prioritize the models configured in Google AI Studio:
-  // 1. gemini-3.1-flash-lite
-  // 2. gemini-3.5-flash-lite
-  // 3. gemini-3.8-flash
-  // 4. gemini-1.5-flash
+  // Mapeia modelos e prioriza modelos reais de alta velocidade da Google
   const requested = (model || '').trim();
+  const validRequested = requested.includes('3.') || !requested ? 'gemini-1.5-flash' : requested;
+
   const prioritizedModels = Array.from(
     new Set([
-      requested || 'gemini-3.1-flash-lite',
-      'gemini-3.1-flash-lite',
-      'gemini-3.5-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-1.5-flash'
+      validRequested,
+      'gemini-1.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash-8b'
     ])
   );
 

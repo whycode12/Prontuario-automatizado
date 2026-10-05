@@ -37,15 +37,25 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
 }) => {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
+  const adjustHeight = React.useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(54, el.scrollHeight)}px`;
+  }, []);
+
+  React.useLayoutEffect(() => {
+    adjustHeight();
+  }, [value, adjustHeight]);
+
   React.useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.max(48, textareaRef.current.scrollHeight)}px`;
-    }
-  }, [value]);
+    adjustHeight();
+    const timer = setTimeout(adjustHeight, 50);
+    return () => clearTimeout(timer);
+  }, [value, adjustHeight]);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 flex flex-col">
       <label className="block text-slate-700 dark:text-ice-200 font-semibold text-xs uppercase tracking-wide">
         {label}
       </label>
@@ -53,14 +63,10 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
         ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onInput={(e) => {
-          const target = e.currentTarget;
-          target.style.height = 'auto';
-          target.style.height = `${Math.max(48, target.scrollHeight)}px`;
-        }}
+        onInput={adjustHeight}
         placeholder={placeholder}
         rows={2}
-        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-xs font-sans leading-relaxed resize-y transition-[height] duration-75 overflow-hidden"
+        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-xs font-sans leading-relaxed resize-none overflow-hidden transition-colors"
       />
     </div>
   );

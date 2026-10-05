@@ -496,13 +496,13 @@ Retorne no formato JSON especificado.`,
 
 Analise todo o caso clínico até o momento.
 
-1. Sugira medicações para administrar na unidade (PA) com dose e via. Antes de cada medicação, enumere assim '1.'.
-2. Sugira medicações para uso domiciliar com posologia. Antes de cada medicação, enumere assim '1.'.
+1. Sugira medicações para administrar na unidade (PA) com dose e via. Antes de cada medicação, enumere assim '1.', '2.', e assim por diante.
+2. Sugira medicações para uso domiciliar com posologia. Antes de cada medicação, enumere assim '1.', '2.', e assim por diante.
 3. PRIORIZE medicações disponíveis no SUS / RENAME / Farmácia Básica quando aplicável.
 4. ALERTA CRÍTICO: Verifique as alergias registradas na HPP e interação medicamentosa com medicações em uso. Se qualquer medicação for contraindicada, avise explicitamente.
 5. Disclaimers clínicos objetivos: ajuste de dose para idoso frágil, disfunção renal/hepática ou cuidados essenciais de infusão ou informações relevantes sobre cuidados com determinados fármacos.
 6. Lembrete de profilaxia antitetânica ou antirrábica se ferimento/mordedura/trauma.
-7. Exames laboratoriais e de imagem a solicitar para o caso. Antes de cada exame, enumere assim '1.'.
+7. Exames laboratoriais e de imagem a solicitar para o caso. Antes de cada exame, enumere assim '1.', '2.', e assim por diante, separando-os por uma quebra de linha.
 8. Sugira o desfecho: alta orientada, observação, internação ou transferência, com justificativa concisa.
 9. Indique se necessita encaminhamento para UBS/Ambulatório com justificativa, além de breve prognóstico mais provável do quadro.
 10. Indique se necessita atestado médico, com dias sugeridos e justificativa.
