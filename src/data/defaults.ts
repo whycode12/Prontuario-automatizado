@@ -121,14 +121,12 @@ Paciente: {{NOME}} | Idade: {{IDADE}} | Sexo: {{SEXO}} | Leito de Observação
 #MEDICAÇÕES ADMINISTRADAS NA UNIDADE:
 {{MEDICACOES_UNIDADE}}
 
-#RESULTADOS DE EXAMES (LABORATÓRIO E IMAGEM):
-{{RESULTADOS_EXAMES}}
+#RESULTADOS DE EXAMES: {{RESULTADOS_EXAMES}}
 
 #REAVALIAÇÃO CLÍNICA:
 {{REAVALIACAO_TEXTO}}
 
-#CONCLUSÃO / NOVA HIPÓTESE:
-{{NOVA_HIPOTESE}}
+#HIPÓTESE FINAL: {{NOVA_HIPOTESE}}
 
 #CONDUTAS:
 {{NOVAS_CONDUTAS}}`,
@@ -522,7 +520,7 @@ Com base em todo o caso clínico:
 1. Gere ORIENTAÇÕES GERAIS e SINAIS DE ALARME em TEXTO TÉCNICO para constar no Prontuário. Inicie sempre as ORIENTAÇÕES com 'Oriento ...' e os SINAIS DE ALARME COM 'Oriento retornar ao pronto atendimento se sinais de alarmes como ...'. Seja conciso, objetivo e direto ao ponto.
 
 2. Gere ORIENTAÇÕES GERAIS e SINAIS DE ALARME em LINGUAGEM LEIGA, clara e acessível, para 
-constar na Receita Domiciliar do paciente. Em orientações, faça em formato instrucional. Em sinais de alarme, comece com 'Retornar ao pronto atendimento se sinais de alarmes como ...'. Seja conciso, objetivo e direto ao ponto.
+constar na Receita Domiciliar do paciente. Em orientações, faça em formato instrucional. Em sinais de alarme, comece com 'Retornar ao pronto atendimento se sinais de alarmes como ...'. Seja conciso, objetivo e direto ao ponto. Não se refira diretamente a pessoa, deixe de forma impessoal.
 
 3. Utilize linguagem fluida e em padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita. Mantenha objetivo, direto ao ponto e sem enrolação.
 
