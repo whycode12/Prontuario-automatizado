@@ -46,8 +46,8 @@ export function useAiWorkflow({
       const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
-        hmaSuggestion: parsed.hmaRefinada || parsed.enhancedHma || parsed.hma || '',
-        hmaMissingQuestions: parsed.perguntasFaltantes || parsed.missingQuestions || []
+        hmaSuggestion: parsed.hmaRefinada || '',
+        hmaMissingQuestions: parsed.perguntasFaltantes || []
       }));
       showToast('Sugestão de HMA gerada pela IA abaixo do campo.');
     } catch (err: any) {
@@ -74,8 +74,8 @@ export function useAiWorkflow({
       const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
-        physicalExamSuggestion: parsed.exameRefinado || parsed.refinedExam || parsed.exame || '',
-        physicalExamMissingManeuvers: parsed.manobrasFaltantes || parsed.missingManeuvers || []
+        physicalExamSuggestion: parsed.exameRefinado || '',
+        physicalExamMissingManeuvers: parsed.manobrasFaltantes || []
       }));
       showToast('Sugestão de exame físico gerada pela IA abaixo do campo.');
     } catch (err: any) {
@@ -217,19 +217,18 @@ export function useAiWorkflow({
       const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
-        unitMedications: parsed.medicacoesUnidade || parsed.unitMedications || [],
-        homeMedications: parsed.medicacoesCasa || parsed.homeMedications || [],
+        unitMedications: parsed.medicacoesUnidade || [],
+        homeMedications: parsed.medicacoesCasa || [],
         medicationDisclaimers: parsed.disclaimers || [],
         tetanusRabiesAlert: parsed.alertaProfilaxiaVacinal || '',
-        orderedLabs: parsed.examesLaboratorio || parsed.orderedLabs || '',
-        orderedImages: parsed.examesImagem || parsed.orderedImages || '',
+        orderedLabs: parsed.examesLaboratorio || '',
+        orderedImages: parsed.examesImagem || '',
         clinicalOutcome: parsed.desfechoSugerido || 'alta',
         outcomeReason: parsed.motivoDesfecho || '',
         referralNeeded: !!parsed.encaminhamentoUbs,
-        referralReason: parsed.motivoEncaminhamento || '',
-        medicalLeaveNeeded: !!(parsed.atestadoNecessario || parsed.medicalLeaveNeeded),
-        medicalLeaveDays: parsed.diasAtestado || parsed.medicalLeaveDays || '',
-        medicalLeaveReason: parsed.motivoAtestado || parsed.medicalLeaveReason || ''
+        medicalLeaveNeeded: !!parsed.atestadoNecessario,
+        medicalLeaveDays: parsed.diasAtestado || '',
+        medicalLeaveReason: parsed.motivoAtestado || ''
       }));
       showToast('Condutas, prescrições e alertas de segurança gerados!');
     } catch (err: any) {
@@ -256,7 +255,7 @@ export function useAiWorkflow({
       const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
-        condutasSuggestion: parsed.condutasRefinadas || parsed.condutas || parsed.refinedConducts || ''
+        condutasSuggestion: parsed.condutasRefinadas || ''
       }));
       showToast('Sugestão de condutas gerada pela IA abaixo do campo!');
     } catch (err: any) {
@@ -288,10 +287,10 @@ export function useAiWorkflow({
       const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
-        techOrientations: parsed.orientacoesProntuario || parsed.guidanceTechnical || parsed.textoTecnico || '',
-        techAlarmSignals: parsed.sinaisAlarmeProntuario || parsed.sinaisAlarmeTecnico || '',
-        layOrientations: parsed.orientacoesReceita || parsed.guidanceLayperson || parsed.textoLeigo || '',
-        layAlarmSignals: parsed.sinaisAlarmeReceita || parsed.sinaisAlarmeLeigo || ''
+        techOrientations: parsed.orientacoesProntuario || parsed.textoTecnico || '',
+        techAlarmSignals: parsed.sinaisAlarmeProntuario || '',
+        layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
+        layAlarmSignals: parsed.sinaisAlarmeReceita || ''
       }));
       showToast('Orientações e sinais de alarme gerados pela IA!');
     } catch (err: any) {
@@ -361,8 +360,8 @@ export function useAiWorkflow({
       const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
-        reevaluationSuggestion: parsed.reavaliacaoRefinada || parsed.reevaluationRefined || '',
-        missingReevaluationChecks: parsed.checagensFaltantes || parsed.missingChecks || []
+        reevaluationSuggestion: parsed.reavaliacaoRefinada || '',
+        missingReevaluationChecks: parsed.checagensFaltantes || []
       }));
       showToast('Sugestão de reavaliação gerada pela IA abaixo do campo.');
     } catch (err: any) {
@@ -390,8 +389,8 @@ export function useAiWorkflow({
       );
 
       const parsed = safeJsonParse(response);
-      const novaHipotese = parsed.novaHipotese || parsed.newHypothesis || parsed.novaHipótese || parsed.conclusao || '';
-      const novasCondutas = parsed.novasCondutas || parsed.newConducts || parsed.novasCondutasTexto || '';
+      const novaHipotese = parsed.novaHipotese || parsed.novaHipótese || parsed.conclusao || '';
+      const novasCondutas = parsed.novasCondutas || parsed.novasCondutasTexto || '';
 
       setAiResults((prev) => ({
         ...prev,

@@ -468,7 +468,7 @@ Retorne no formato JSON especificado.`,
 
 Com base nos dados do paciente (Idade, Sexo, Peso, Altura, Queixa Principal e texto inicial da HMA), realize duas tarefas de forma direta, concisa e sem prolixidade:
 
-1. Melhore a redação da HMA tornando-a técnica, fluida, cronológica e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita. Porém, compare o exame físico do caso com o template padrão abaixo e só altere o que for diferente do template padrão, que se tratam de coisas que eu adicionei ao caso gostaria que você revisasse.
+1. Melhore a redação do exame físico de forma fluida e padrão médico, mas sem usar uma linguagem muito formal, com palavras difíceis e pouco usuais ou com aspecto robótico ou feito por inteligência artificial, tente preservar o aspecto humano da escrita. Porém, compare o exame físico do caso com o template padrão abaixo e só altere o que for diferente do template padrão, que se tratam de coisas que eu adicionei ao caso gostaria que você revisasse. Mantenha a quebra de linha conforme no template padrão.
 
 2. Sugira perguntas ou dados de anamnese essenciais que faltaram investigar para este caso específico, levando em consideração todo o caso, apresente as perguntas em ordem de prioridade ao caso.
 
