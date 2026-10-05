@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   FileText,
   UserPlus,
@@ -50,6 +50,8 @@ import {
   subscribeToUserApiKey
 } from './services/firebase';
 import { downloadDefaultsFile, copyDefaultsCodeToClipboard } from './utils/defaultsExporter';
+import { replaceTemplateTags } from './utils/templateTags';
+import { safeJsonParse } from './utils/jsonSafe';
 
 import { AtendimentoView } from './views/AtendimentoView';
 import { DocumentosView } from './views/DocumentosView';
@@ -923,7 +925,7 @@ export default function App() {
         jsonExample
       );
 
-      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
         hmaSuggestion: parsed.hmaRefinada || '',
@@ -951,7 +953,7 @@ export default function App() {
         jsonExample
       );
 
-      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
         physicalExamSuggestion: parsed.exameRefinado || '',
@@ -1004,7 +1006,7 @@ export default function App() {
         jsonExample
       );
 
-      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      const parsed = safeJsonParse(response);
 
       // Monta o ranking estruturado de hipóteses
       let rankingHipoteses = parsed.rankingHipoteses || [];
@@ -1094,7 +1096,7 @@ export default function App() {
         jsonExample
       );
 
-      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
         unitMedications: parsed.medicacoesUnidade || [],
@@ -1133,7 +1135,7 @@ export default function App() {
         jsonExample
       );
 
-      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
         condutasSuggestion: parsed.condutasRefinadas || ''
@@ -1165,7 +1167,7 @@ export default function App() {
         jsonExample
       );
 
-      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
         techOrientations: parsed.orientacoesProntuario || parsed.textoTecnico || '',
@@ -1238,7 +1240,7 @@ export default function App() {
         jsonExample
       );
 
-      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
         reevaluationSuggestion: parsed.reavaliacaoRefinada || '',
@@ -1269,7 +1271,7 @@ export default function App() {
         jsonExample
       );
 
-      const parsed = JSON.parse(response.replace(/```json/g, '').replace(/```/g, '').trim());
+      const parsed = safeJsonParse(response);
       const novaHipotese = parsed.novaHipotese || parsed.novaHipótese || parsed.conclusao || '';
       const novasCondutas = parsed.novasCondutas || parsed.novasCondutasTexto || '';
 
@@ -1380,176 +1382,70 @@ export default function App() {
   ];
 
   // Fila de observação ordenada por urgência (mais atrasados ou com menor tempo restante primeiro)
-  const sortedActiveObsPatients = [...activeObsPatients].sort((a, b) => {
-    const cdA = computeObservationCountdown(
-      a.observation?.startedAt,
-      a.observation?.revaluationTimeMinutes || 120
-    );
-    const cdB = computeObservationCountdown(
-      b.observation?.startedAt,
-      b.observation?.revaluationTimeMinutes || 120
-    );
-    return cdA.remaining - cdB.remaining;
-  });
+  const sortedActiveObsPatients = useMemo(() => {
+    return [...activeObsPatients].sort((a, b) => {
+      const cdA = computeObservationCountdown(
+        a.observation?.startedAt,
+        a.observation?.revaluationTimeMinutes || 120
+      );
+      const cdB = computeObservationCountdown(
+        b.observation?.startedAt,
+        b.observation?.revaluationTimeMinutes || 120
+      );
+      return cdA.remaining - cdB.remaining;
+    });
+  }, [activeObsPatients]);
 
   // Verifica em tempo real se há pacientes que já passaram do horário de reavaliação
-  const overdueCount = activeObsPatients.filter((r) => {
-    const cd = computeObservationCountdown(
-      r.observation.startedAt,
-      r.observation.revaluationTimeMinutes || 120
-    );
-    return cd.status === 'overdue';
-  }).length;
+  const overdueCount = useMemo(() => {
+    return activeObsPatients.filter((r) => {
+      const cd = computeObservationCountdown(
+        r.observation.startedAt,
+        r.observation.revaluationTimeMinutes || 120
+      );
+      return cd.status === 'overdue';
+    }).length;
+  }, [activeObsPatients]);
   const hasOverdueObservation = overdueCount > 0;
-
-  // Helper para substituir as 4 tags de orientações e sinais de alarme em qualquer documento
-  const replaceOrientationAndAlarmTags = (templateStr: string): string => {
-    const techOrient = aiResults.techOrientations?.trim() || '';
-    const techAlarm = aiResults.techAlarmSignals?.trim() || '';
-    const layOrient = aiResults.layOrientations?.trim() || '';
-    const layAlarm = aiResults.layAlarmSignals?.trim() || '';
-
-    const hasSeparateTechAlarm = /\{\{(alarme_prontuario|sinais_alarme_prontuario|alarme_tecnico|sinais_alarme_tecnicos)\}\}/i.test(templateStr);
-
-    let output = templateStr;
-
-    // 1. Orientações Prontuário (Técnicas)
-    output = output.replace(/\{\{(orientacoes_prontuario|orientacao_prontuario)\}\}/gi, techOrient);
-
-    // 2. Sinais de Alarme Prontuário (Técnicos)
-    output = output.replace(/\{\{(alarme_prontuario|sinais_alarme_prontuario|alarme_tecnico|sinais_alarme_tecnicos)\}\}/gi, techAlarm);
-
-    // Retrocompatibilidade para {{ORIENTACOES_TECNICAS}}
-    if (hasSeparateTechAlarm) {
-      output = output.replace(/\{\{(orientacoes_tecnicas|orientacao_tecnica)\}\}/gi, techOrient);
-    } else {
-      const combinedTech = [techOrient, techAlarm].filter(Boolean).join('\n\n');
-      output = output.replace(/\{\{(orientacoes_tecnicas|orientacao_tecnica)\}\}/gi, combinedTech);
-    }
-
-    // 3. Orientações Paciente (Leigas / Receita)
-    output = output.replace(/\{\{(orientacoes_paciente|orientacao_paciente|orientacoes_receita|orientacoes_leigas)\}\}/gi, layOrient);
-
-    // 4. Sinais de Alarme Paciente (Leigos / Receita)
-    output = output.replace(/\{\{(alarme_paciente|sinais_alarme_paciente|alarme_receita|sinais_alarme_leigos)\}\}/gi, layAlarm);
-
-    return output;
-  };
 
   // Generate Evolution Text from Template
   const generateEvolucaoDocument = () => {
-    const now = new Date();
-    const dataHora = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
     const medsUnidade = (aiResults.unitMedications || []).map((m, i) => `${i + 1}. ${m}`).join('\n') || 'Nenhuma medicação administrada registrada';
-
-    let text = templates.evolucao
-      .replace('{{DATA_HORA}}', dataHora)
-      .replace('{{NOME}}', patient.nome || 'Não informado')
-      .replace('{{IDADE}}', patient.idade ? `${patient.idade} anos` : 'Não informada')
-      .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : 'Não informado')
-      .replace('{{HIPOTESE_INICIAL}}', aiResults.mainHypothesis || 'Não informada')
-      .replace('{{MEDICACOES_UNIDADE}}', medsUnidade)
-      .replace('{{RESULTADOS_EXAMES}}', examResults || 'Sem exames adicionais no momento.')
-      .replace('{{REAVALIACAO_TEXTO}}', observation.clinicalReevaluationText || 'Paciente reavaliado em leito de observação, mantendo estabilidade clínica.')
-      .replace('{{NOVA_HIPOTESE}}', observation.conclusionNewHypothesis || aiResults.mainHypothesis || 'Quadro clínico inalterado.')
-      .replace('{{NOVAS_CONDUTAS}}', observation.newConducts || '- Alta clínica orientada com receitas e orientações domiciliares.');
-
-    text = replaceOrientationAndAlarmTags(text);
+    const text = replaceTemplateTags(templates.evolucao, {
+      patient,
+      qp,
+      hma,
+      hpp,
+      vitals,
+      exameFisico,
+      examResults,
+      condutas,
+      aiResults,
+      observation,
+      customReplacements: {
+        MEDICACOES_UNIDADE: medsUnidade
+      }
+    });
     setDocuments((prev) => ({ ...prev, evolucao: text }));
     showToast('Evolução médica compilada com sucesso!');
   };
 
   // Montador único e centralizado para qualquer documento
   const buildDocumentContent = (docType: 'prontuario' | 'receitaInterna' | 'receitaDomiciliar' | 'passagemPlantao' | 'passometro'): string => {
-    const today = new Date().toLocaleDateString('pt-BR');
-    if (docType === 'prontuario') {
-      return replaceOrientationAndAlarmTags(
-        templates.prontuario
-          .replace('{{NOME}}', patient.nome || 'Paciente')
-          .replace('{{IDADE}}', patient.idade || '--')
-          .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : patient.sexo || 'Não informado')
-          .replace('{{DATA}}', today)
-          .replace('{{PESO}}', patient.peso || '--')
-          .replace('{{ALTURA}}', patient.altura || '--')
-          .replace('{{QP}}', qp || 'Não informada')
-          .replace('{{HMA}}', hma || 'Não informada')
-          .replace('{{ALERGIAS}}', hpp.alergias)
-          .replace('{{COMORBIDADES}}', hpp.comorbidades)
-          .replace('{{MUC}}', hpp.muc)
-          .replace('{{CIRURGIAS}}', hpp.cirurgias)
-          .replace('{{TABAGISMO}}', hpp.tabagismo)
-          .replace('{{ETILISMO}}', hpp.etilismo)
-          .replace('{{PA}}', vitals.pa || '--')
-          .replace('{{FC}}', vitals.fc || '--')
-          .replace('{{FR}}', vitals.fr || '--')
-          .replace('{{SAT}}', vitals.sat || '--')
-          .replace('{{TAX}}', vitals.tax || '--')
-          .replace('{{EXAME_FISICO}}', exameFisico || 'Não informado')
-          .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
-          .replace('{{DIFERENCIAIS}}', aiResults.differentialDiagnoses?.length ? `Diferenciais: ${aiResults.differentialDiagnoses.join(' • ')}` : '')
-          .replace('{{CID}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
-          .replace('{{CIDS}}', aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '')
-          .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado informado')
-          .replace('{{CONDUTAS}}', condutas.trim() || 'Condutas sintomáticas e orientações')
-      );
-    }
-    if (docType === 'receitaInterna') {
-      const medsUnidadeText = (aiResults.unitMedications || []).join('\n') || 'Nenhuma medicação prescrita na unidade.';
-      const examesSolicitados = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join('\n') || 'Nenhum exame solicitado.';
-      return replaceOrientationAndAlarmTags(
-        templates.receitaInterna
-          .replace('{{NOME}}', patient.nome || 'Paciente')
-          .replace('{{IDADE}}', patient.idade || '--')
-          .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : patient.sexo || 'Não informado')
-          .replace('{{DATA}}', today)
-          .replace('{{MEDICACOES_UNIDADE}}', medsUnidadeText)
-          .replace('{{EXAMES_SOLICITADOS}}', examesSolicitados)
-      );
-    }
-    if (docType === 'receitaDomiciliar') {
-      const medsCasaText = (aiResults.homeMedications || []).join('\n\n') || 'Nenhuma medicação domiciliar.';
-      return replaceOrientationAndAlarmTags(
-        templates.receitaDomiciliar
-          .replace('{{NOME}}', patient.nome || 'Paciente')
-          .replace('{{IDADE}}', patient.idade || '--')
-          .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : patient.sexo || 'Não informado')
-          .replace('{{DATA}}', today)
-          .replace('{{MEDICACOES_CASA}}', medsCasaText)
-      );
-    }
-    if (docType === 'passagemPlantao') {
-      return replaceOrientationAndAlarmTags(
-        templates.passagemPlantao
-          .replace('{{NOME}}', patient.nome || 'Paciente')
-          .replace('{{IDADE}}', patient.idade || '--')
-          .replace('{{SEXO}}', patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : 'Não informado')
-          .replace('{{DATA}}', today)
-          .replace('{{QP}}', qp || 'Não informada')
-          .replace('{{HMA_RESUMO}}', hma ? hma.slice(0, 150) + (hma.length > 150 ? '...' : '') : 'Não informada')
-          .replace('{{PA}}', vitals.pa || '--')
-          .replace('{{FC}}', vitals.fc || '--')
-          .replace('{{TAX}}', vitals.tax || '--')
-          .replace('{{EXAME_RESUMO}}', exameFisico ? exameFisico.slice(0, 100) + '...' : 'Sem alterações descritas')
-          .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
-          .replace('{{CONDUTAS_UNIDADE}}', (aiResults.unitMedications || []).join(', ') || condutas || 'Sintomáticos')
-          .replace('{{PENDENCIAS}}', observation.whatToReevaluate || examResults ? 'Conferir exames' : 'Reavaliação clínica')
-          .replace('{{STATUS}}', observation.inObservation ? 'Em observação clínica' : 'Em atendimento')
-      );
-    }
-    if (docType === 'passometro') {
-      return replaceOrientationAndAlarmTags(
-        templates.passometro
-          .replace('{{NOME}}', patient.nome || 'Paciente')
-          .replace('{{IDADE}}', patient.idade || '--')
-          .replace('{{SEXO}}', patient.sexo === 'M' ? 'M' : patient.sexo === 'F' ? 'F' : patient.sexo || '')
-          .replace('{{DATA}}', today)
-          .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'A esclarecer')
-          .replace('{{CONDUTAS_FEITAS}}', (aiResults.unitMedications || []).join(', ') || 'Sintomáticos')
-          .replace('{{PENDENCIAS}}', observation.whatToReevaluate || examResults ? 'Conferir exames' : 'Reavaliação clínica')
-          .replace('{{SINAIS_ALERTA}}', 'Piora hemodinâmica ou dor refratária')
-      );
-    }
-    return '';
+    const template = templates[docType];
+    if (!template) return '';
+    return replaceTemplateTags(template, {
+      patient,
+      qp,
+      hma,
+      hpp,
+      vitals,
+      exameFisico,
+      examResults,
+      condutas,
+      aiResults,
+      observation
+    });
   };
 
   // Compile All Final Documents (Preencher Tudo)

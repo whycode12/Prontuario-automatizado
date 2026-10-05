@@ -1,4 +1,5 @@
 import type { PatientData, VitalSigns, HppData, AIResult, ObservationData } from '../types';
+import { replaceTemplateTags } from '../utils/templateTags';
 
 export function buildCaseContextPayload(
   patient: PatientData,
@@ -60,51 +61,18 @@ Exames Solicitados: {{EXAMES_SOLICITADOS}}
 Em observação: {{STATUS_OBSERVACAO}}
 Pendências da Reavaliação: {{PENDENCIAS_OBSERVACAO}}`;
 
-  const diferentialsText = aiResults.differentialDiagnoses?.length
-    ? 'Diferenciais: ' + aiResults.differentialDiagnoses.join(', ')
-    : '';
-
-  const examesSolicitados = [aiResults.orderedLabs, aiResults.orderedImages].filter(Boolean).join(' | ') || 'Nenhum';
-
-  return baseTemplate
-    .replace('{{NOME}}', patient.nome || 'Não informado')
-    .replace('{{IDADE}}', patient.idade || 'Não informada')
-    .replace('{{SEXO}}', patient.sexo || 'Não informado')
-    .replace('{{PESO}}', patient.peso ? `${patient.peso} kg` : 'Não informado')
-    .replace('{{ALTURA}}', patient.altura ? `${patient.altura} cm` : 'Não informada')
-    .replace('{{QP}}', qp || 'Não informada')
-    .replace('{{HMA}}', hma || 'Não informada')
-    .replace('{{ALERGIAS}}', hpp.alergias || 'Nega')
-    .replace('{{COMORBIDADES}}', hpp.comorbidades || 'Nega')
-    .replace('{{MUC}}', hpp.muc || 'Nega')
-    .replace('{{CIRURGIAS}}', hpp.cirurgias || 'Nega')
-    .replace('{{TABAGISMO}}', hpp.tabagismo || 'Nega')
-    .replace('{{ETILISMO}}', hpp.etilismo || 'Nega')
-    .replace('{{PA}}', vitals.pa || '--')
-    .replace('{{FC}}', vitals.fc || '--')
-    .replace('{{FR}}', vitals.fr || '--')
-    .replace('{{SAT}}', vitals.sat || '--')
-    .replace('{{TAX}}', vitals.tax || '--')
-    .replace('{{EXAME_FISICO}}', exameFisico || 'Não informado')
-    .replace('{{RESULTADOS_EXAMES}}', examResults || 'Nenhum resultado registrado')
-    .replace('{{HIPOTESE}}', aiResults.mainHypothesis || 'Não definida')
-    .replace('{{DIFERENCIAIS}}', diferentialsText)
-    .replace('{{MEDS_UNIDADE}}', aiResults.unitMedications?.join('; ') || 'Nenhuma')
-    .replace('{{MEDS_CASA}}', aiResults.homeMedications?.join('; ') || 'Nenhuma')
-    .replace('{{EXAMES_SOLICITADOS}}', examesSolicitados)
-    .replace(
-      '{{STATUS_OBSERVACAO}}',
-      observation.inObservation ? `SIM (Reavaliar em ${observation.revaluationTimeMinutes} min)` : 'NÃO'
-    )
-    .replace('{{PENDENCIAS_OBSERVACAO}}', observation.whatToReevaluate || 'N/A')
-    .replace('{{REAVALIACAO_TEXTO}}', observation.clinicalReevaluationText || 'Não informada')
-    .replace('{{NOVA_HIPOTESE}}', observation.conclusionNewHypothesis || 'Não informada')
-    .replace('{{NOVAS_CONDUTAS}}', observation.newConducts || 'Não informadas')
-    .replace('{{CONDUTAS}}', condutas || 'Não informadas')
-    .replace('{{ORIENTACOES_PRONTUARIO}}', aiResults.techOrientations || 'Não informadas')
-    .replace('{{ALARME_PRONTUARIO}}', aiResults.techAlarmSignals || 'Não informados')
-    .replace('{{ORIENTACOES_PACIENTE}}', aiResults.layOrientations || 'Não informadas')
-    .replace('{{ALARME_PACIENTE}}', aiResults.layAlarmSignals || 'Não informados');
+  return replaceTemplateTags(baseTemplate, {
+    patient,
+    qp,
+    hma,
+    hpp,
+    vitals,
+    exameFisico,
+    examResults,
+    condutas,
+    aiResults,
+    observation
+  });
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
