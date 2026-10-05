@@ -107,9 +107,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={(e) => setLocalModel(e.target.value)}
               className="w-full px-2.5 py-1.5 rounded border border-[#e5e5e5] dark:border-[#383838] focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-neutral-500 text-xs bg-white dark:bg-[#202020] text-slate-800 dark:text-neutral-100"
             >
-              <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B (Menor fila, ultra-estável sem gargalos)</option>
-              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Equilibrado)</option>
-              <option value="gemini-3.8-flash">Gemini 3.8 Flash (Mais Recente)</option>
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (Frontier Flash, alta precisão)</option>
+              <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (Alta velocidade e eficiência)</option>
+              <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Ultra rápido, baixa latência)</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Equilibrado e consistente)</option>
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Econômico e ágil)</option>
+              <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B (Menor fila sem gargalos)</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legado estável)</option>
               <option value="gemini-1.5-pro">Gemini 1.5 Pro (Raciocínio Clínico Aprofundado)</option>
             </select>
           </div>
