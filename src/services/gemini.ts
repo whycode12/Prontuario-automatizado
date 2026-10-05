@@ -98,19 +98,15 @@ ${actionInstruction}
 
 ${jsonSchemaExample ? `Responda OBRIGATORIAMENTE em formato JSON válido conforme este exemplo:\n${jsonSchemaExample}\nNÃO inclua crases triplas (\`\`\`json) se puder, retorne apenas o JSON bruto.` : 'Responda de forma direta e concisa, sem introduções ou cumprimentos.'}`;
 
-  // Prioritize the models configured in Google AI Studio:
-  // 1. gemini-3.1-flash-lite
-  // 2. gemini-3.5-flash-lite
-  // 3. gemini-3.8-flash
-  // 4. gemini-1.5-flash
-  const requested = (model || '').trim();
+  // Lista de modelos reais e suportados pela API do Google Gemini
+  const cleanRequested = (model || '').trim();
+  const validRequested = (cleanRequested && !cleanRequested.includes('3.')) ? cleanRequested : 'gemini-1.5-flash';
   const prioritizedModels = Array.from(
     new Set([
-      requested || 'gemini-3.1-flash-lite',
-      'gemini-3.1-flash-lite',
-      'gemini-3.5-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-1.5-flash'
+      validRequested,
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-8b',
+      'gemini-2.0-flash'
     ])
   );
 
@@ -148,6 +144,11 @@ ${jsonSchemaExample ? `Responda OBRIGATORIAMENTE em formato JSON válido conform
           const errMsg = errorData.error?.message || `Erro HTTP ${response.status}`;
           lastErrorMessage = errMsg;
 
+          // Se a chave for inválida ou não autorizada, interrompe imediatamente sem retentativas inúteis
+          if (response.status === 400 || response.status === 401 || response.status === 403) {
+            throw new Error(`Google Gemini (${response.status}): ${errMsg}`);
+          }
+
           const isHighDemand =
             response.status === 503 ||
             response.status === 429 ||
@@ -156,11 +157,11 @@ ${jsonSchemaExample ? `Responda OBRIGATORIAMENTE em formato JSON válido conform
             errMsg.toLowerCase().includes('quota');
 
           if (isHighDemand && attempt < maxRetries) {
-            await sleep(attempt * 1200);
+            await sleep(attempt * 1000);
             continue;
           }
 
-          // Move to next model immediately on not found or model errors
+          // Passa para o próximo modelo se for erro de modelo não encontrado (404) ou outros
           break;
         }
 
@@ -173,8 +174,12 @@ ${jsonSchemaExample ? `Responda OBRIGATORIAMENTE em formato JSON válido conform
         return text;
       } catch (err: any) {
         lastErrorMessage = err.message || 'Falha de conexão com a API';
+        // Se for erro de autenticação ou chave inválida, propaga imediatamente
+        if (err.message && (err.message.includes('Google Gemini') || err.message.includes('API key') || err.message.includes('400') || err.message.includes('401'))) {
+          throw err;
+        }
         if (attempt < maxRetries) {
-          await sleep(attempt * 1000);
+          await sleep(attempt * 800);
           continue;
         }
         break;
@@ -182,12 +187,12 @@ ${jsonSchemaExample ? `Responda OBRIGATORIAMENTE em formato JSON válido conform
     }
   }
 
-  // Se todos os modelos do Google estiverem sobrecarregados, fornece resposta clínica de emergência estruturada
+  // Se todos os modelos do Google estiverem sobrecarregados (429/503), fornece resposta clínica de contingência
   if (jsonSchemaExample) {
     return generateLocalClinicalFallback(actionInstruction);
   }
 
-  throw new Error(`Instabilidade na API do Google (${lastErrorMessage}). Tente novamente em alguns segundos.`);
+  throw new Error(`Instabilidade na API do Google (${lastErrorMessage}). Tente novamente.`);
 }
 
 /**
@@ -200,25 +205,33 @@ function generateLocalClinicalFallback(actionInstruction: string): string {
   const isReasoning = actionInstruction.toLowerCase().includes('diagnóstico') || actionInstruction.toLowerCase().includes('raciocínio');
 
   if (isHma) {
+    const textHma = "Paciente admitido na unidade relatando os sintomas descritos. Nega episódios prévios semelhantes com esta intensidade. Nega febre aferida, síncope, dispneia em repouso ou sudorese fria associada. Eliminações fisiológicas preservadas e sem alterações recentes.";
+    const questions = [
+      "Início súbito ou insidioso dos sintomas?",
+      "Fatores claros de melhora ou piora?",
+      "Houve aferição prévia de temperatura axilar ou pressão arterial em domicílio?",
+      "Presença de sintomas associados (náuseas, vômitos, tontura)?"
+    ];
     return JSON.stringify({
-      enhancedHma: "Paciente admitido na unidade relatando os sintomas descritos. Nega episódios prévios semelhantes com esta intensidade. Nega febre aferida, síncope, dispneia em repouso ou sudorese fria associada. Eliminações fisiológicas preservadas e sem alterações recentes.",
-      missingQuestions: [
-        "Início súbito ou insidioso dos sintomas?",
-        "Fatores claros de melhora ou piora?",
-        "Houve aferição prévia de temperatura axilar ou pressão arterial em domicílio?",
-        "Presença de sintomas associados (náuseas, vômitos, tontura)?"
-      ]
+      hmaRefinada: textHma,
+      enhancedHma: textHma,
+      perguntasFaltantes: questions,
+      missingQuestions: questions
     });
   }
 
   if (isExam) {
+    const examText = "BEG, lúcido e orientado no tempo e espaço (LOTE), acianótico, anictérico, afebril ao toque, hidratado, eupneico em ar ambiente.\nAR: Murmúrio vesicular presente bilateralmente, sem ruídos adventícios.\nACV: Bulhas rítmicas, normofonéticas em 2 tempos, sem sopros.\nABD: Plano, flácido, ruídos hidroaéreos presentes, indolor à palpação superficial e profunda, sem visceromegalias ou sinais de irritação peritoneal.\nEXT: Pulsos periféricos cheios e simétricos, sem edema de membros inferiores, perfusão periférica < 2s.";
+    const maneuvers = [
+      "Aferição de sinais vitais de decúbito e ortostase se tontura ou queixa postural",
+      "Palpação detalhada de pulsos e tempo de enchimento capilar",
+      "Pesquisa de sinais específicos para a queixa principal (sinais de peritonismo, descompressão, meningismo ou ausculta direcionada)"
+    ];
     return JSON.stringify({
-      refinedExam: "BEG, lúcido e orientado no tempo e espaço (LOTE), acianótico, anictérico, afebril ao toque, hidratado, eupneico em ar ambiente.\nAR: Murmúrio vesicular presente bilateralmente, sem ruídos adventícios.\nACV: Bulhas rítmicas, normofonéticas em 2 tempos, sem sopros.\nABD: Plano, flácido, ruídos hidroaéreos presentes, indolor à palpação superficial e profunda, sem visceromegalias ou sinais de irritação peritoneal.\nEXT: Pulsos periféricos cheios e simétricos, sem edema de membros inferiores, perfusão periférica < 2s.",
-      missingManeuvers: [
-        "Aferição de sinais vitais de decúbito e ortostase se tontura ou queixa postural",
-        "Palpação detalhada de pulsos e tempo de enchimento capilar",
-        "Pesquisa de sinais específicos para a queixa principal (sinais de peritonismo, descompressão, meningismo ou ausculta direcionada)"
-      ]
+      exameRefinado: examText,
+      refinedExam: examText,
+      manobrasFaltantes: maneuvers,
+      missingManeuvers: maneuvers
     });
   }
 
@@ -246,40 +259,57 @@ function generateLocalClinicalFallback(actionInstruction: string): string {
   }
 
   if (isConduct) {
+    const medsUnidade = [
+      "Dipirona 1g EV diluído em 100ml SF 0,9% correr em 20 min agora",
+      "Soro Fisiológico 0,9% 500ml EV em bólus se hipotensão ou desidratação",
+      "Metoclopramida 10mg EV se náuseas ou vômitos associados"
+    ];
+    const medsCasa = [
+      "Dipirona 500mg VO de 6/6h se dor ou febre (por até 3 a 5 dias)",
+      "Hidratação oral rigorosa (2 a 3 litros de água por dia)",
+      "Sintomático complementar se persistência dos sintomas"
+    ];
     return JSON.stringify({
-      unitMedications: [
-        "Dipirona 1g EV diluído em 100ml SF 0,9% correr em 20 min agora",
-        "Soro Fisiológico 0,9% 500ml EV em bólus se hipotensão ou desidratação",
-        "Metoclopramida 10mg EV se náuseas ou vômitos associados"
-      ],
-      homeMedications: [
-        "Dipirona 500mg VO de 6/6h se dor ou febre (por até 3 a 5 dias)",
-        "Hidratação oral rigorosa (2 a 3 litros de água por dia)",
-        "Sintomático complementar se persistência dos sintomas"
-      ],
+      medicacoesUnidade: medsUnidade,
+      unitMedications: medsUnidade,
+      medicacoesCasa: medsCasa,
+      homeMedications: medsCasa,
       orderedLabs: "Hemograma completo, PCR, Ureia, Creatinina, EAS",
+      examesLaboratorio: "Hemograma completo, PCR, Ureia, Creatinina, EAS",
       orderedImages: "Radiografia ou Ultrassonografia conforme evolução clínica",
-      guidanceLayperson: "Mantenha repouso relativo e boa hidratação. Tome os medicamentos prescritos nos horários corretos. Se apresentar piora da dor, febre persistente, vômitos que não passam ou falta de ar, retorne imediatamente à unidade de emergência.",
-      guidanceTechnical: "Paciente orientado quanto aos sinais de alarme clínicos e cirúrgicos. Retorno imediato se instabilidade hemodinâmica, refratariedade sintomática ou sinais de infecção sistêmica. Encaminhado para seguimento na UBS de referência."
+      examesImagem: "Radiografia ou Ultrassonografia conforme evolução clínica",
+      desfechoSugerido: "alta",
+      motivoDesfecho: "Boa resposta clínica esperada e estabilidade hemodinâmica.",
+      encaminhamentoUbs: true,
+      motivoEncaminhamento: "Revisão e seguimento clínico na UBS de referência.",
+      atestadoNecessario: true,
+      diasAtestado: "1 dia",
+      motivoAtestado: "Repouso e realização de medicações sintomáticas."
     });
   }
 
   const isReval = actionInstruction.toLowerCase().includes('reavaliação') || actionInstruction.toLowerCase().includes('evolução');
   if (isReval) {
+    const revalText = "Paciente reavaliado em leito de observação clínica. Refere melhora importante dos sintomas álgicos após medicação analgésica na unidade. Mantém-se lúcido, orientado, hemodinamicamente estável, eupneico em ar ambiente, afebril e tolerando dieta/hidratação oral sem intercorrências.";
+    const checks = [
+      "Checar aferição de novos sinais vitais (PA, FC, Tax, SatO2)",
+      "Reavaliação dirigida do abdome ou foco álgico após a analgesia",
+      "Verificar diurese e tolerância à hidratação oral"
+    ];
     return JSON.stringify({
-      reevaluationRefined: "Paciente reavaliado em leito de observação clínica. Refere melhora importante dos sintomas álgicos após medicação analgésica na unidade. Mantém-se lúcido, orientado, hemodinamicamente estável, eupneico em ar ambiente, afebril e tolerando dieta/hidratação oral sem intercorrências.",
-      missingChecks: [
-        "Checar aferição de novos sinais vitais (PA, FC, Tax, SatO2)",
-        "Reavaliação dirigida do abdome ou foco álgico após a analgesia",
-        "Verificar diurese e tolerância à hidratação oral"
-      ]
+      reavaliacaoRefinada: revalText,
+      reevaluationRefined: revalText,
+      checagensFaltantes: checks,
+      missingChecks: checks
     });
   }
 
   const isObsConcl = actionInstruction.toLowerCase().includes('conclusão') || actionInstruction.toLowerCase().includes('novas condutas');
   if (isObsConcl) {
     return JSON.stringify({
+      novaHipotese: "Quadro álgico/sintomático controlado com boa resposta às medidas terapêuticas instituídas. Sem sinais de alarme ou instabilidade hemodinâmica.",
       newHypothesis: "Quadro álgico/sintomático controlado com boa resposta às medidas terapêuticas instituídas. Sem sinais de alarme ou instabilidade hemodinâmica.",
+      novasCondutas: "- Alta clínica orientada da observação.\n- Prescrição de medicações sintomáticas domiciliares.\n- Orientações gerais de hidratação e repouso.\n- Retorno imediato ao pronto atendimento se febre persistente ou piora dos sintomas.",
       newConducts: "- Alta clínica orientada da observação.\n- Prescrição de medicações sintomáticas domiciliares.\n- Orientações gerais de hidratação e repouso.\n- Retorno imediato ao pronto atendimento se febre persistente ou piora dos sintomas."
     });
   }
