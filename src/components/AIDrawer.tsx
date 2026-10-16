@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Sparkles, ArrowDownToLine } from 'lucide-react';
+import { ChevronDown, ChevronUp, Sparkles, ArrowDownToLine, RotateCcw } from 'lucide-react';
 
 interface AIDrawerProps {
   title: string;
@@ -7,6 +7,8 @@ interface AIDrawerProps {
   children: React.ReactNode;
   variant?: 'neutral' | 'amber' | 'blue' | 'rose' | 'indigo';
   onImplement?: () => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
   implementLabel?: string;
   triggerUpdate?: any;
   className?: string;
@@ -18,6 +20,8 @@ export const AIDrawer: React.FC<AIDrawerProps> = ({
   children,
   variant = 'neutral',
   onImplement,
+  onUndo,
+  canUndo = false,
   implementLabel = 'Implementar no campo',
   triggerUpdate,
   className = '',
@@ -56,6 +60,23 @@ export const AIDrawer: React.FC<AIDrawerProps> = ({
         </span>
 
         <div className="flex items-center gap-1.5 ml-auto">
+          {onUndo && (
+            <button
+              type="button"
+              onClick={onUndo}
+              disabled={!canUndo}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md border flex items-center gap-1.5 transition-colors shadow-2xs ${
+                canUndo
+                  ? 'bg-white dark:bg-[#262626] border-[#d4d4d4] dark:border-[#404040] text-slate-700 dark:text-neutral-200 hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] cursor-pointer'
+                  : 'opacity-40 cursor-not-allowed border-transparent text-slate-400 dark:text-neutral-500'
+              }`}
+              title="Voltar ao texto anterior"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Voltar</span>
+            </button>
+          )}
+
           {onImplement && (
             <button
               type="button"

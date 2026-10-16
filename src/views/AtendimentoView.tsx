@@ -205,6 +205,49 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     return 'bg-slate-200 dark:bg-navy-800 text-slate-600 dark:text-slate-400 border border-slate-300/40 dark:border-slate-700/50';
   };
 
+  const [prevHma, setPrevHma] = React.useState<string | null>(null);
+  const [prevExameFisico, setPrevExameFisico] = React.useState<string | null>(null);
+  const [prevCondutas, setPrevCondutas] = React.useState<string | null>(null);
+
+  const handleImplementHma = () => {
+    setPrevHma(hma);
+    setHma(aiResults.hmaSuggestion || '');
+  };
+
+  const handleUndoHma = () => {
+    if (prevHma !== null) {
+      const current = hma;
+      setHma(prevHma);
+      setPrevHma(current);
+    }
+  };
+
+  const handleImplementExameFisico = () => {
+    setPrevExameFisico(exameFisico);
+    setExameFisico(aiResults.physicalExamSuggestion || '');
+  };
+
+  const handleUndoExameFisico = () => {
+    if (prevExameFisico !== null) {
+      const current = exameFisico;
+      setExameFisico(prevExameFisico);
+      setPrevExameFisico(current);
+    }
+  };
+
+  const handleImplementCondutas = () => {
+    setPrevCondutas(condutas);
+    setCondutas(aiResults.condutasSuggestion || '');
+  };
+
+  const handleUndoCondutas = () => {
+    if (prevCondutas !== null) {
+      const current = condutas;
+      setCondutas(prevCondutas);
+      setPrevCondutas(current);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* IDENTIFICAÇÃO DO PACIENTE */}
@@ -364,10 +407,9 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           {!hideAiBoxes && aiResults.hmaSuggestion && (
             <AIDrawer
               title="Sugestão da IA para HMA:"
-              onImplement={() => {
-                setHma(aiResults.hmaSuggestion || '');
-                showToast('Sugestão da IA aplicada na HMA!');
-              }}
+              onImplement={handleImplementHma}
+              onUndo={handleUndoHma}
+              canUndo={prevHma !== null}
               triggerUpdate={aiResults.hmaSuggestion}
             >
               <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#e5e5e5] dark:border-[#2e2e2e]">
@@ -709,9 +751,9 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           {!hideAiBoxes && aiResults.physicalExamSuggestion && (
             <AIDrawer
               title="Sugestão da IA para Exame Físico:"
-              onImplement={() => {
-                setExameFisico(aiResults.physicalExamSuggestion || '');
-              }}
+              onImplement={handleImplementExameFisico}
+              onUndo={handleUndoExameFisico}
+              canUndo={prevExameFisico !== null}
               triggerUpdate={aiResults.physicalExamSuggestion}
             >
               <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
@@ -1087,10 +1129,9 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         {!hideAiBoxes && aiResults.condutasSuggestion && (
           <AIDrawer
             title="Sugestão da IA para Condutas:"
-            onImplement={() => {
-              setCondutas(aiResults.condutasSuggestion || '');
-              showToast('Sugestão da IA aplicada em Condutas!');
-            }}
+            onImplement={handleImplementCondutas}
+            onUndo={handleUndoCondutas}
+            canUndo={prevCondutas !== null}
             triggerUpdate={aiResults.condutasSuggestion}
           >
             <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">

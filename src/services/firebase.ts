@@ -17,7 +17,7 @@ import {
   serverTimestamp,
   onSnapshot
 } from 'firebase/firestore';
-import type { SavedPatientRecord, SystemTemplates, SystemPrompts } from '../types';
+import type { SavedPatientRecord, SystemTemplates, SystemPrompts, UserImprovements } from '../types';
 import { DEFAULT_TEMPLATES, DEFAULT_PROMPTS } from '../data/defaults';
 import { encryptData, decryptData } from './crypto';
 
@@ -384,6 +384,66 @@ export function subscribeToGlobalDefaultConfig(
     },
     (error) => {
       console.warn('[Sync] Escuta de padrão global inativa ou com erro:', error);
+    }
+  );
+}
+
+// Salva melhorias individuais do perfil no Firestore
+export async function saveUserImprovements(improvements: UserImprovements): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+  const docRef = doc(db, 'users', user.uid, 'settings', 'improvements');
+  await setDoc(
+    docRef,
+    {
+      prontuario: improvements.prontuario || [],
+      receituario: improvements.receituario || [],
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
+// Carrega melhorias individuais do perfil no Firestore
+export async function fetchUserImprovements(): Promise<UserImprovements | null> {
+  const user = auth.currentUser;
+  if (!user) return null;
+  try {
+    const docRef = doc(db, 'users', user.uid, 'settings', 'improvements');
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return null;
+    const data = docSnap.data();
+    return {
+      prontuario: Array.isArray(data.prontuario) ? data.prontuario : [],
+      receituario: Array.isArray(data.receituario) ? data.receituario : []
+    };
+  } catch (err) {
+    console.warn('[Sync] Erro ao carregar melhorias do perfil:', err);
+    return null;
+  }
+}
+
+// Ouve em tempo real as melhorias deste perfil no Firestore
+export function subscribeToUserImprovements(
+  onUpdated: (improvements: UserImprovements) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+  const docRef = doc(db, 'users', user.uid, 'settings', 'improvements');
+  return onSnapshot(
+    docRef,
+    (docSnap) => {
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
+      if (data) {
+        onUpdated({
+          prontuario: Array.isArray(data.prontuario) ? data.prontuario : [],
+          receituario: Array.isArray(data.receituario) ? data.receituario : []
+        });
+      }
+    },
+    (err) => {
+      console.warn('[Sync] Erro na escuta em tempo real de melhorias:', err);
     }
   );
 }

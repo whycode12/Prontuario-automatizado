@@ -59,6 +59,67 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   toggleObservation: _toggleObservation,
   hideAiBoxes = false,
 }) => {
+  const [prevReevaluation, setPrevReevaluation] = React.useState<string | null>(null);
+  const [prevConclusionHypothesis, setPrevConclusionHypothesis] = React.useState<string | null>(null);
+  const [prevNewConducts, setPrevNewConducts] = React.useState<string | null>(null);
+
+  const handleImplementReevaluation = () => {
+    setPrevReevaluation(observation.clinicalReevaluationText);
+    setObservation((prev) => ({
+      ...prev,
+      clinicalReevaluationText: aiResults.reevaluationSuggestion || ''
+    }));
+  };
+
+  const handleUndoReevaluation = () => {
+    if (prevReevaluation !== null) {
+      const current = observation.clinicalReevaluationText;
+      setObservation((prev) => ({
+        ...prev,
+        clinicalReevaluationText: prevReevaluation
+      }));
+      setPrevReevaluation(current);
+    }
+  };
+
+  const handleImplementConclusionHypothesis = () => {
+    setPrevConclusionHypothesis(observation.conclusionNewHypothesis);
+    setObservation((prev) => ({
+      ...prev,
+      conclusionNewHypothesis: aiResults.conclusionHypothesisSuggestion || ''
+    }));
+  };
+
+  const handleUndoConclusionHypothesis = () => {
+    if (prevConclusionHypothesis !== null) {
+      const current = observation.conclusionNewHypothesis;
+      setObservation((prev) => ({
+        ...prev,
+        conclusionNewHypothesis: prevConclusionHypothesis
+      }));
+      setPrevConclusionHypothesis(current);
+    }
+  };
+
+  const handleImplementNewConducts = () => {
+    setPrevNewConducts(observation.newConducts);
+    setObservation((prev) => ({
+      ...prev,
+      newConducts: aiResults.newConductsSuggestion || ''
+    }));
+  };
+
+  const handleUndoNewConducts = () => {
+    if (prevNewConducts !== null) {
+      const current = observation.newConducts;
+      setObservation((prev) => ({
+        ...prev,
+        newConducts: prevNewConducts
+      }));
+      setPrevNewConducts(current);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
 
@@ -111,12 +172,9 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         {!hideAiBoxes && aiResults.reevaluationSuggestion && (
           <AIDrawer
             title="Sugestão da IA para Reavaliação Clínica:"
-            onImplement={() => {
-              setObservation((prev) => ({
-                ...prev,
-                clinicalReevaluationText: aiResults.reevaluationSuggestion || ''
-              }));
-            }}
+            onImplement={handleImplementReevaluation}
+            onUndo={handleUndoReevaluation}
+            canUndo={prevReevaluation !== null}
             triggerUpdate={aiResults.reevaluationSuggestion}
           >
             <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
@@ -179,12 +237,9 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             {!hideAiBoxes && aiResults.conclusionHypothesisSuggestion && (
               <AIDrawer
                 title="Sugestão da IA para Hipótese:"
-                onImplement={() => {
-                  setObservation((prev) => ({
-                    ...prev,
-                    conclusionNewHypothesis: aiResults.conclusionHypothesisSuggestion || ''
-                  }));
-                }}
+                onImplement={handleImplementConclusionHypothesis}
+                onUndo={handleUndoConclusionHypothesis}
+                canUndo={prevConclusionHypothesis !== null}
                 triggerUpdate={aiResults.conclusionHypothesisSuggestion}
               >
                 <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
@@ -208,12 +263,9 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             {!hideAiBoxes && aiResults.newConductsSuggestion && (
               <AIDrawer
                 title="Sugestão da IA para Condutas:"
-                onImplement={() => {
-                  setObservation((prev) => ({
-                    ...prev,
-                    newConducts: aiResults.newConductsSuggestion || ''
-                  }));
-                }}
+                onImplement={handleImplementNewConducts}
+                onUndo={handleUndoNewConducts}
+                canUndo={prevNewConducts !== null}
                 triggerUpdate={aiResults.newConductsSuggestion}
               >
                 <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">

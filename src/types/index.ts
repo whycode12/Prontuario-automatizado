@@ -137,3 +137,15 @@ export interface SavedPatientRecord {
   observation: ObservationData;
   documents: FinalDocuments;
 }
+
+export interface ImprovementItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: number;
+}
+
+export interface UserImprovements {
+  prontuario: ImprovementItem[];
+  receituario: ImprovementItem[];
+}

@@ -16,7 +16,8 @@ import {
   PanelLeft,
   Cloud,
   Sparkles,
-  Terminal
+  Terminal,
+  ListTodo
 } from 'lucide-react';
 
 import type {
@@ -28,7 +29,8 @@ import type {
   FinalDocuments,
   SystemTemplates,
   SystemPrompts,
-  SavedPatientRecord
+  SavedPatientRecord,
+  UserImprovements
 } from './types';
 import { DEFAULT_TEMPLATES, DEFAULT_PROMPTS, parseHppText } from './data/defaults';
 import { buildCaseContextPayload } from './services/gemini';
@@ -49,7 +51,10 @@ import {
   subscribeToGlobalDefaultConfig,
   saveUserApiKey,
   fetchUserApiKey,
-  subscribeToUserApiKey
+  subscribeToUserApiKey,
+  saveUserImprovements,
+  fetchUserImprovements,
+  subscribeToUserImprovements
 } from './services/firebase';
 import { downloadDefaultsFile, copyDefaultsCodeToClipboard } from './utils/defaultsExporter';
 import type { TagContextData } from './utils/templateTags';
@@ -61,6 +66,7 @@ import { DocumentosView } from './views/DocumentosView';
 import { EvolucaoView } from './views/EvolucaoView';
 import { FilaObservacaoView } from './views/FilaObservacaoView';
 import { HistoricoView } from './views/HistoricoView';
+import { MelhoriasView } from './views/MelhoriasView';
 
 const STORAGE_KEYS = {
   API_KEY: 'prontuario_gemini_api_key',
@@ -317,18 +323,54 @@ export default function App() {
       }
     };
 
+    const currentKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
+    if (auth.currentUser) {
+      if (currentKey) setupListener(auth.currentUser, currentKey);
+      setupApiKeyListener(auth.currentUser);
+    }
+
+    let unsubscribeImprovements: (() => void) | null = null;
+
+    const setupImprovementsListener = (user: typeof auth.currentUser) => {
+      if (unsubscribeImprovements) {
+        unsubscribeImprovements();
+        unsubscribeImprovements = null;
+      }
+      const uid = user ? user.uid : 'guest';
+      const cached = localStorage.getItem(`prontuario_improvements_${uid}`);
+      if (cached) {
+        try {
+          setImprovements(JSON.parse(cached));
+        } catch {}
+      } else {
+        setImprovements({ prontuario: [], receituario: [] });
+      }
+      if (user) {
+        fetchUserImprovements().then((cloudImprovements) => {
+          if (cloudImprovements) {
+            setImprovements(cloudImprovements);
+            localStorage.setItem(`prontuario_improvements_${user.uid}`, JSON.stringify(cloudImprovements));
+          }
+        });
+        unsubscribeImprovements = subscribeToUserImprovements((updated) => {
+          if (updated) {
+            setImprovements(updated);
+            localStorage.setItem(`prontuario_improvements_${user.uid}`, JSON.stringify(updated));
+          }
+        });
+      }
+    };
+
     const unsubAuth = auth.onAuthStateChanged((user) => {
       setCurrentDoctor(user);
       const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
       setupListener(user, activeKey);
       setupApiKeyListener(user);
+      setupImprovementsListener(user);
     });
 
-    // Se já houver médico conectado, inicia listeners
-    const currentKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
     if (auth.currentUser) {
-      if (currentKey) setupListener(auth.currentUser, currentKey);
-      setupApiKeyListener(auth.currentUser);
+      setupImprovementsListener(auth.currentUser);
     }
 
     return () => {
@@ -337,8 +379,28 @@ export default function App() {
       if (unsubscribeConfig) unsubscribeConfig();
       if (unsubscribeGlobalConfig) unsubscribeGlobalConfig();
       if (unsubscribeApiKey) unsubscribeApiKey();
+      if (unsubscribeImprovements) unsubscribeImprovements();
     };
   }, [masterKey, configSource]);
+
+  const [improvements, setImprovements] = useState<UserImprovements>(() => {
+    const currentUid = auth.currentUser ? auth.currentUser.uid : 'guest';
+    const saved = localStorage.getItem(`prontuario_improvements_${currentUid}`);
+    return saved ? JSON.parse(saved) : { prontuario: [], receituario: [] };
+  });
+
+  const handleUpdateImprovements = async (updated: UserImprovements) => {
+    setImprovements(updated);
+    const currentUid = auth.currentUser ? auth.currentUser.uid : 'guest';
+    localStorage.setItem(`prontuario_improvements_${currentUid}`, JSON.stringify(updated));
+    if (auth.currentUser) {
+      try {
+        await saveUserImprovements(updated);
+      } catch (err) {
+        console.warn('[Sync] Erro ao salvar melhorias:', err);
+      }
+    }
+  };
 
   // UI Navigation & Modals
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -347,7 +409,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
     return localStorage.getItem('prontuario_sidebar_open') !== 'false';
   });
-  const [activeTab, setActiveTab] = useState<'atendimento' | 'documentos' | 'evolucao' | 'observacao' | 'historico'>('atendimento');
+  const [activeTab, setActiveTab] = useState<'atendimento' | 'documentos' | 'evolucao' | 'observacao' | 'historico' | 'melhorias'>('atendimento');
 
   const toggleSidebar = () => {
     setSidebarOpen((prev) => {
@@ -1305,6 +1367,30 @@ export default function App() {
                 </span>
               )}
             </button>
+
+            {/* Melhorias */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('melhorias')}
+              className={`w-full flex items-center ${
+                sidebarOpen ? 'justify-between px-2.5 py-1.5' : 'justify-center p-2'
+              } rounded-md text-xs font-medium transition-colors ${
+                activeTab === 'melhorias'
+                  ? 'bg-[#ececeb] dark:bg-[#2a2a2a] text-slate-900 dark:text-white font-semibold'
+                  : 'text-slate-600 dark:text-neutral-400 hover:bg-[#efefee] dark:hover:bg-[#262626] hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Melhorias"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <ListTodo className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400 shrink-0" />
+                {sidebarOpen && <span className="truncate">Melhorias</span>}
+              </div>
+              {sidebarOpen && (
+                <span className="text-[10px] text-slate-400 dark:text-neutral-500 font-mono">
+                  {(improvements.prontuario?.filter(i => !i.completed).length || 0) + (improvements.receituario?.filter(i => !i.completed).length || 0)}
+                </span>
+              )}
+            </button>
           </nav>
         </div>
 
@@ -1418,10 +1504,13 @@ export default function App() {
                 {activeTab === 'evolucao' && 'Evolução'}
                 {activeTab === 'observacao' && 'Observação'}
                 {activeTab === 'historico' && 'Histórico'}
+                {activeTab === 'melhorias' && 'Melhorias'}
               </span>
               <span className="text-slate-300 dark:text-neutral-600">/</span>
               <span className="font-semibold text-slate-800 dark:text-neutral-200 truncate">
-                {patient.nome ? patient.nome : 'Paciente Não Identificado'}
+                {activeTab === 'melhorias'
+                  ? 'Lista de Tarefas'
+                  : patient.nome ? patient.nome : 'Paciente Não Identificado'}
               </span>
             </div>
           </div>
@@ -1591,6 +1680,13 @@ export default function App() {
             onRestoreRecord={handleRestoreDeletedRecord}
             canRestore={!!lastDeletedRecord}
             onOpenCloudSync={() => setCloudSyncOpen(true)}
+          />
+        )}
+
+        {activeTab === 'melhorias' && (
+          <MelhoriasView
+            improvements={improvements}
+            onUpdateImprovements={handleUpdateImprovements}
           />
         )}
       </main>
