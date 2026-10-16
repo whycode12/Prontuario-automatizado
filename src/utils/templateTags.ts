@@ -16,6 +16,26 @@ export interface TagContextData {
   customReplacements?: Record<string, string>;
 }
 
+export function numeroPorExtenso(num: number): string {
+  const unidades = [
+    'zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove',
+    'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete',
+    'dezoito', 'dezenove', 'vinte', 'vinte e um', 'vinte e dois', 'vinte e três',
+    'vinte e quatro', 'vinte e cinco', 'vinte e seis', 'vinte e sete', 'vinte e oito',
+    'vinte e nove', 'trinta'
+  ];
+  if (num >= 0 && num < unidades.length) return unidades[num];
+  return String(num);
+}
+
+export function getDataExtenso(d: Date = new Date()): string {
+  const meses = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  ];
+  return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
 export function formatUsoWithColon(text: string): string {
   if (!text || typeof text !== 'string') return '';
   return text.replace(/\b(USO\s+[A-ZÀ-Úa-zà-ú]+)(?!\s*:)\b/g, '$1:');
@@ -246,7 +266,50 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
     }
   }
 
-  // 11. Padronização de vias com dois pontos (ex: 'USO ORAL:', 'USO INTRAMUSCULAR:')
+  // 11. Tags específicas para Atestado Médico e Encaminhamento PSF
+  const cpfFormatted = patient.cpf?.trim() || '_________________';
+  const portadorCpf = patient.sexo === 'M'
+    ? `portador do CPF nº ${cpfFormatted}`
+    : patient.sexo === 'F'
+    ? `portadora do CPF nº ${cpfFormatted}`
+    : `portador(a) do CPF nº ${cpfFormatted}`;
+
+  const atendidoUnidade = patient.sexo === 'M'
+    ? 'foi atendido'
+    : patient.sexo === 'F'
+    ? 'foi atendida'
+    : 'foi atendido(a)';
+
+  const dataExtenso = getDataExtenso();
+
+  const rawDias = customReplacements?.DIAS || aiResults.medicalLeaveDays || '1';
+  const diasNumMatch = String(rawDias).match(/\d+/);
+  const diasNum = diasNumMatch ? parseInt(diasNumMatch[0], 10) : 1;
+  const diasExtenso = numeroPorExtenso(diasNum);
+
+  const cleanCidOnly = aiResults.selectedCid ? aiResults.selectedCid.replace(/^CID:?\s*/i, '').trim() : '';
+  const includeCid = customReplacements?.INCLUIR_CID === 'true' || !!customReplacements?.BLOCO_CID;
+  const blocoCidFinal = customReplacements?.BLOCO_CID !== undefined
+    ? customReplacements.BLOCO_CID
+    : includeCid
+    ? `\n    CID-10: ${cleanCidOnly || '[Código]'}\n\nAssinatura do paciente:\n`
+    : '';
+
+  output = output.replace(/\{\{PORTADOR_CPF\}\}/gi, portadorCpf);
+  output = output.replace(/\{\{ATENDIDO_UNIDADE\}\}/gi, atendidoUnidade);
+  output = output.replace(/\{\{ATENDIDO\}\}/gi, atendidoUnidade);
+  output = output.replace(/\{\{CPF\}\}/gi, cpfFormatted);
+  output = output.replace(/\{\{DATA_EXTENSO\}\}/gi, dataExtenso);
+  output = output.replace(/\{\{DIAS\}\}/gi, String(diasNum));
+  output = output.replace(/\{\{DIAS_EXTENSO\}\}/gi, diasExtenso);
+  output = output.replace(/\{\{BLOCO_CID\}\}/gi, blocoCidFinal ? `\n${blocoCidFinal.trim()}\n` : '');
+  output = output.replace(/\{\{CID_CODIGO\}\}/gi, cleanCidOnly || '[Código]');
+
+  // Encaminhamento PSF
+  const textoEncaminhamentoDefault = `Encaminho o(a) paciente ${patient.nome || 'Não identificado(a)'}, ${patient.idade ? `${patient.idade} anos` : '--'}, atendido(a) na UPA de Mateus Leme nesta data com quadro de ${qp || 'queixa clínica'}. ${hma ? `Histórico clínico: ${hma.slice(0, 200)}... ` : ''}Foram realizadas condutas sintomáticas e estabilização clínica na unidade. Solicito seguimento ambulatorial junto à equipe da Atenção Primária à Saúde (PSF) para propedêutica e acompanhamento clínico continuado.`;
+  output = output.replace(/\{\{TEXTO_ENCAMINHAMENTO\}\}/gi, customReplacements?.TEXTO_ENCAMINHAMENTO || textoEncaminhamentoDefault);
+
+  // 12. Padronização de vias com dois pontos (ex: 'USO ORAL:', 'USO INTRAMUSCULAR:')
   output = formatUsoWithColon(output);
 
   return output.replace(/\n{3,}/g, '\n\n');

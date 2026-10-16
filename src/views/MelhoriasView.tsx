@@ -21,8 +21,9 @@ interface MelhoriasViewProps {
 interface ImprovementBoxProps {
   title: string;
   items: ImprovementItem[];
-  onAdd: (text: string) => void;
+  onAdd: (text: string, priority: 'alta' | 'baixa') => void;
   onToggle: (id: string) => void;
+  onTogglePriority: (id: string) => void;
   onEdit: (id: string, newText: string) => void;
   onDelete: (id: string) => void;
 }
@@ -32,10 +33,12 @@ const ImprovementBox: React.FC<ImprovementBoxProps> = ({
   items,
   onAdd,
   onToggle,
+  onTogglePriority,
   onEdit,
   onDelete,
 }) => {
   const [inputText, setInputText] = useState('');
+  const [selectedPriority, setSelectedPriority] = useState<'alta' | 'baixa'>('alta');
   const [hideCompleted, setHideCompleted] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -43,7 +46,7 @@ const ImprovementBox: React.FC<ImprovementBoxProps> = ({
   const handleAdd = () => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
-    onAdd(trimmed);
+    onAdd(trimmed, selectedPriority);
     setInputText('');
   };
 
@@ -69,6 +72,112 @@ const ImprovementBox: React.FC<ImprovementBoxProps> = ({
   const displayedItems = hideCompleted ? items.filter((item) => !item.completed) : items;
   const completedCount = items.filter((item) => item.completed).length;
 
+  const altaItems = displayedItems.filter((i) => (i.priority || 'alta') === 'alta');
+  const baixaItems = displayedItems.filter((i) => i.priority === 'baixa');
+
+  const renderItem = (item: ImprovementItem) => {
+    const isEditing = editingId === item.id;
+    const itemPriority = item.priority || 'alta';
+    return (
+      <div
+        key={item.id}
+        className={`group flex items-start gap-2.5 p-2 rounded-lg border transition-colors ${
+          item.completed
+            ? 'border-transparent bg-slate-50/50 dark:bg-[#191919] opacity-70'
+            : 'border-slate-100 dark:border-[#2a2a2a] bg-white dark:bg-[#1f1f1f] hover:border-slate-200 dark:hover:border-[#333]'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => onToggle(item.id)}
+          className="mt-0.5 text-slate-400 dark:text-neutral-500 hover:text-slate-800 dark:hover:text-white shrink-0 transition-colors"
+        >
+          {item.completed ? (
+            <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <Square className="w-4 h-4" />
+          )}
+        </button>
+
+        {isEditing ? (
+          <div className="flex-1 flex items-center gap-1.5">
+            <input
+              type="text"
+              autoFocus
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSaveEdit(item.id);
+                } else if (e.key === 'Escape') {
+                  handleCancelEdit();
+                }
+              }}
+              className="flex-1 px-2 py-1 text-xs rounded border border-slate-300 dark:border-[#444] bg-white dark:bg-[#151515] text-slate-800 dark:text-neutral-100 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => handleSaveEdit(item.id)}
+              className="p-1 rounded text-slate-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-[#2c2c2c]"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="p-1 rounded text-slate-400 dark:text-neutral-500 hover:bg-slate-100 dark:hover:bg-[#2c2c2c]"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <span
+              onClick={() => startEdit(item)}
+              className={`flex-1 text-xs leading-relaxed break-words cursor-pointer select-text ${
+                item.completed
+                  ? 'line-through text-slate-400 dark:text-neutral-500'
+                  : 'text-slate-800 dark:text-neutral-200'
+              }`}
+            >
+              {item.text}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => onTogglePriority(item.id)}
+              className={`px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border transition-colors shrink-0 ${
+                itemPriority === 'alta'
+                  ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 hover:bg-rose-100'
+                  : 'bg-slate-100 dark:bg-[#282828] border-slate-200 dark:border-[#383838] text-slate-600 dark:text-neutral-400 hover:bg-slate-200'
+              }`}
+            >
+              {itemPriority === 'alta' ? 'Alta' : 'Baixa'}
+            </button>
+
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button
+                type="button"
+                onClick={() => startEdit(item)}
+                className="p-1 rounded text-slate-400 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-200 hover:bg-slate-100 dark:hover:bg-[#2c2c2c] transition-colors"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete(item.id)}
+                className="p-1 rounded text-slate-400 hover:text-rose-600 dark:text-neutral-500 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-[#2c2c2c] transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white dark:bg-[#202020] border border-slate-200 dark:border-[#2e2e2e] rounded-xl p-4 shadow-xs space-y-3 flex flex-col h-full">
       <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-[#2e2e2e]">
@@ -89,7 +198,6 @@ const ImprovementBox: React.FC<ImprovementBoxProps> = ({
               ? 'bg-[#ececeb] dark:bg-[#2a2a2a] border-slate-300 dark:border-[#444] text-slate-900 dark:text-white'
               : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-600 dark:text-neutral-400 hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e]'
           }`}
-          title={hideCompleted ? 'Exibir itens concluídos' : 'Ocultar itens concluídos'}
         >
           {hideCompleted ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           <span>{hideCompleted ? 'Ocultando concluídos' : 'Ocultar concluídos'}</span>
@@ -97,6 +205,31 @@ const ImprovementBox: React.FC<ImprovementBoxProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
+        <div className="flex items-center p-0.5 bg-slate-100 dark:bg-[#1a1a1a] rounded-lg border border-slate-200 dark:border-[#333] shrink-0">
+          <button
+            type="button"
+            onClick={() => setSelectedPriority('alta')}
+            className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+              selectedPriority === 'alta'
+                ? 'bg-white dark:bg-[#2c2c2c] text-rose-700 dark:text-rose-300 shadow-2xs'
+                : 'text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200'
+            }`}
+          >
+            Alta
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedPriority('baixa')}
+            className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+              selectedPriority === 'baixa'
+                ? 'bg-white dark:bg-[#2c2c2c] text-slate-800 dark:text-neutral-200 shadow-2xs'
+                : 'text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200'
+            }`}
+          >
+            Baixa
+          </button>
+        </div>
+
         <input
           type="text"
           value={inputText}
@@ -118,101 +251,49 @@ const ImprovementBox: React.FC<ImprovementBoxProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-1.5 min-h-[220px]">
+      <div className="flex-1 overflow-y-auto space-y-4 min-h-[220px]">
         {displayedItems.length === 0 ? (
           <div className="h-40 flex items-center justify-center text-xs text-slate-400 dark:text-neutral-500">
             {items.length === 0 ? 'Nenhuma melhoria adicionada' : 'Nenhuma tarefa pendente'}
           </div>
         ) : (
-          displayedItems.map((item) => {
-            const isEditing = editingId === item.id;
-            return (
-              <div
-                key={item.id}
-                className={`group flex items-start gap-2.5 p-2 rounded-lg border transition-colors ${
-                  item.completed
-                    ? 'border-transparent bg-slate-50/50 dark:bg-[#191919] opacity-70'
-                    : 'border-slate-100 dark:border-[#2a2a2a] bg-white dark:bg-[#1f1f1f] hover:border-slate-200 dark:hover:border-[#333]'
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => onToggle(item.id)}
-                  className="mt-0.5 text-slate-400 dark:text-neutral-500 hover:text-slate-800 dark:hover:text-white shrink-0 transition-colors"
-                >
-                  {item.completed ? (
-                    <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  ) : (
-                    <Square className="w-4 h-4" />
-                  )}
-                </button>
-
-                {isEditing ? (
-                  <div className="flex-1 flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      autoFocus
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSaveEdit(item.id);
-                        } else if (e.key === 'Escape') {
-                          handleCancelEdit();
-                        }
-                      }}
-                      className="flex-1 px-2 py-1 text-xs rounded border border-slate-300 dark:border-[#444] bg-white dark:bg-[#151515] text-slate-800 dark:text-neutral-100 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleSaveEdit(item.id)}
-                      className="p-1 rounded text-slate-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-[#2c2c2c]"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="p-1 rounded text-slate-400 dark:text-neutral-500 hover:bg-slate-100 dark:hover:bg-[#2c2c2c]"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <span
-                      onClick={() => startEdit(item)}
-                      className={`flex-1 text-xs leading-relaxed break-words cursor-pointer select-text ${
-                        item.completed
-                          ? 'line-through text-slate-400 dark:text-neutral-500'
-                          : 'text-slate-800 dark:text-neutral-200'
-                      }`}
-                    >
-                      {item.text}
-                    </span>
-
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(item)}
-                        className="p-1 rounded text-slate-400 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-200 hover:bg-slate-100 dark:hover:bg-[#2c2c2c] transition-colors"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDelete(item.id)}
-                        className="p-1 rounded text-slate-400 hover:text-rose-600 dark:text-neutral-500 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-[#2c2c2c] transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </>
-                )}
+          <>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60">
+                  Prioridade Alta
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 dark:text-neutral-500">
+                  {altaItems.length}
+                </span>
               </div>
-            );
-          })
+              {altaItems.length === 0 ? (
+                <div className="p-2 text-[11px] text-slate-400 dark:text-neutral-500 italic">
+                  Nenhum item de alta prioridade
+                </div>
+              ) : (
+                altaItems.map(renderItem)
+              )}
+            </div>
+
+            <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-[#2e2e2e]">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-[#282828] dark:text-neutral-300 border border-slate-200 dark:border-[#383838]">
+                  Prioridade Baixa
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 dark:text-neutral-500">
+                  {baixaItems.length}
+                </span>
+              </div>
+              {baixaItems.length === 0 ? (
+                <div className="p-2 text-[11px] text-slate-400 dark:text-neutral-500 italic">
+                  Nenhum item de baixa prioridade
+                </div>
+              ) : (
+                baixaItems.map(renderItem)
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -223,12 +304,17 @@ export const MelhoriasView: React.FC<MelhoriasViewProps> = ({
   improvements,
   onUpdateImprovements,
 }) => {
-  const handleAddItem = (category: 'prontuario' | 'receituario', text: string) => {
+  const handleAddItem = (
+    category: 'prontuario' | 'receituario',
+    text: string,
+    priority: 'alta' | 'baixa'
+  ) => {
     const newItem: ImprovementItem = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
       text,
       completed: false,
       createdAt: Date.now(),
+      priority,
     };
     const updated: UserImprovements = {
       ...improvements,
@@ -241,6 +327,22 @@ export const MelhoriasView: React.FC<MelhoriasViewProps> = ({
     const updatedList = (improvements[category] || []).map((item) =>
       item.id === id ? { ...item, completed: !item.completed } : item
     );
+    const updated: UserImprovements = {
+      ...improvements,
+      [category]: updatedList,
+    };
+    onUpdateImprovements(updated);
+  };
+
+  const handleTogglePriority = (category: 'prontuario' | 'receituario', id: string) => {
+    const updatedList = (improvements[category] || []).map((item) => {
+      if (item.id === id) {
+        const currentPriority = item.priority || 'alta';
+        const newPriority: 'alta' | 'baixa' = currentPriority === 'alta' ? 'baixa' : 'alta';
+        return { ...item, priority: newPriority };
+      }
+      return item;
+    });
     const updated: UserImprovements = {
       ...improvements,
       [category]: updatedList,
@@ -285,8 +387,9 @@ export const MelhoriasView: React.FC<MelhoriasViewProps> = ({
         <ImprovementBox
           title="Melhorias no Prontuário"
           items={improvements.prontuario || []}
-          onAdd={(text) => handleAddItem('prontuario', text)}
+          onAdd={(text, priority) => handleAddItem('prontuario', text, priority)}
           onToggle={(id) => handleToggleItem('prontuario', id)}
+          onTogglePriority={(id) => handleTogglePriority('prontuario', id)}
           onEdit={(id, newText) => handleEditItem('prontuario', id, newText)}
           onDelete={(id) => handleDeleteItem('prontuario', id)}
         />
@@ -294,8 +397,9 @@ export const MelhoriasView: React.FC<MelhoriasViewProps> = ({
         <ImprovementBox
           title="Melhorias no Receituário"
           items={improvements.receituario || []}
-          onAdd={(text) => handleAddItem('receituario', text)}
+          onAdd={(text, priority) => handleAddItem('receituario', text, priority)}
           onToggle={(id) => handleToggleItem('receituario', id)}
+          onTogglePriority={(id) => handleTogglePriority('receituario', id)}
           onEdit={(id, newText) => handleEditItem('receituario', id, newText)}
           onDelete={(id) => handleDeleteItem('receituario', id)}
         />

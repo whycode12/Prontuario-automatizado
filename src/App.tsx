@@ -431,7 +431,8 @@ export default function App() {
     idadeMeses: '',
     sexo: '',
     peso: '',
-    altura: ''
+    altura: '',
+    cpf: ''
   });
   const [qp, setQp] = useState<string>('');
   const [hma, setHma] = useState<string>('');
@@ -468,7 +469,9 @@ export default function App() {
     receitaDomiciliar: '',
     passagemPlantao: '',
     passometro: '',
-    evolucao: ''
+    evolucao: '',
+    atestado: '',
+    encaminhamento: ''
   });
 
   // Notification Toast - Interface silenciosa (apenas erros críticos reais do sistema)
@@ -766,7 +769,7 @@ export default function App() {
       }
     }
     setCurrentRecordId(Date.now().toString());
-    setPatient({ nome: '', idade: '', idadeAnos: '', idadeMeses: '', sexo: '', peso: '', altura: '' });
+    setPatient({ nome: '', idade: '', idadeAnos: '', idadeMeses: '', sexo: '', peso: '', altura: '', cpf: '' });
     setQp('');
     setHma('');
     setHpp(parseHppText(templates.hpp));
@@ -790,7 +793,9 @@ export default function App() {
       receitaDomiciliar: '',
       passagemPlantao: '',
       passometro: '',
-      evolucao: ''
+      evolucao: '',
+      atestado: '',
+      encaminhamento: ''
     });
     setActiveTab('atendimento');
     showToast('Novo atendimento iniciado.');
@@ -972,7 +977,9 @@ export default function App() {
       receitaDomiciliar: '',
       passagemPlantao: '',
       passometro: '',
-      evolucao: ''
+      evolucao: '',
+      atestado: '',
+      encaminhamento: ''
     });
     showToast(`Atendimento de ${rec.patient.nome || 'paciente'} carregado.`);
   };
@@ -986,6 +993,7 @@ export default function App() {
     runAiConduta,
     runAiPassagemPlantao,
     runAiPassometro,
+    runAiEncaminhamento,
     runAiReavaliacao,
     runAiConclusaoObs
   } = useAiWorkflow({
@@ -1147,11 +1155,6 @@ export default function App() {
     showToast('Evolução médica compilada com sucesso!');
   };
 
-  // Montador único e centralizado para qualquer documento
-  const buildDocumentContent = (docType: CompilableDocType): string => {
-    return buildDocument(docType, templates, tagContextData);
-  };
-
   // Compile All Final Documents (Preencher Tudo)
   const compileAllDocuments = () => {
     const compiled = compileAllDocumentsHelper(templates, tagContextData);
@@ -1163,15 +1166,26 @@ export default function App() {
     showToast('Todos os documentos foram compilados!');
   };
 
-  const compileSingleDocument = (docType: 'prontuario' | 'receitaInterna' | 'receitaDomiciliar' | 'passagemPlantao' | 'passometro') => {
-    const compiled = buildDocumentContent(docType);
+  const compileSingleDocument = (
+    docType: CompilableDocType,
+    customReplacements?: Record<string, string>
+  ) => {
+    const compiled = buildDocument(docType, templates, {
+      ...tagContextData,
+      customReplacements: {
+        ...tagContextData.customReplacements,
+        ...customReplacements
+      }
+    });
     setDocuments((prev) => ({ ...prev, [docType]: compiled }));
     const titles: Record<string, string> = {
       prontuario: 'Prontuário',
       receitaInterna: 'Prescrição interna',
       receitaDomiciliar: 'Receituário domiciliar',
       passagemPlantao: 'Passagem de plantão',
-      passometro: 'Passômetro'
+      passometro: 'Passômetro',
+      atestado: 'Atestado médico',
+      encaminhamento: 'Encaminhamento PSF'
     };
     showToast(`${titles[docType] || 'Documento'} compilado!`);
   };
@@ -1607,6 +1621,9 @@ export default function App() {
             compileSingleDocument={compileSingleDocument}
             templates={templates}
             prompts={prompts}
+            patient={patient}
+            setPatient={setPatient}
+            aiResults={aiResults}
             handleSaveTemplate={handleSaveTemplate}
             handleSaveGlobalTemplate={handleSaveGlobalTemplate}
             handleSavePrompt={handleSavePrompt}
@@ -1617,6 +1634,7 @@ export default function App() {
             handleResetSinglePayloadTemplate={handleResetSinglePayloadTemplate}
             runAiPassagemPlantao={runAiPassagemPlantao}
             runAiPassometro={runAiPassometro}
+            runAiEncaminhamento={runAiEncaminhamento}
             aiLoading={aiLoading}
           />
         )}

@@ -6,6 +6,15 @@ import { DEFAULT_PROMPTS } from '../data/defaults';
 import { addAiLog, updateAiLog } from '../utils/aiLogger';
 import { formatUsoWithColon, ensureOriento } from '../utils/templateTags';
 
+export const DEFAULT_ENCAMINHAMENTO_PROMPT = `Você é um médico experiente atuando na UPA de Mateus Leme - MG.
+Elabore um relatório de encaminhamento médico para o PSF (Posto de Saúde da Família / Atenção Básica) de forma humanizada, profissional, empática e sem qualquer aspecto robótico de inteligência artificial.
+DIRETRIZES OBRIGATÓRIAS:
+1. Inclua os dados do paciente (nome completo e idade).
+2. Redija em texto corrido, contínuo e fluido (sem divisões em tópicos excessivos), uma história clínica BREVE e concisa, relatando em ordem cronológica que o paciente foi consultado na UPA de Mateus Leme nesta data.
+3. Descreva de forma direta e objetiva o que foi investigado e administrado na unidade (exames complementares e medicações administradas).
+4. Explique com clareza e justifique por QUAL motivo o paciente necessita de seguimento ambulatorial na Atenção Básica (ex: investigação etiológica de ITU de repetição, ajuste de anti-hipertensivo, controle glicêmico, acompanhamento de lesão, propedêutica complementar, etc.).
+5. Mantenha tom colegial, respeitoso e colaborativo de médico da urgência para médico da atenção primária.`;
+
 interface UseAiWorkflowParams {
   apiKey: string;
   model: string;
@@ -385,7 +394,6 @@ DIRETRIZES OBRIGATÓRIAS:
         'Gere a passagem de caso oral sintetizada, direta ao ponto, para passagem de plantão.'
       );
       setDocuments((prev: FinalDocuments) => ({ ...prev, passagemPlantao: response.trim() }));
-      showToast('Passagem de plantão oral gerada!');
     });
   };
 
@@ -400,7 +408,20 @@ DIRETRIZES OBRIGATÓRIAS:
         'Preencha o passômetro do paciente de forma ultra-objetiva com base em todo o caso.'
       );
       setDocuments((prev: FinalDocuments) => ({ ...prev, passometro: response.trim() }));
-      showToast('Passômetro gerado pela IA!');
+    });
+  };
+
+  const runAiEncaminhamento = async () => {
+    await executeAiAction('Encaminhamento PSF', 'encaminhamento', async () => {
+      const payload = getCasePayload('payloadEncaminhamento');
+      const response = await callGeminiApi(
+        apiKey,
+        model,
+        prompts.encaminhamento || DEFAULT_ENCAMINHAMENTO_PROMPT,
+        payload,
+        'Gere o relatório de encaminhamento médico para o PSF em texto corrido humanizado, conciso e direto ao ponto, relatando atendimento na UPA de Mateus Leme e o motivo clínico do seguimento ambulatorial.'
+      );
+      setDocuments((prev: FinalDocuments) => ({ ...prev, encaminhamento: response.trim() }));
     });
   };
 
@@ -426,7 +447,6 @@ DIRETRIZES OBRIGATÓRIAS:
         reevaluationSuggestion: parsed.reavaliacaoRefinada || '',
         missingReevaluationChecks: parsed.checagensFaltantes || []
       }));
-      showToast('Sugestão de reavaliação gerada pela IA abaixo do campo.');
     });
   };
 
@@ -455,7 +475,6 @@ DIRETRIZES OBRIGATÓRIAS:
         conclusionHypothesisSuggestion: novaHipotese,
         newConductsSuggestion: novasCondutas
       }));
-      showToast('Sugestão de nova hipótese e condutas gerada abaixo dos campos.');
     });
   };
 
@@ -470,6 +489,7 @@ DIRETRIZES OBRIGATÓRIAS:
     runAiOrientacoes,
     runAiPassagemPlantao,
     runAiPassometro,
+    runAiEncaminhamento,
     runAiReavaliacao,
     runAiConclusaoObs
   };

@@ -6,18 +6,30 @@ import {
   Layers,
   FileText,
 } from 'lucide-react';
-import type { FinalDocuments, SystemTemplates, SystemPrompts } from '../types';
+import type { FinalDocuments, SystemTemplates, SystemPrompts, PatientData, AIResult } from '../types';
 import { UndoableTextarea } from '../components/UndoableTextarea';
 import { AIActionButton } from '../components/AIActionButton';
 import { TemplateEditorButton } from '../components/TemplateEditorButton';
+import {
+  type CompilableDocType,
+  DEFAULT_ATESTADO_TEMPLATE,
+  DEFAULT_ENCAMINHAMENTO_TEMPLATE
+} from '../utils/documentCompiler';
+import { DEFAULT_ENCAMINHAMENTO_PROMPT } from '../hooks/useAiWorkflow';
 
 interface DocumentosViewProps {
   documents: FinalDocuments;
   setDocuments: React.Dispatch<React.SetStateAction<FinalDocuments>>;
   compileAllDocuments: () => void;
-  compileSingleDocument: (docType: 'prontuario' | 'receitaInterna' | 'receitaDomiciliar' | 'passagemPlantao' | 'passometro') => void;
+  compileSingleDocument: (
+    docType: CompilableDocType,
+    customReplacements?: Record<string, string>
+  ) => void;
   templates: SystemTemplates;
   prompts: SystemPrompts;
+  patient?: PatientData;
+  setPatient?: React.Dispatch<React.SetStateAction<PatientData>>;
+  aiResults?: AIResult;
   handleSaveTemplate: (key: keyof SystemTemplates, value: string) => void;
   handleSaveGlobalTemplate?: (key: keyof SystemTemplates, value: string) => void;
   handleSavePrompt: (key: keyof SystemPrompts, value: string) => void;
@@ -28,6 +40,7 @@ interface DocumentosViewProps {
   handleResetSinglePayloadTemplate: (key: keyof SystemTemplates) => void;
   runAiPassagemPlantao: () => void;
   runAiPassometro: () => void;
+  runAiEncaminhamento?: () => void;
   aiLoading: Record<string, boolean>;
 }
 
@@ -38,6 +51,9 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
   compileSingleDocument,
   templates,
   prompts,
+  patient,
+  setPatient,
+  aiResults,
   handleSaveTemplate,
   handleSaveGlobalTemplate,
   handleSavePrompt,
@@ -48,9 +64,28 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
   handleResetSinglePayloadTemplate,
   runAiPassagemPlantao,
   runAiPassometro,
+  runAiEncaminhamento,
   aiLoading,
 }) => {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+
+  const [diasAtestado, setDiasAtestado] = useState<string>(() => {
+    const raw = aiResults?.medicalLeaveDays || '';
+    const m = String(raw).match(/\d+/);
+    return m ? m[0] : '1';
+  });
+  const [incluirCid, setIncluirCid] = useState<boolean>(true);
+
+  const handleCompileAtestado = () => {
+    compileSingleDocument('atestado', {
+      DIAS: String(diasAtestado || '1'),
+      INCLUIR_CID: incluirCid ? 'true' : 'false'
+    });
+  };
+
+  const handleCompileEncaminhamento = () => {
+    compileSingleDocument('encaminhamento');
+  };
 
   const copyToClipboard = (text: string, section: string) => {
     navigator.clipboard.writeText(text);
@@ -241,6 +276,164 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
           <UndoableTextarea
             value={documents.receitaDomiciliar}
             onChange={(val) => setDocuments({ ...documents, receitaDomiciliar: val })}
+            rows={8}
+            className="font-mono text-xs leading-relaxed"
+          />
+        </section>
+      </div>
+
+      {/* ATESTADO MÉDICO & ENCAMINHAMENTO PSF */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ATESTADO MÉDICO */}
+        <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+              ATESTADO MÉDICO
+            </h2>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* Dias de afastamento */}
+              <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#202020] border border-slate-200 dark:border-[#383838] px-2 py-1 rounded-lg text-xs">
+                <span className="text-slate-500 dark:text-neutral-400 font-medium">Dias:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={diasAtestado}
+                  onChange={(e) => setDiasAtestado(e.target.value)}
+                  className="w-10 text-center font-bold text-slate-800 dark:text-ice-100 bg-transparent focus:outline-none"
+                />
+              </div>
+
+              {/* CPF do Paciente */}
+              <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#202020] border border-slate-200 dark:border-[#383838] px-2 py-1 rounded-lg text-xs">
+                <span className="text-slate-500 dark:text-neutral-400 font-medium">CPF:</span>
+                <input
+                  type="text"
+                  value={patient?.cpf || ''}
+                  onChange={(e) => setPatient && patient && setPatient({ ...patient, cpf: e.target.value })}
+                  className="w-24 text-center text-xs text-slate-800 dark:text-ice-100 bg-transparent focus:outline-none"
+                />
+              </div>
+
+              {/* Toggle com ou sem CID */}
+              <button
+                type="button"
+                onClick={() => setIncluirCid(!incluirCid)}
+                className={`h-8 px-2 rounded-lg text-xs font-medium border transition-colors shadow-2xs flex items-center gap-1 ${
+                  incluirCid
+                    ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848]'
+                    : 'bg-white dark:bg-[#202020] border-slate-200 dark:border-[#333] text-slate-600 dark:text-neutral-400 hover:bg-[#f5f5f5] dark:hover:bg-[#262626]'
+                }`}
+                title={incluirCid ? 'Com CID-10 e Assinatura do paciente' : 'Sem CID-10'}
+              >
+                <span>{incluirCid ? 'Com CID' : 'Sem CID'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCompileAtestado}
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
+                title="Compilar Atestado Médico"
+              >
+                <FileText className="w-4 h-4" />
+              </button>
+              <TemplateEditorButton
+                label="Atestado"
+                templateKey="atestado"
+                currentTemplate={templates.atestado || DEFAULT_ATESTADO_TEMPLATE}
+                onSaveTemplate={(t) => handleSaveTemplate('atestado', t)}
+                onSaveGlobalTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('atestado', t) : undefined}
+              />
+              <button
+                type="button"
+                onClick={() => copyToClipboard(documents.atestado || '', 'atestado')}
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
+                title="Copiar Atestado"
+              >
+                {copiedSection === 'atestado' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePrint(documents.atestado || '', 'Atestado Médico')}
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
+                title="Imprimir Atestado"
+              >
+                <Printer className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <UndoableTextarea
+            value={documents.atestado || ''}
+            onChange={(val) => setDocuments({ ...documents, atestado: val })}
+            rows={8}
+            className="font-mono text-xs leading-relaxed"
+          />
+        </section>
+
+        {/* ENCAMINHAMENTO PSF */}
+        <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+              ENCAMINHAMENTO PSF
+            </h2>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleCompileEncaminhamento}
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
+                title="Compilar Encaminhamento PSF"
+              >
+                <FileText className="w-4 h-4" />
+              </button>
+              <TemplateEditorButton
+                label="Encaminhamento PSF"
+                templateKey="encaminhamento"
+                currentTemplate={templates.encaminhamento || DEFAULT_ENCAMINHAMENTO_TEMPLATE}
+                onSaveTemplate={(t) => handleSaveTemplate('encaminhamento', t)}
+                onSaveGlobalTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('encaminhamento', t) : undefined}
+              />
+              {runAiEncaminhamento && (
+                <AIActionButton
+                  label="Gerar Encaminhamento com IA"
+                  onExecute={runAiEncaminhamento}
+                  isLoading={!!aiLoading.encaminhamento}
+                  promptKey="encaminhamento"
+                  currentPrompt={prompts.encaminhamento || DEFAULT_ENCAMINHAMENTO_PROMPT}
+                  onSavePrompt={(p) => handleSavePrompt('encaminhamento', p)}
+                  onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('encaminhamento', p) : undefined}
+                  onResetPrompt={() => handleResetSinglePrompt('encaminhamento')}
+                  contextPayload={getCasePayload('payloadEncaminhamento')}
+                  payloadTemplate={getPayloadTemplate('payloadEncaminhamento')}
+                  onSavePayloadTemplate={(t) => handleSaveTemplate('payloadEncaminhamento', t)}
+                  onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadEncaminhamento', t) : undefined}
+                  onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadEncaminhamento')}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => copyToClipboard(documents.encaminhamento || '', 'encaminhamento')}
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
+                title="Copiar Encaminhamento PSF"
+              >
+                {copiedSection === 'encaminhamento' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePrint(documents.encaminhamento || '', 'Encaminhamento PSF')}
+                className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
+                title="Imprimir Encaminhamento PSF"
+              >
+                <Printer className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <UndoableTextarea
+            value={documents.encaminhamento || ''}
+            onChange={(val) => setDocuments({ ...documents, encaminhamento: val })}
             rows={8}
             className="font-mono text-xs leading-relaxed"
           />

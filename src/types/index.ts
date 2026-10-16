@@ -6,6 +6,7 @@ export interface PatientData {
   sexo: 'M' | 'F' | '';
   peso: string;
   altura: string;
+  cpf?: string;
 }
 
 export interface VitalSigns {
@@ -88,6 +89,8 @@ export interface FinalDocuments {
   passagemPlantao: string;
   passometro: string;
   evolucao: string;
+  atestado?: string;
+  encaminhamento?: string;
 }
 
 export interface SystemTemplates {
@@ -99,6 +102,8 @@ export interface SystemTemplates {
   passagemPlantao: string;
   passometro: string;
   evolucao: string;
+  atestado?: string;
+  encaminhamento?: string;
   payloadCaso: string;
   payloadHma?: string;
   payloadExameFisico?: string;
@@ -110,6 +115,7 @@ export interface SystemTemplates {
   payloadPassometro?: string;
   payloadReavaliacao?: string;
   payloadConclusaoObs?: string;
+  payloadEncaminhamento?: string;
 }
 
 export interface SystemPrompts {
@@ -123,6 +129,8 @@ export interface SystemPrompts {
   passometro: string;
   reavaliacao: string;
   conclusaoObs: string;
+  encaminhamento?: string;
+  atestado?: string;
 }
 
 export interface SavedPatientRecord {
@@ -146,6 +154,7 @@ export interface ImprovementItem {
   text: string;
   completed: boolean;
   createdAt: number;
+  priority?: 'alta' | 'baixa';
 }
 
 export interface UserImprovements {
