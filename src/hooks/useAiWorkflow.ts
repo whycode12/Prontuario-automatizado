@@ -11,6 +11,7 @@ interface UseAiWorkflowParams {
   prompts: SystemPrompts;
   getCasePayload: (templateKey: keyof SystemTemplates) => string;
   condutas: string;
+  setCondutas?: (val: string) => void;
   susFilter: boolean;
   setAiResults: React.Dispatch<React.SetStateAction<AIResult>>;
   setDocuments: React.Dispatch<React.SetStateAction<FinalDocuments>>;
@@ -24,6 +25,7 @@ export function useAiWorkflow({
   prompts,
   getCasePayload,
   condutas,
+  setCondutas,
   susFilter,
   setAiResults,
   setDocuments,
@@ -205,26 +207,49 @@ export function useAiWorkflow({
   };
 
   const runAiConduta = async () => {
-    await executeAiAction('Condutas e Prescrições', 'conduta', async () => {
+    await executeAiAction('Condutas, Prescrições e Orientações', 'conduta', async () => {
       const jsonExample = `{
-  "medicacoesUnidade": ["Cetoprofeno 100mg EV em SF 0,9% 100ml", "Dipirona 1g EV"],
-  "medicacoesCasa": ["Fosfomicina Trometamol 3g dose única VO", "Dipirona 500mg VO até de 6/6h se dor"],
-  "disclaimers": [
-    {"med": "Cetoprofeno 100mg", "type": "warning", "note": "Cuidado em idoso frágil e nefropatas (risco renal)."},
-    {"med": "Dipirona", "type": "contraindication", "note": "ATENÇÃO: Paciente relata alergia se houver, não prescrever!"}
+  "medicacoesUnidade": [
+    "USO INTRAMUSCULAR\\n\\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
   ],
-  "alertaProfilaxiaVacinal": "Avaliar VAT se ferimento perfurocortante.",
-  "examesLaboratorio": "1. EAS / Urina 1\\n2. Urocultura com antibiograma se falha",
-  "examesImagem": "Sem indicação no momento",
+  "medicacoesCasa": [
+    "USO ORAL\\n\\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\\n\\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\\nTomar 2 comprimidos, via oral, até de 6 em 6 horas, se dor ou febre."
+  ],
+  "disclaimers": [
+    {"med": "Cetoprofeno", "type": "warning", "note": "Cuidado em idoso frágil e nefropatas (risco renal)."},
+    {"med": "Dipirona", "type": "contraindication", "note": "ATENÇÃO: Checagem estrita de alergias conforme HPP."}
+  ],
+  "alertaProfilaxiaVacinal": "",
+  "examesLaboratorio": "HMG, Ur, Cr",
+  "examesImagem": "RX de braço esquerdo AP e PERFIL",
   "desfechoSugerido": "alta",
-  "motivoDesfecho": "Boa resposta clínica esperada, ausência de sinais de sepse ou abdome cirúrgico.",
+  "motivoDesfecho": "Quadro clínico controlado com boa tolerância oral.",
   "encaminhamentoUbs": true,
-  "motivoEncaminhamento": "Revisão e seguimento de urocultura na UBS de referência.",
+  "motivoEncaminhamento": "Seguimento ambulatorial na UBS de referência.",
   "atestadoNecessario": true,
   "diasAtestado": "1 dia",
-  "motivoAtestado": "Repouso e realização de medicações na fase álgica aguda."
+  "motivoAtestado": "Repouso durante fase álgica aguda.",
+  "condutasSintetizadas": "- Prescrevo Ondansetrona IM na unidade.\\n- Solicito RX de braço esquerdo AP e PERFIL na unidade.\\n- Solicito HMG, Ur e Cr na unidade.\\n- Prescrevo Amoxicilina + Clavulanato VO e Dipirona VO para uso domiciliar.\\n- Alta médica com orientações",
+  "orientacoesProntuario": "Paciente orientado quanto ao diagnóstico, adesão medicamentosa e hidratação. Seguirá tratamento ambulatorial.",
+  "sinaisAlarmeProntuario": "Retorno imediato se piora clínica, febre persistente ou intolerância oral.",
+  "orientacoesReceita": "Repouso relativo, hidratação hídrica adequada e tomar os medicamentos nos horários prescritos.",
+  "sinaisAlarmeReceita": "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não cede, dor intensa ou vômitos recorrentes."
 }`;
-      const instruction = `Gere as condutas com prescrições (Unidade vs Domiciliar), checagem estrita de alergias conforme a HPP, avisos para idoso frágil, escores, profilaxia de tétano/raiva se aplicável, exames e desfecho clínico. ${
+      const instruction = `Você é um médico experiente atuando no Brasil (UPA/SUS). Gere a conduta médica completa e rigorosa para este caso, preenchendo todos os campos do JSON.
+DIRETRIZES OBRIGATÓRIAS:
+1. RIGOR EXTREMO EM EXAMES E PRESCRIÇÕES: Seja estritamente criterioso. NÃO seja permissivo. Só prescreva medicações ou solicite exames laboratoriais / exames de imagem se forem REALMENTE estritamente necessários para o caso clínico apresentado. Se não houver indicação clara para exames, retorne vazio ("") em "examesLaboratorio" e "examesImagem".
+2. PRESCRIÇÃO INTERNA (Unidade):
+   - PREFIRA via Intramuscular (IM) quando não for fazer várias medicações simultâneas ou quando a medicação não exigir infusão contínua em bolsa de soro, para não puncionar acesso venoso sem real necessidade.
+   - Siga rigorosamente o padrão SUS/Brasil com blocos de via (ex: 'USO INTRAMUSCULAR', 'USO ENDOVENOSO'), itens com travessões para a quantidade (ex: '1 ampola (2 mL)'), e modo de uso com diluição/infusão/administração.
+3. PRESCRIÇÃO DOMICILIAR:
+   - Siga rigorosamente o padrão com bloco de via (ex: 'USO ORAL'), numeração sequencial, travessões indicando o quantitativo total da embalagem (ex: '———— 1 caixa', '——— 04 envelopes'), seguido da posologia por extenso e instruções de preparo/uso se necessário. Use sempre as apresentações e posologias mais habituais no Brasil e no SUS.
+4. CONDUTAS SINTETIZADAS ('condutasSintetizadas'):
+   - Use a MENOR quantidade de palavras possível, direto ao ponto e objetivo, sintetizando o que foi feito na unidade e domiciliar em tópicos com palavras-chave e abreviações médicas habituais (ex: 'HMG', 'Ur', 'Cr', 'RX AP e PERFIL', 'VO', 'IM', 'EV'). NÃO inclua doses ou tempos desnecessários já descritos nas receitas.
+   - OBRIGATÓRIO: O último tópico DEVE ser o desfecho do paciente, exatamente no padrão: '- Alta médica com orientações' OU '- Em observação para reavaliação após medicação/exames'.
+5. ORIENTAÇÕES E SINAIS DE ALARME:
+   - Personalize estritamente adaptado ao agravo e à pessoa consultada (faixa etária e contexto do paciente). Jamais utilize orientações genéricas desconexas (ex: jamais cite amamentação se for paciente adulto).
+   - Seja conciso e objetivo em 'orientacoesProntuario', 'sinaisAlarmeProntuario', 'orientacoesReceita' e 'sinaisAlarmeReceita', com poucas palavras e alta relevância clínica.
+6. SEGURANÇA E SUS: Checagem estrita de alergias conforme a HPP, avisos para idoso frágil/nefropatas em 'disclaimers', profilaxia de tétano/raiva se aplicável em 'alertaProfilaxiaVacinal'. ${
         susFilter ? 'PRIORIZE FORTEMENTE FÁRMACOS DA RENAME / FARMÁCIA BÁSICA DO SUS.' : ''
       }`;
 
@@ -259,10 +284,26 @@ export function useAiWorkflow({
         return String(val);
       };
 
+      const formatMedList = (val: any): string[] => {
+        if (!val) return [];
+        if (Array.isArray(val)) {
+          return val.map((item) => String(item).trim()).filter(Boolean);
+        }
+        if (typeof val === 'string') {
+          const trimmed = val.trim();
+          return trimmed ? [trimmed] : [];
+        }
+        return [String(val)];
+      };
+
+      if (parsed.condutasSintetizadas && setCondutas) {
+        setCondutas(parsed.condutasSintetizadas);
+      }
+
       setAiResults((prev) => ({
         ...prev,
-        unitMedications: parsed.medicacoesUnidade || [],
-        homeMedications: parsed.medicacoesCasa || [],
+        unitMedications: formatMedList(parsed.medicacoesUnidade),
+        homeMedications: formatMedList(parsed.medicacoesCasa),
         medicationDisclaimers: parsed.disclaimers || [],
         tetanusRabiesAlert: parsed.alertaProfilaxiaVacinal || '',
         orderedLabs: formatExamList(parsed.examesLaboratorio),
@@ -273,9 +314,13 @@ export function useAiWorkflow({
         referralReason: parsed.motivoEncaminhamento || '',
         medicalLeaveNeeded: !!parsed.atestadoNecessario,
         medicalLeaveDays: parsed.diasAtestado || '',
-        medicalLeaveReason: parsed.motivoAtestado || ''
+        medicalLeaveReason: parsed.motivoAtestado || '',
+        condutasSuggestion: parsed.condutasSintetizadas || '',
+        techOrientations: parsed.orientacoesProntuario || parsed.textoTecnico || '',
+        techAlarmSignals: parsed.sinaisAlarmeProntuario || '',
+        layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
+        layAlarmSignals: parsed.sinaisAlarmeReceita || ''
       }));
-      showToast('Condutas, prescrições e alertas de segurança gerados!');
     });
   };
 

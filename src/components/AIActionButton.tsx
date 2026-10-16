@@ -47,27 +47,30 @@ export const DEFAULT_JSON_SCHEMAS: Record<string, string> = {
 
   conduta: JSON.stringify({
     medicacoesUnidade: [
-      "Dipirona 1g EV diluído em 100ml SF 0,9% agora em 20 min",
-      "Cetoprofeno 100mg EV em SF 0,9% 100ml agora"
+      "USO INTRAMUSCULAR\n\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
     ],
     medicacoesCasa: [
-      "Fosfomicina Trometamol 3g dose única VO à noite",
-      "Dipirona 500mg VO de 6/6h se dor ou febre (por até 3 a 5 dias)"
+      "USO ORAL\n\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\n\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\nTomar 2 comprimidos, via oral, até de 6 em 6 horas, se dor ou febre."
     ],
     disclaimers: [
-      { med: "Cetoprofeno 100mg", type: "warning", note: "Cuidado em idoso frágil e nefropatas (risco renal)." },
-      { med: "Dipirona", type: "contraindication", note: "ATENÇÃO: Paciente relata alergia se houver, não prescrever!" }
+      { med: "Cetoprofeno", type: "warning", note: "Cuidado em idoso frágil e nefropatas (risco renal)." },
+      { med: "Dipirona", type: "contraindication", note: "ATENÇÃO: Checagem estrita de alergias conforme HPP." }
     ],
-    alertaProfilaxiaVacinal: "Avaliar VAT se ferimento perfurocortante.",
-    examesLaboratorio: "1. EAS / Urina 1\n2. Urocultura com antibiograma se falha terapêutica",
-    examesImagem: "Sem indicação no momento",
+    alertaProfilaxiaVacinal: "",
+    examesLaboratorio: "HMG, Ur, Cr",
+    examesImagem: "RX de braço esquerdo AP e PERFIL",
     desfechoSugerido: "alta",
-    motivoDesfecho: "Boa resposta clínica esperada, ausência de sinais de sepse ou abdome cirúrgico.",
+    motivoDesfecho: "Quadro clínico controlado com boa tolerância oral.",
     encaminhamentoUbs: true,
-    motivoEncaminhamento: "Revisão e seguimento de urocultura na UBS de referência.",
+    motivoEncaminhamento: "Seguimento ambulatorial na UBS de referência.",
     atestadoNecessario: true,
     diasAtestado: "1 dia",
-    motivoAtestado: "Repouso e realização de medicações na fase álgica aguda."
+    motivoAtestado: "Repouso durante fase álgica aguda.",
+    condutasSintetizadas: "- Prescrevo Ondansetrona IM na unidade.\n- Solicito RX de braço esquerdo AP e PERFIL na unidade.\n- Solicito HMG, Ur e Cr na unidade.\n- Prescrevo Amoxicilina + Clavulanato VO e Dipirona VO para uso domiciliar.\n- Alta médica com orientações",
+    orientacoesProntuario: "Paciente orientado quanto ao diagnóstico, adesão medicamentosa e hidratação. Seguirá tratamento ambulatorial.",
+    sinaisAlarmeProntuario: "Retorno imediato se piora clínica, febre persistente ou intolerância oral.",
+    orientacoesReceita: "Repouso relativo, hidratação hídrica adequada e tomar os medicamentos nos horários prescritos.",
+    sinaisAlarmeReceita: "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não cede, dor intensa ou vômitos recorrentes."
   }, null, 2),
 
   melhorarCondutas: JSON.stringify({
@@ -111,10 +114,12 @@ interface AIActionProps {
   onSaveGlobalPayloadTemplate?: (newTemplate: string) => void;
   onResetPayloadTemplate: () => void;
   compact?: boolean;
+  actionIcon?: React.ReactNode;
 }
 
 export const AIActionButton: React.FC<AIActionProps> = ({
   label,
+  actionIcon,
   onExecute,
   isLoading,
   promptKey,
@@ -201,7 +206,11 @@ export const AIActionButton: React.FC<AIActionProps> = ({
           className="h-full px-2.5 text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors disabled:opacity-50 flex items-center justify-center"
           title={`Executar IA: ${label}`}
         >
-          <Sparkles className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          {actionIcon ? (
+            <span className={isLoading ? 'animate-spin' : ''}>{actionIcon}</span>
+          ) : (
+            <Sparkles className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          )}
         </button>
 
         <button

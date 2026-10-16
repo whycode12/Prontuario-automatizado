@@ -3,6 +3,7 @@ import { RotateCcw, Copy, Check } from 'lucide-react';
 
 interface UndoableTextareaProps {
   label?: string;
+  labelClassName?: string;
   value: string;
   onChange: (value: string) => void;
   rows?: number;
@@ -14,6 +15,7 @@ interface UndoableTextareaProps {
 
 export const UndoableTextarea: React.FC<UndoableTextareaProps> = ({
   label,
+  labelClassName,
   value,
   onChange,
   rows = 3,
@@ -67,7 +69,7 @@ export const UndoableTextarea: React.FC<UndoableTextareaProps> = ({
       {(label || headerRight) && (
         <div className="flex items-center justify-between text-sm">
           {label ? (
-            <span className="font-semibold text-slate-800 dark:text-ice-100 text-sm tracking-tight">
+            <span className={labelClassName || "font-semibold text-slate-800 dark:text-ice-100 text-sm tracking-tight"}>
               {label}
             </span>
           ) : (

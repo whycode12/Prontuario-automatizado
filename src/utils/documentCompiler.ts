@@ -23,13 +23,17 @@ export function generateEvolucaoText(
   templateEvolucao: string,
   contextData: TagContextData
 ): string {
-  const medsUnidade = (contextData.aiResults.unitMedications || [])
-    .map((m, i) => {
-      const trimmed = m.trim();
-      const cleaned = trimmed.replace(/^\s*(?:\d+[\.\)\-:]|\-|\*)\s*/, '');
-      return `${i + 1}. ${cleaned}`;
-    })
-    .join('\n') || 'Nenhuma medicação administrada registrada';
+  const rawMeds = contextData.aiResults.unitMedications || [];
+  let medsUnidade = '';
+  if (rawMeds.length > 0) {
+    const fullText = rawMeds.join('\n\n').trim();
+    if (fullText) {
+      medsUnidade = fullText;
+    }
+  }
+  if (!medsUnidade) {
+    medsUnidade = 'Nenhuma medicação administrada registrada';
+  }
 
   return replaceTemplateTags(templateEvolucao, {
     ...contextData,

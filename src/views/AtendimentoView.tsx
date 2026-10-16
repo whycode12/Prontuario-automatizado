@@ -8,6 +8,7 @@ import {
   Check,
   Calculator,
   X,
+  Pill,
 } from 'lucide-react';
 import type {
   PatientData,
@@ -24,7 +25,53 @@ import { TemplateEditorButton } from '../components/TemplateEditorButton';
 import { AIDrawer } from '../components/AIDrawer';
 import { parseHppText } from '../data/defaults';
 
+function parseIdadeParts(idadeStr?: string, anosProp?: string, mesesProp?: string): { anos: string; meses: string } {
+  if (anosProp !== undefined && mesesProp !== undefined) {
+    return { anos: anosProp, meses: mesesProp };
+  }
+  const str = (idadeStr ?? '').trim();
+  if (!str) return { anos: anosProp ?? '', meses: mesesProp ?? '' };
 
+  const anosMatch = str.match(/(\d+)\s*(?:ano|a\b)/i);
+  const mesesMatch = str.match(/(\d+)\s*(?:m[êe]s|meses|m\b)/i);
+
+  if (anosMatch || mesesMatch) {
+    return {
+      anos: anosProp !== undefined ? anosProp : (anosMatch ? anosMatch[1] : (str.includes('ano') ? '0' : '')),
+      meses: mesesProp !== undefined ? mesesProp : (mesesMatch ? mesesMatch[1] : '')
+    };
+  }
+
+  if (/^\d+$/.test(str)) {
+    return { anos: anosProp ?? str, meses: mesesProp ?? '' };
+  }
+
+  return { anos: anosProp ?? str, meses: mesesProp ?? '' };
+}
+
+function formatIdadeParts(anos: string, meses: string): string {
+  const a = anos.trim();
+  const m = meses.trim();
+
+  if (a !== '' && m !== '') {
+    const numA = Number(a);
+    const numM = Number(m);
+    const labelA = numA === 1 ? 'ano' : 'anos';
+    const labelM = numM === 1 ? 'mês' : 'meses';
+    return `${a} ${labelA} e ${m} ${labelM}`;
+  }
+  if (a !== '') {
+    const numA = Number(a);
+    const labelA = numA === 1 ? 'ano' : 'anos';
+    return `${a} ${labelA}`;
+  }
+  if (m !== '') {
+    const numM = Number(m);
+    const labelM = numM === 1 ? 'mês' : 'meses';
+    return `${m} ${labelM}`;
+  }
+  return '';
+}
 
 interface AtendimentoViewProps {
   patient: PatientData;
@@ -61,8 +108,8 @@ interface AtendimentoViewProps {
   runAiExameFisico: () => void;
   runAiDiagnostico: () => void;
   runAiConduta: () => void;
-  runAiMelhorarCondutas: () => void;
-  runAiOrientacoes: () => void;
+  runAiMelhorarCondutas?: () => void;
+  runAiOrientacoes?: () => void;
   showToast: (msg: string) => void;
   hideAiBoxes?: boolean;
 }
@@ -102,8 +149,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   runAiExameFisico,
   runAiDiagnostico,
   runAiConduta,
-  runAiMelhorarCondutas,
-  runAiOrientacoes,
   showToast,
   hideAiBoxes = false,
 }) => {
@@ -248,6 +293,20 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     }
   };
 
+  const idadeParts = useMemo(() => {
+    return parseIdadeParts(patient.idade, patient.idadeAnos, patient.idadeMeses);
+  }, [patient.idade, patient.idadeAnos, patient.idadeMeses]);
+
+  const handleIdadeChange = (newAnos: string, newMeses: string) => {
+    const formatted = formatIdadeParts(newAnos, newMeses);
+    setPatient((prev) => ({
+      ...prev,
+      idadeAnos: newAnos,
+      idadeMeses: newMeses,
+      idade: formatted
+    }));
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* IDENTIFICAÇÃO DO PACIENTE */}
@@ -258,7 +317,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 text-sm">
           {/* Nome */}
-          <div className="sm:col-span-2 lg:col-span-5">
+          <div className="sm:col-span-2 lg:col-span-4">
             <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
               Nome
             </label>
@@ -270,16 +329,29 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             />
           </div>
 
-          {/* Idade */}
+          {/* Idade - Anos */}
           <div className="lg:col-span-1">
-            <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1">
-              Idade
+            <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1 text-center">
+              Anos
             </label>
             <input
               type="text"
-              value={patient.idade}
-              onChange={(e) => setPatient({ ...patient, idade: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-center"
+              value={idadeParts.anos}
+              onChange={(e) => handleIdadeChange(e.target.value, idadeParts.meses)}
+              className="w-full px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-center"
+            />
+          </div>
+
+          {/* Idade - Meses */}
+          <div className="lg:col-span-1">
+            <label className="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1 text-center">
+              Meses
+            </label>
+            <input
+              type="text"
+              value={idadeParts.meses}
+              onChange={(e) => handleIdadeChange(idadeParts.anos, e.target.value)}
+              className="w-full px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50 text-center"
             />
           </div>
 
@@ -350,7 +422,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               type="text"
               readOnly
               value={computedImc ? `${computedImc}` : ''}
-              placeholder="-"
               className="w-full px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-[#1f1f1f] text-slate-800 dark:text-ice-100 text-sm font-semibold text-center cursor-default"
             />
           </div>
@@ -397,6 +468,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         <div>
           <UndoableTextarea
             label="História da Moléstia Atual (HMA)"
+            labelClassName="block text-slate-600 dark:text-slate-300 font-semibold text-xs mb-1"
             value={hma}
             onChange={setHma}
             rows={4}
@@ -787,21 +859,39 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               HIPÓTESE DIAGNÓSTICA
             </h2>
           </div>
-          <AIActionButton
-            label="Gerar Hipóteses com IA"
-            onExecute={runAiDiagnostico}
-            isLoading={!!aiLoading.diagnostico}
-            promptKey="diagnostico"
-            currentPrompt={prompts.diagnostico}
-            onSavePrompt={(p) => handleSavePrompt('diagnostico', p)}
-            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('diagnostico', p) : undefined}
-            onResetPrompt={() => handleResetSinglePrompt('diagnostico')}
-            contextPayload={getCasePayload('payloadDiagnostico')}
-            payloadTemplate={getPayloadTemplate('payloadDiagnostico')}
-            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadDiagnostico', t)}
-            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadDiagnostico', t) : undefined}
-            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadDiagnostico')}
-          />
+          <div className="flex items-center gap-2">
+            <AIActionButton
+              label="Gerar Hipóteses com IA"
+              onExecute={runAiDiagnostico}
+              isLoading={!!aiLoading.diagnostico}
+              promptKey="diagnostico"
+              currentPrompt={prompts.diagnostico}
+              onSavePrompt={(p) => handleSavePrompt('diagnostico', p)}
+              onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('diagnostico', p) : undefined}
+              onResetPrompt={() => handleResetSinglePrompt('diagnostico')}
+              contextPayload={getCasePayload('payloadDiagnostico')}
+              payloadTemplate={getPayloadTemplate('payloadDiagnostico')}
+              onSavePayloadTemplate={(t) => handleSaveTemplate('payloadDiagnostico', t)}
+              onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadDiagnostico', t) : undefined}
+              onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadDiagnostico')}
+            />
+            <AIActionButton
+              label="Gerar Condutas, Prescrições e Orientações"
+              actionIcon={<Pill className="w-4 h-4" />}
+              onExecute={runAiConduta}
+              isLoading={!!aiLoading.conduta}
+              promptKey="conduta"
+              currentPrompt={prompts.conduta}
+              onSavePrompt={(p) => handleSavePrompt('conduta', p)}
+              onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('conduta', p) : undefined}
+              onResetPrompt={() => handleResetSinglePrompt('conduta')}
+              contextPayload={getCasePayload('payloadConduta')}
+              payloadTemplate={getPayloadTemplate('payloadConduta')}
+              onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConduta', t)}
+              onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConduta', t) : undefined}
+              onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConduta')}
+            />
+          </div>
         </div>
 
         {/* Compulsory Notification Alert com engavetar */}
@@ -989,21 +1079,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               </span>
             )}
           </div>
-          <AIActionButton
-            label="Sugerir Condutas & Prescrições"
-            onExecute={runAiConduta}
-            isLoading={!!aiLoading.conduta}
-            promptKey="conduta"
-            currentPrompt={prompts.conduta}
-            onSavePrompt={(p) => handleSavePrompt('conduta', p)}
-            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('conduta', p) : undefined}
-            onResetPrompt={() => handleResetSinglePrompt('conduta')}
-            contextPayload={getCasePayload('payloadConduta')}
-            payloadTemplate={getPayloadTemplate('payloadConduta')}
-            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConduta', t)}
-            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConduta', t) : undefined}
-            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConduta')}
-          />
         </div>
 
         {/* Tetanus/Rabies Warning if present com engavetar */}
@@ -1048,11 +1123,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               PRESCRIÇÃO INTERNA
             </span>
             <UndoableTextarea
-              value={aiResults.unitMedications?.join('\n') || ''}
+              value={Array.isArray(aiResults.unitMedications) ? aiResults.unitMedications.join('\n\n') : (aiResults.unitMedications || '')}
               onChange={(val) =>
-                setAiResults({ ...aiResults, unitMedications: val.split('\n').filter(Boolean) })
+                setAiResults({ ...aiResults, unitMedications: val ? [val] : [] })
               }
-              rows={3}
+              rows={4}
             />
           </div>
 
@@ -1061,11 +1136,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               PRESCRIÇÃO DOMICILIAR
             </span>
             <UndoableTextarea
-              value={aiResults.homeMedications?.join('\n') || ''}
+              value={Array.isArray(aiResults.homeMedications) ? aiResults.homeMedications.join('\n\n') : (aiResults.homeMedications || '')}
               onChange={(val) =>
-                setAiResults({ ...aiResults, homeMedications: val.split('\n').filter(Boolean) })
+                setAiResults({ ...aiResults, homeMedications: val ? [val] : [] })
               }
-              rows={3}
+              rows={4}
             />
           </div>
         </div>
@@ -1102,21 +1177,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
             CONDUTAS
           </h2>
-          <AIActionButton
-            label="Melhorar Escrita com IA"
-            onExecute={runAiMelhorarCondutas}
-            isLoading={!!aiLoading.melhorarCondutas}
-            promptKey="melhorarCondutas"
-            currentPrompt={prompts.melhorarCondutas || ''}
-            onSavePrompt={(p) => handleSavePrompt('melhorarCondutas', p)}
-            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('melhorarCondutas', p) : undefined}
-            onResetPrompt={() => handleResetSinglePrompt('melhorarCondutas')}
-            contextPayload={getCasePayload('payloadConduta')}
-            payloadTemplate={getPayloadTemplate('payloadConduta')}
-            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConduta', t)}
-            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConduta', t) : undefined}
-            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConduta')}
-          />
         </div>
 
         <UndoableTextarea
@@ -1126,7 +1186,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         />
 
         {/* Sugestão da IA para Condutas com engavetar */}
-        {!hideAiBoxes && aiResults.condutasSuggestion && (
+        {!hideAiBoxes && aiResults.condutasSuggestion && condutas !== aiResults.condutasSuggestion && (
           <AIDrawer
             title="Sugestão da IA para Condutas:"
             onImplement={handleImplementCondutas}
@@ -1147,21 +1207,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
             ORIENTAÇÕES E SINAIS DE ALARME
           </h2>
-          <AIActionButton
-            label="Gerar Orientações com IA"
-            onExecute={runAiOrientacoes}
-            isLoading={!!aiLoading.orientacoes}
-            promptKey="orientacoes"
-            currentPrompt={prompts.orientacoes}
-            onSavePrompt={(p) => handleSavePrompt('orientacoes', p)}
-            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('orientacoes', p) : undefined}
-            onResetPrompt={() => handleResetSinglePrompt('orientacoes')}
-            contextPayload={getCasePayload('payloadOrientacoes')}
-            payloadTemplate={getPayloadTemplate('payloadOrientacoes')}
-            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadOrientacoes', t)}
-            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadOrientacoes', t) : undefined}
-            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadOrientacoes')}
-          />
         </div>
 
         {/* 4 Caixas de Texto: 2 para Prontuário, 2 para Receita */}

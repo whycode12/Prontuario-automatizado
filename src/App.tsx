@@ -427,6 +427,8 @@ export default function App() {
   const [patient, setPatient] = useState<PatientData>({
     nome: '',
     idade: '',
+    idadeAnos: '',
+    idadeMeses: '',
     sexo: '',
     peso: '',
     altura: ''
@@ -764,7 +766,7 @@ export default function App() {
       }
     }
     setCurrentRecordId(Date.now().toString());
-    setPatient({ nome: '', idade: '', sexo: '', peso: '', altura: '' });
+    setPatient({ nome: '', idade: '', idadeAnos: '', idadeMeses: '', sexo: '', peso: '', altura: '' });
     setQp('');
     setHma('');
     setHpp(parseHppText(templates.hpp));
@@ -982,8 +984,6 @@ export default function App() {
     runAiExameFisico,
     runAiDiagnostico,
     runAiConduta,
-    runAiMelhorarCondutas,
-    runAiOrientacoes,
     runAiPassagemPlantao,
     runAiPassometro,
     runAiReavaliacao,
@@ -994,6 +994,7 @@ export default function App() {
     prompts,
     getCasePayload,
     condutas,
+    setCondutas,
     susFilter,
     setAiResults,
     setDocuments,
@@ -1593,8 +1594,6 @@ export default function App() {
             runAiExameFisico={runAiExameFisico}
             runAiDiagnostico={runAiDiagnostico}
             runAiConduta={runAiConduta}
-            runAiMelhorarCondutas={runAiMelhorarCondutas}
-            runAiOrientacoes={runAiOrientacoes}
             showToast={showToast}
             hideAiBoxes={hideAiBoxes}
           />

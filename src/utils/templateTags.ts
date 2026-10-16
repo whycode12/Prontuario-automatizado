@@ -85,7 +85,11 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
 
   // 2. Dados do Paciente
   output = output.replace(/\{\{NOME\}\}/gi, patient.nome || 'Não informado');
-  output = output.replace(/\{\{IDADE\}\}/gi, patient.idade || '--');
+  const idadeText = patient.idade || '--';
+  if (/mes|ano/i.test(idadeText)) {
+    output = output.replace(/\{\{IDADE\}\}\s*anos/gi, idadeText);
+  }
+  output = output.replace(/\{\{IDADE\}\}/gi, idadeText);
   output = output.replace(/\{\{SEXO\}\}/gi, patient.sexo === 'M' ? 'Masculino' : patient.sexo === 'F' ? 'Feminino' : patient.sexo || 'Não informado');
   output = output.replace(/\{\{PESO\}\}/gi, patient.peso || '--');
   output = output.replace(/\{\{ALTURA\}\}/gi, patient.altura || '--');

@@ -1,6 +1,8 @@
 export interface PatientData {
   nome: string;
   idade: string;
+  idadeAnos?: string;
+  idadeMeses?: string;
   sexo: 'M' | 'F' | '';
   peso: string;
   altura: string;
