@@ -51,6 +51,7 @@ export interface AIResult {
   orderedLabs?: string;
   orderedImages?: string;
   clinicalOutcome?: 'alta' | 'observacao' | 'internacao' | 'transferencia';
+  suggestedOutcome?: 'alta' | 'observacao' | 'internacao' | 'transferencia';
   outcomeReason?: string;
   referralNeeded?: boolean;
   referralReason?: string;

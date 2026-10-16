@@ -4,6 +4,7 @@ import { callGeminiApi } from '../services/gemini';
 import { safeJsonParse } from '../utils/jsonSafe';
 import { DEFAULT_PROMPTS } from '../data/defaults';
 import { addAiLog, updateAiLog } from '../utils/aiLogger';
+import { formatUsoWithColon, ensureOriento } from '../utils/templateTags';
 
 interface UseAiWorkflowParams {
   apiKey: string;
@@ -90,7 +91,6 @@ export function useAiWorkflow({
         hmaSuggestion: parsed.hmaRefinada || '',
         hmaMissingQuestions: parsed.perguntasFaltantes || []
       }));
-      showToast('Sugestão de HMA gerada pela IA abaixo do campo.');
     });
   };
 
@@ -113,7 +113,6 @@ export function useAiWorkflow({
         physicalExamSuggestion: parsed.exameRefinado || '',
         physicalExamMissingManeuvers: parsed.manobrasFaltantes || []
       }));
-      showToast('Sugestão de exame físico gerada pela IA abaixo do campo.');
     });
   };
 
@@ -151,7 +150,7 @@ export function useAiWorkflow({
         model,
         prompts.diagnostico,
         payload,
-        'Elabore a hipótese principal, ranking de hipóteses (principal e diferenciais) com probabilidade (Alta, Média ou Baixa), ranking de 5 CIDs com probabilidade, verificação de notificação compulsória e escores clínicos pertinentes.',
+        'Elabore a hipótese principal (usando obrigatoriamente a nomenclatura médica oficial equivalente do CID-10), ranking de hipóteses (principal e diferenciais) com probabilidade (Alta, Média ou Baixa), ranking de 5 CIDs com probabilidade utilizando a nomenclatura estritamente oficial da tabela CID-10 (DATASUS/OMS), verificação de notificação compulsória e escores clínicos pertinentes.',
         jsonExample
       );
 
@@ -202,7 +201,6 @@ export function useAiWorkflow({
         compulsoryDetails: parsed.detalhesNotificacao || '',
         clinicalScores: parsed.escoresClinicos || []
       }));
-      showToast('Diagnósticos e CID gerados pela IA!');
     });
   };
 
@@ -210,10 +208,10 @@ export function useAiWorkflow({
     await executeAiAction('Condutas, Prescrições e Orientações', 'conduta', async () => {
       const jsonExample = `{
   "medicacoesUnidade": [
-    "USO INTRAMUSCULAR\\n\\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
+    "USO INTRAMUSCULAR:\\n\\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
   ],
   "medicacoesCasa": [
-    "USO ORAL\\n\\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\\n\\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\\nTomar 2 comprimidos, via oral, até de 6 em 6 horas, se dor ou febre."
+    "USO ORAL:\\n\\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\\n\\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\\nTomar 2 comprimidos, via oral, até de 6 em 6 horas, se dor ou febre."
   ],
   "disclaimers": [
     {"med": "Cetoprofeno", "type": "warning", "note": "Cuidado em idoso frágil e nefropatas (risco renal)."},
@@ -230,26 +228,25 @@ export function useAiWorkflow({
   "diasAtestado": "1 dia",
   "motivoAtestado": "Repouso durante fase álgica aguda.",
   "condutasSintetizadas": "- Prescrevo Ondansetrona IM na unidade.\\n- Solicito RX de braço esquerdo AP e PERFIL na unidade.\\n- Solicito HMG, Ur e Cr na unidade.\\n- Prescrevo Amoxicilina + Clavulanato VO e Dipirona VO para uso domiciliar.\\n- Alta médica com orientações",
-  "orientacoesProntuario": "Paciente orientado quanto ao diagnóstico, adesão medicamentosa e hidratação. Seguirá tratamento ambulatorial.",
-  "sinaisAlarmeProntuario": "Retorno imediato se piora clínica, febre persistente ou intolerância oral.",
+  "orientacoesProntuario": "Oriento hidratação oral vigorosa e repouso relativo durante a fase sintomática.",
+  "sinaisAlarmeProntuario": "Oriento retorno imediato ao pronto atendimento se febre persistente, vômitos refratários ou piora da dor.",
   "orientacoesReceita": "Repouso relativo, hidratação hídrica adequada e tomar os medicamentos nos horários prescritos.",
   "sinaisAlarmeReceita": "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não cede, dor intensa ou vômitos recorrentes."
 }`;
       const instruction = `Você é um médico experiente atuando no Brasil (UPA/SUS). Gere a conduta médica completa e rigorosa para este caso, preenchendo todos os campos do JSON.
 DIRETRIZES OBRIGATÓRIAS:
 1. RIGOR EXTREMO EM EXAMES E PRESCRIÇÕES: Seja estritamente criterioso. NÃO seja permissivo. Só prescreva medicações ou solicite exames laboratoriais / exames de imagem se forem REALMENTE estritamente necessários para o caso clínico apresentado. Se não houver indicação clara para exames, retorne vazio ("") em "examesLaboratorio" e "examesImagem".
-2. PRESCRIÇÃO INTERNA (Unidade):
+2. PRESCRIÇÃO INTERNA (Unidade) E DOMICILIAR:
    - PREFIRA via Intramuscular (IM) quando não for fazer várias medicações simultâneas ou quando a medicação não exigir infusão contínua em bolsa de soro, para não puncionar acesso venoso sem real necessidade.
-   - Siga rigorosamente o padrão SUS/Brasil com blocos de via (ex: 'USO INTRAMUSCULAR', 'USO ENDOVENOSO'), itens com travessões para a quantidade (ex: '1 ampola (2 mL)'), e modo de uso com diluição/infusão/administração.
-3. PRESCRIÇÃO DOMICILIAR:
-   - Siga rigorosamente o padrão com bloco de via (ex: 'USO ORAL'), numeração sequencial, travessões indicando o quantitativo total da embalagem (ex: '———— 1 caixa', '——— 04 envelopes'), seguido da posologia por extenso e instruções de preparo/uso se necessário. Use sempre as apresentações e posologias mais habituais no Brasil e no SUS.
-4. CONDUTAS SINTETIZADAS ('condutasSintetizadas'):
+   - OBRIGATÓRIO: Sempre que indicar uma via de administração em prescrições (USO ORAL, USO INTRAMUSCULAR, USO ENDOVENOSO, etc.), coloque SEMPRE os dois-pontos logo após a via (ex: 'USO ORAL:', 'USO INTRAMUSCULAR:', 'USO ENDOVENOSO:').
+   - Siga rigorosamente o padrão com blocos de via, itens com travessões para a quantidade (ex: '1 ampola (2 mL)', '———— 1 caixa', '——— 04 envelopes'), seguido da posologia por extenso e instruções de preparo/uso se necessário. Use sempre as apresentações e posologias mais habituais no Brasil e no SUS.
+3. CONDUTAS SINTETIZADAS ('condutasSintetizadas'):
    - Use a MENOR quantidade de palavras possível, direto ao ponto e objetivo, sintetizando o que foi feito na unidade e domiciliar em tópicos com palavras-chave e abreviações médicas habituais (ex: 'HMG', 'Ur', 'Cr', 'RX AP e PERFIL', 'VO', 'IM', 'EV'). NÃO inclua doses ou tempos desnecessários já descritos nas receitas.
    - OBRIGATÓRIO: O último tópico DEVE ser o desfecho do paciente, exatamente no padrão: '- Alta médica com orientações' OU '- Em observação para reavaliação após medicação/exames'.
-5. ORIENTAÇÕES E SINAIS DE ALARME:
+4. ORIENTAÇÕES E SINAIS DE ALARME:
    - Personalize estritamente adaptado ao agravo e à pessoa consultada (faixa etária e contexto do paciente). Jamais utilize orientações genéricas desconexas (ex: jamais cite amamentação se for paciente adulto).
-   - Seja conciso e objetivo em 'orientacoesProntuario', 'sinaisAlarmeProntuario', 'orientacoesReceita' e 'sinaisAlarmeReceita', com poucas palavras e alta relevância clínica.
-6. SEGURANÇA E SUS: Checagem estrita de alergias conforme a HPP, avisos para idoso frágil/nefropatas em 'disclaimers', profilaxia de tétano/raiva se aplicável em 'alertaProfilaxiaVacinal'. ${
+   - OBRIGATÓRIO: Em 'orientacoesProntuario' e 'sinaisAlarmeProntuario' para o prontuário, comece SEMPRE obrigatoriamente com a palavra 'Oriento...'. Seja conciso e objetivo com poucas palavras.
+5. SEGURANÇA E SUS: Checagem estrita de alergias conforme a HPP, avisos para idoso frágil/nefropatas em 'disclaimers', profilaxia de tétano/raiva se aplicável em 'alertaProfilaxiaVacinal'. ${
         susFilter ? 'PRIORIZE FORTEMENTE FÁRMACOS DA RENAME / FARMÁCIA BÁSICA DO SUS.' : ''
       }`;
 
@@ -300,15 +297,18 @@ DIRETRIZES OBRIGATÓRIAS:
         setCondutas(parsed.condutasSintetizadas);
       }
 
+      const aiSuggested = (parsed.desfechoSugerido as 'alta' | 'observacao' | 'internacao' | 'transferencia') || 'alta';
+
       setAiResults((prev) => ({
         ...prev,
-        unitMedications: formatMedList(parsed.medicacoesUnidade),
-        homeMedications: formatMedList(parsed.medicacoesCasa),
+        unitMedications: formatMedList(parsed.medicacoesUnidade).map(formatUsoWithColon),
+        homeMedications: formatMedList(parsed.medicacoesCasa).map(formatUsoWithColon),
         medicationDisclaimers: parsed.disclaimers || [],
         tetanusRabiesAlert: parsed.alertaProfilaxiaVacinal || '',
         orderedLabs: formatExamList(parsed.examesLaboratorio),
         orderedImages: formatExamList(parsed.examesImagem),
-        clinicalOutcome: parsed.desfechoSugerido || 'alta',
+        suggestedOutcome: aiSuggested,
+        clinicalOutcome: aiSuggested,
         outcomeReason: parsed.motivoDesfecho || '',
         referralNeeded: !!parsed.encaminhamentoUbs,
         referralReason: parsed.motivoEncaminhamento || '',
@@ -316,8 +316,8 @@ DIRETRIZES OBRIGATÓRIAS:
         medicalLeaveDays: parsed.diasAtestado || '',
         medicalLeaveReason: parsed.motivoAtestado || '',
         condutasSuggestion: parsed.condutasSintetizadas || '',
-        techOrientations: parsed.orientacoesProntuario || parsed.textoTecnico || '',
-        techAlarmSignals: parsed.sinaisAlarmeProntuario || '',
+        techOrientations: ensureOriento(parsed.orientacoesProntuario || parsed.textoTecnico || ''),
+        techAlarmSignals: ensureOriento(parsed.sinaisAlarmeProntuario || ''),
         layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
         layAlarmSignals: parsed.sinaisAlarmeReceita || ''
       }));
@@ -342,15 +342,14 @@ DIRETRIZES OBRIGATÓRIAS:
         ...prev,
         condutasSuggestion: parsed.condutasRefinadas || ''
       }));
-      showToast('Sugestão de condutas gerada pela IA abaixo do campo!');
     });
   };
 
   const runAiOrientacoes = async () => {
     await executeAiAction('Orientações e Alarmes', 'orientacoes', async () => {
       const jsonExample = `{
-  "orientacoesProntuario": "Orientado repouso relativo, hidratação oral contínua e seguimento com médico assistente / UBS.",
-  "sinaisAlarmeProntuario": "Febre persistente acima de 38,5°C refratária a antitérmicos, piora acentuada da dor, vômitos incoercíveis, síncope ou dispneia.",
+  "orientacoesProntuario": "Oriento repouso relativo, hidratação oral contínua e seguimento com médico assistente / UBS.",
+  "sinaisAlarmeProntuario": "Oriento retorno imediato ao pronto atendimento se febre persistente, piora acentuada da dor ou dispneia.",
   "orientacoesReceita": "Mantenha repouso em casa e tome bastante água e sucos naturais. Tome as medicações receitadas rigorosamente nos horários indicados.",
   "sinaisAlarmeReceita": "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não baixa com os remédios, dor intensa que piore, vômitos que impeçam beber água ou falta de ar."
 }`;
@@ -367,12 +366,11 @@ DIRETRIZES OBRIGATÓRIAS:
       const parsed = safeJsonParse(response);
       setAiResults((prev) => ({
         ...prev,
-        techOrientations: parsed.orientacoesProntuario || parsed.textoTecnico || '',
-        techAlarmSignals: parsed.sinaisAlarmeProntuario || '',
+        techOrientations: ensureOriento(parsed.orientacoesProntuario || parsed.textoTecnico || ''),
+        techAlarmSignals: ensureOriento(parsed.sinaisAlarmeProntuario || ''),
         layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
         layAlarmSignals: parsed.sinaisAlarmeReceita || ''
       }));
-      showToast('Orientações e sinais de alarme gerados pela IA!');
     });
   };
 

@@ -637,7 +637,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                       <input
                         type="number"
                         min="1"
-                        placeholder="ex: 5"
                         value={smokingCigs}
                         onChange={(e) => setSmokingCigs(e.target.value)}
                         onKeyDown={(e) => {
@@ -660,7 +659,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                         type="number"
                         min="0.1"
                         step="any"
-                        placeholder="ex: 3"
                         value={smokingYears}
                         onChange={(e) => setSmokingYears(e.target.value)}
                         onKeyDown={(e) => {
@@ -1397,15 +1395,15 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                 <span>
                   <strong>Desfecho Sugerido:</strong>{' '}
                   <span className="font-semibold text-slate-800 dark:text-ice-100">
-                    {aiResults.clinicalOutcome === 'alta'
+                    {(aiResults.suggestedOutcome || aiResults.clinicalOutcome) === 'alta'
                       ? 'Alta orientada'
-                      : aiResults.clinicalOutcome === 'observacao'
+                      : (aiResults.suggestedOutcome || aiResults.clinicalOutcome) === 'observacao'
                       ? 'Observação'
-                      : aiResults.clinicalOutcome === 'internacao'
+                      : (aiResults.suggestedOutcome || aiResults.clinicalOutcome) === 'internacao'
                       ? 'Internação'
-                      : aiResults.clinicalOutcome === 'transferencia'
+                      : (aiResults.suggestedOutcome || aiResults.clinicalOutcome) === 'transferencia'
                       ? 'Transferência'
-                      : aiResults.clinicalOutcome || 'Alta'}
+                      : (aiResults.suggestedOutcome || aiResults.clinicalOutcome) || 'Alta'}
                   </span>
                   {' — '}{aiResults.outcomeReason}
                 </span>

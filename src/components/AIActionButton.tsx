@@ -47,10 +47,10 @@ export const DEFAULT_JSON_SCHEMAS: Record<string, string> = {
 
   conduta: JSON.stringify({
     medicacoesUnidade: [
-      "USO INTRAMUSCULAR\n\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
+      "USO INTRAMUSCULAR:\n\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
     ],
     medicacoesCasa: [
-      "USO ORAL\n\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\n\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\nTomar 2 comprimidos, via oral, até de 6 em 6 horas, se dor ou febre."
+      "USO ORAL:\n\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\n\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\nTomar 2 comprimidos, via oral, até de 6 em 6 horas, se dor ou febre."
     ],
     disclaimers: [
       { med: "Cetoprofeno", type: "warning", note: "Cuidado em idoso frágil e nefropatas (risco renal)." },
@@ -67,8 +67,8 @@ export const DEFAULT_JSON_SCHEMAS: Record<string, string> = {
     diasAtestado: "1 dia",
     motivoAtestado: "Repouso durante fase álgica aguda.",
     condutasSintetizadas: "- Prescrevo Ondansetrona IM na unidade.\n- Solicito RX de braço esquerdo AP e PERFIL na unidade.\n- Solicito HMG, Ur e Cr na unidade.\n- Prescrevo Amoxicilina + Clavulanato VO e Dipirona VO para uso domiciliar.\n- Alta médica com orientações",
-    orientacoesProntuario: "Paciente orientado quanto ao diagnóstico, adesão medicamentosa e hidratação. Seguirá tratamento ambulatorial.",
-    sinaisAlarmeProntuario: "Retorno imediato se piora clínica, febre persistente ou intolerância oral.",
+    orientacoesProntuario: "Oriento hidratação oral vigorosa e repouso relativo durante a fase sintomática.",
+    sinaisAlarmeProntuario: "Oriento retorno imediato ao pronto atendimento se febre persistente, vômitos refratários ou piora da dor.",
     orientacoesReceita: "Repouso relativo, hidratação hídrica adequada e tomar os medicamentos nos horários prescritos.",
     sinaisAlarmeReceita: "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não cede, dor intensa ou vômitos recorrentes."
   }, null, 2),
@@ -78,8 +78,8 @@ export const DEFAULT_JSON_SCHEMAS: Record<string, string> = {
   }, null, 2),
 
   orientacoes: JSON.stringify({
-    orientacoesProntuario: "Orientado repouso relativo, hidratação oral contínua e seguimento com médico assistente / UBS.",
-    sinaisAlarmeProntuario: "Febre persistente acima de 38,5°C refratária a antitérmicos, piora acentuada da dor, vômitos incoercíveis, síncope ou dispneia.",
+    orientacoesProntuario: "Oriento repouso relativo, hidratação oral contínua e seguimento com médico assistente / UBS.",
+    sinaisAlarmeProntuario: "Oriento retorno imediato se febre persistente acima de 38,5°C refratária a antitérmicos, piora acentuada da dor ou dispneia.",
     orientacoesReceita: "Mantenha repouso em casa e tome bastante água e sucos naturais. Tome as medicações receitadas rigorosamente nos horários indicados.",
     sinaisAlarmeReceita: "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não baixa com os remédios, dor intensa que piore, vômitos que impeçam beber água ou falta de ar."
   }, null, 2),
