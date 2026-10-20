@@ -9,6 +9,7 @@ import {
   Calculator,
   X,
   Pill,
+  Clock,
 } from 'lucide-react';
 import type {
   PatientData,
@@ -311,9 +312,30 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* IDENTIFICAÇÃO DO PACIENTE */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
-        <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-          IDENTIFICAÇÃO
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+            IDENTIFICAÇÃO
+          </h2>
+          {patient.horaInicio && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-[11px] font-medium text-slate-500 dark:text-neutral-400">Início:</span>
+              <input
+                type="text"
+                value={patient.horaInicio}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPatient((prev) => ({
+                    ...prev,
+                    horaInicio: val,
+                    dataHoraInicio: prev.dataHoraInicio ? `${prev.dataHoraInicio.split(' - ')[0]} - ${val}` : val
+                  }));
+                }}
+                className="w-14 px-1 py-0.5 text-xs font-mono font-medium rounded border border-transparent hover:border-slate-200 dark:hover:border-slate-700 focus:border-slate-300 dark:focus:border-slate-600 bg-transparent text-slate-700 dark:text-neutral-300 focus:outline-none text-center"
+              />
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 text-sm">
           {/* Nome */}
@@ -324,7 +346,26 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             <input
               type="text"
               value={patient.nome}
-              onChange={(e) => setPatient({ ...patient, nome: e.target.value })}
+              onChange={(e) => {
+                const newName = e.target.value;
+                setPatient((prev) => {
+                  let horaInicio = prev.horaInicio;
+                  let dataHoraInicio = prev.dataHoraInicio;
+                  if (newName.trim().length > 0 && !horaInicio) {
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const dateStr = now.toLocaleDateString('pt-BR');
+                    horaInicio = timeStr;
+                    dataHoraInicio = `${dateStr} - ${timeStr}`;
+                  }
+                  return {
+                    ...prev,
+                    nome: newName,
+                    horaInicio,
+                    dataHoraInicio
+                  };
+                });
+              }}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-ice-100 text-sm focus:outline-none focus:ring-2 focus:ring-ice-400/50"
             />
           </div>

@@ -138,11 +138,29 @@ export default function App() {
   const [model, setModel] = useState<string>(() => localStorage.getItem(STORAGE_KEYS.MODEL) || 'gemini-3.8-flash');
   const [templates, setTemplates] = useState<SystemTemplates>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
-    return saved ? { ...DEFAULT_TEMPLATES, ...JSON.parse(saved) } : DEFAULT_TEMPLATES;
+    if (!saved) return DEFAULT_TEMPLATES;
+    try {
+      const parsed = { ...DEFAULT_TEMPLATES, ...JSON.parse(saved) };
+      if (parsed.passometro && parsed.passometro.includes('[PASSÔMETRO]')) {
+        parsed.passometro = DEFAULT_TEMPLATES.passometro;
+      }
+      return parsed;
+    } catch {
+      return DEFAULT_TEMPLATES;
+    }
   });
   const [prompts, setPrompts] = useState<SystemPrompts>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.PROMPTS);
-    return saved ? { ...DEFAULT_PROMPTS, ...JSON.parse(saved) } : DEFAULT_PROMPTS;
+    if (!saved) return DEFAULT_PROMPTS;
+    try {
+      const parsed = { ...DEFAULT_PROMPTS, ...JSON.parse(saved) };
+      if (parsed.passometro && parsed.passometro.includes('Identificação e Leito')) {
+        parsed.passometro = DEFAULT_PROMPTS.passometro;
+      }
+      return parsed;
+    } catch {
+      return DEFAULT_PROMPTS;
+    }
   });
   const [savedRecords, setSavedRecords] = useState<SavedPatientRecord[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.RECORDS);
@@ -769,7 +787,7 @@ export default function App() {
       }
     }
     setCurrentRecordId(Date.now().toString());
-    setPatient({ nome: '', idade: '', idadeAnos: '', idadeMeses: '', sexo: '', peso: '', altura: '', cpf: '' });
+    setPatient({ nome: '', idade: '', idadeAnos: '', idadeMeses: '', sexo: '', peso: '', altura: '', cpf: '', horaInicio: undefined, dataHoraInicio: undefined });
     setQp('');
     setHma('');
     setHpp(parseHppText(templates.hpp));
@@ -1647,6 +1665,7 @@ export default function App() {
             examResults={examResults}
             setExamResults={setExamResults}
             aiResults={aiResults}
+            setAiResults={setAiResults}
             aiLoading={aiLoading}
             prompts={prompts}
             templates={templates}

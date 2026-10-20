@@ -7,6 +7,8 @@ export interface PatientData {
   peso: string;
   altura: string;
   cpf?: string;
+  horaInicio?: string;
+  dataHoraInicio?: string;
 }
 
 export interface VitalSigns {

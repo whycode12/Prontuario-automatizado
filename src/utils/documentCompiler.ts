@@ -12,7 +12,7 @@ export type CompilableDocType =
 
 export const DEFAULT_ATESTADO_TEMPLATE = `ATESTADO MÉDICO
 
-Atesto, para os devidos fins, que {{NOME}}, {{PORTADOR_CPF}}, {{ATENDIDO_UNIDADE}} nesta unidade no dia {{DATA}}, necessitando de {{DIAS_EXTENSO}} ({{DIAS}}) dia(s) de repouso e afastamento de suas atividades laborais e/ou escolares a contar desta data.
+Atesto, para os devidos fins, que {{NOME}}, {{PORTADOR_CPF}}, {{ATENDIDO_UNIDADE}} nesta unidade no dia {{DATA}}, necessitando de {{DIAS_EXTENSO}} ({{DIAS}}) {{DIA_OU_DIAS}} de repouso e afastamento de suas atividades laborais e/ou escolares a contar desta data.
 {{BLOCO_CID}}
 Mateus Leme - MG, {{DATA_EXTENSO}}.`;
 

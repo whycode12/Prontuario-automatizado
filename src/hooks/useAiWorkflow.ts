@@ -405,7 +405,7 @@ DIRETRIZES OBRIGATÓRIAS:
         model,
         prompts.passometro,
         payload,
-        'Preencha o passômetro do paciente de forma ultra-objetiva com base em todo o caso.'
+        'Preencha o passômetro do paciente respeitando estritamente a estrutura solicitada (PACIENTE, IDADE, ADMISSÃO::, MÉDICO RESPONSÁVEL, LOCAL DO PACIENTE::, BREVE CONTEXTO, VÍCIOS, COMORBIDADES, MEDICAÇÕES DE USO CONTÍNUO, ALERGIAS MEDICAMENTOSAS, EXAME FÍSICO ATUAL, HIPÓTESES DIAGNÓSTICAS, CONDUTAS, PROPOSTAS).'
       );
       setDocuments((prev: FinalDocuments) => ({ ...prev, passometro: response.trim() }));
     });

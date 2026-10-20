@@ -160,6 +160,10 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{ALTURA\}\}/gi, patient.altura || '--');
   output = output.replace(/\{\{DATA\}\}/gi, todayDate);
   output = output.replace(/\{\{DATA_HORA\}\}/gi, dataHora);
+  const horaAdmissao = patient.horaInicio || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const admissaoFormatted = patient.dataHoraInicio || `${todayDate} - ${horaAdmissao}`;
+  output = output.replace(/\{\{ADMISSAO\}\}/gi, admissaoFormatted);
+  output = output.replace(/\{\{MEDICO_RESPONSAVEL\}\}/gi, 'Dr.');
 
   // 3. Clínica - não puxar se não preenchido
   output = output.replace(/\{\{QP\}\}/gi, qp.trim() || 'Não informada');
@@ -186,6 +190,14 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
       output = output.replace(new RegExp(`\\{\\{${f.key}\\}\\}`, 'gi'), val);
     }
   }
+
+  const viciosList: string[] = [];
+  const tab = hpp.tabagismo?.trim();
+  const etil = hpp.etilismo?.trim();
+  if (tab && !/^nega\b/i.test(tab)) viciosList.push(tab);
+  if (etil && !/^nega\b/i.test(etil)) viciosList.push(etil);
+  const viciosFinal = viciosList.length > 0 ? viciosList.join(', ') : 'Nega';
+  output = output.replace(/\{\{VICIOS\}\}/gi, viciosFinal);
 
   // 5. Sinais Vitais - omitir parâmetros não preenchidos (ex: se não preencheu FR, não puxa)
   const vitalsItems: string[] = [];
@@ -249,6 +261,10 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{NOVA_HIPOTESE\}\}/gi, observation.conclusionNewHypothesis || aiResults.mainHypothesis || 'Quadro clínico inalterado.');
   output = output.replace(/\{\{NOVAS_CONDUTAS\}\}/gi, observation.newConducts || '- Alta clínica orientada com receitas e orientações domiciliares.');
   output = output.replace(/\{\{SINAIS_ALERTA\}\}/gi, 'Piora hemodinâmica ou dor refratária');
+  const propostasDefault = observation.whatToReevaluate
+    ? `- ${observation.whatToReevaluate}`
+    : (observation.inObservation ? '- Reavaliação clínica e aguardar exames/condutas' : '- Aguardar RL para definição de conduta');
+  output = output.replace(/\{\{PROPOSTAS\}\}/gi, customReplacements?.PROPOSTAS || propostasDefault);
 
   // 10. Injeção de Prescrição Interna no Prontuário se houver medicações na unidade
   const hasUnitMeds = rawUnitMeds.some((m) => m && m.trim() && !/^nenhuma\b/i.test(m.trim()));
@@ -286,6 +302,8 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   const diasNumMatch = String(rawDias).match(/\d+/);
   const diasNum = diasNumMatch ? parseInt(diasNumMatch[0], 10) : 1;
   const diasExtenso = numeroPorExtenso(diasNum);
+  const diasFormatted = diasNum < 10 ? String(diasNum).padStart(2, '0') : String(diasNum);
+  const palavraDia = diasNum === 1 ? 'dia' : 'dias';
 
   const cleanCidOnly = aiResults.selectedCid ? aiResults.selectedCid.replace(/^CID:?\s*/i, '').trim() : '';
   const includeCid = customReplacements?.INCLUIR_CID === 'true' || !!customReplacements?.BLOCO_CID;
@@ -300,8 +318,11 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{ATENDIDO\}\}/gi, atendidoUnidade);
   output = output.replace(/\{\{CPF\}\}/gi, cpfFormatted);
   output = output.replace(/\{\{DATA_EXTENSO\}\}/gi, dataExtenso);
-  output = output.replace(/\{\{DIAS\}\}/gi, String(diasNum));
+  output = output.replace(/\{\{DIAS\}\}/gi, diasFormatted);
   output = output.replace(/\{\{DIAS_EXTENSO\}\}/gi, diasExtenso);
+  output = output.replace(/\{\{DIA_OU_DIAS\}\}/gi, palavraDia);
+  output = output.replace(/\{\{PALAVRA_DIA\}\}/gi, palavraDia);
+  output = output.replace(/dia\(s\)/gi, palavraDia);
   output = output.replace(/\{\{BLOCO_CID\}\}/gi, blocoCidFinal ? `\n${blocoCidFinal.trim()}\n` : '');
   output = output.replace(/\{\{CID_CODIGO\}\}/gi, cleanCidOnly || '[Código]');
 

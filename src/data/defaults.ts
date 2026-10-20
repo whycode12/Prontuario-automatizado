@@ -106,12 +106,25 @@ HD: {{HIPOTESE}}
 Condutas efetuadas na unidade: {{CONDUTAS_UNIDADE}}
 Exames/Pendências: {{PENDENCIAS}}
 Status atual: {{STATUS}}`,
-  passometro: `[PASSÔMETRO]
-- LEITO / PACIENTE: {{NOME}} ({{IDADE}}a, {{SEXO}})
-- DIAGNÓSTICO: {{HIPOTESE}}
-- CONDUTAS REALIZADAS: {{CONDUTAS_FEITAS}}
-- PENDÊNCIAS ATIVAS: {{PENDENCIAS}}
-- SINAIS DE ALERTA / SE PIORAR: {{SINAIS_ALERTA}}`,
+  passometro: `PACIENTE: {{NOME}}
+IDADE: {{IDADE}} anos
+ADMISSÃO:: {{ADMISSAO}}
+MÉDICO RESPONSÁVEL: Dr.
+LOCAL DO PACIENTE:: SALA DE MEDICAÇÃO // ENFERMARIA // SALA VERMELHA
+BREVE CONTEXTO: {{HMA_RESUMO}}
+
+VÍCIOS: {{VICIOS}}
+COMORBIDADES: {{COMORBIDADES}}
+MEDICAÇÕES DE USO CONTÍNUO: {{MUC}}
+ALERGIAS MEDICAMENTOSAS: {{ALERGIAS}}
+EXAME FÍSICO ATUAL (somente dados relevantes ao caso): {{EXAME_RESUMO}}
+HIPÓTESES DIAGNÓSTICAS: {{HIPOTESE}}
+
+CONDUTAS:
+{{CONDUTAS}}
+
+PROPOSTAS: 
+{{PROPOSTAS}}`,
   evolucao: `#EVOLUÇÃO MÉDICA
 Data e Horário: {{DATA_HORA}}
 Paciente: {{NOME}} | Idade: {{IDADE}} | Sexo: {{SEXO}} | Leito de Observação
@@ -344,6 +357,7 @@ CONDUTAS:
   payloadPassometro: `IDENTIFICAÇÃO:
 Nome: {{NOME}}
 Idade: {{IDADE}} anos
+Admissão: {{ADMISSAO}}
 Sexo: {{SEXO}}
 Peso: {{PESO}}
 Altura: {{ALTURA}}
@@ -532,12 +546,31 @@ Idade, Sexo, QP, tempo de evolução, dados vitais alterados, exame físico rele
 
 Máxima objetividade, linguagem médica fluida de beira de leito, com linguagem humanizada e não robótica ou com aspectos de inteligência artificial, não use palavras exageradamente técnicas ou incomuns. Priorize apenas aspectos relevantes ao caso, ao entendimento de quem está ouvindo.`,
   passometro: `Você é um médico emergencista.
-Preencha o Passômetro com máxima objetividade para o caso clínico acumulado:
-- Identificação e Leito
-- Diagnóstico Principal
-- Condutas já realizadas
-- Pendências ativas (exames pendentes, resposta a drogas)
-- Sinais de alerta / Conduta se piorar.`,
+Preencha o Passômetro respeitando estritamente a estrutura e organização obrigatória abaixo, sem criar tópicos adicionais ou alterar a ordem:
+
+PACIENTE: [Nome do paciente]
+IDADE: [Idade] anos
+ADMISSÃO:: [Data e hora de admissão no formato DD/MM/AAAA - HH:MM]
+MÉDICO RESPONSÁVEL: Dr.
+LOCAL DO PACIENTE:: [Indicar: SALA DE MEDICAÇÃO // ENFERMARIA // SALA VERMELHA]
+BREVE CONTEXTO: [HMA reduzida com o que é importante]
+
+VÍCIOS: [Tabagista, etilista ou Nega]
+COMORBIDADES: [Comorbidades do paciente ou Nega]
+MEDICAÇÕES DE USO CONTÍNUO: [Medicações de uso contínuo ou Nega]
+ALERGIAS MEDICAMENTOSAS: [Alergias medicamentosas ou Nega]
+EXAME FÍSICO ATUAL (somente dados relevantes ao caso): [Apenas achados relevantes do exame físico atual]
+HIPÓTESES DIAGNÓSTICAS: [Hipótese diagnóstica principal]
+
+CONDUTAS:
+- [Condutas e medicações já realizadas na unidade]
+
+PROPOSTAS: 
+- [Propostas de conduta, exames a aguardar ou definição de conduta]
+
+Diretrizes obrigatórias:
+- Siga rigorosamente os títulos dos tópicos e a ordem apresentada.
+- Máxima objetividade e concisão.`,
   reavaliacao: `Você é um médico assistente experiente em uma UPA (Unidade de Pronto Atendimento) no Brasil.
 
 Com base no histórico do caso, queixa inicial, medicações administradas e no texto inicial digitado da reavaliação:
