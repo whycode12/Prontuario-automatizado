@@ -322,7 +322,15 @@ DIRETRIZES OBRIGATÓRIAS:
         referralNeeded: !!parsed.encaminhamentoUbs,
         referralReason: parsed.motivoEncaminhamento || '',
         medicalLeaveNeeded: !!parsed.atestadoNecessario,
-        medicalLeaveDays: parsed.diasAtestado || '',
+        medicalLeaveDays: (() => {
+          const raw = parsed.diasAtestado || '';
+          const m = String(raw).match(/\d+/);
+          if (!m) return raw;
+          const n = parseInt(m[0], 10);
+          const formattedN = n <= 9 ? `0${n}` : String(n);
+          const p = n === 1 ? 'dia' : 'dias';
+          return `${formattedN} ${p}`;
+        })(),
         medicalLeaveReason: parsed.motivoAtestado || '',
         condutasSuggestion: parsed.condutasSintetizadas || '',
         techOrientations: ensureOriento(parsed.orientacoesProntuario || parsed.textoTecnico || ''),

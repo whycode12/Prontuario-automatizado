@@ -74,13 +74,26 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
   const [diasAtestado, setDiasAtestado] = useState<string>(() => {
     const raw = aiResults?.medicalLeaveDays || '';
     const m = String(raw).match(/\d+/);
-    return m ? m[0] : '1';
+    const n = m ? parseInt(m[0], 10) : 1;
+    return n <= 9 ? `0${n}` : String(n);
   });
   const [incluirCid, setIncluirCid] = useState<boolean>(true);
 
+  React.useEffect(() => {
+    if (aiResults?.medicalLeaveDays) {
+      const m = String(aiResults.medicalLeaveDays).match(/\d+/);
+      if (m) {
+        const n = parseInt(m[0], 10);
+        setDiasAtestado(n <= 9 ? `0${n}` : String(n));
+      }
+    }
+  }, [aiResults?.medicalLeaveDays]);
+
   const handleCompileAtestado = () => {
+    const n = parseInt(diasAtestado, 10) || 1;
+    const formatted = n <= 9 ? `0${n}` : String(n);
     compileSingleDocument('atestado', {
-      DIAS: String(diasAtestado || '1'),
+      DIAS: formatted,
       INCLUIR_CID: incluirCid ? 'true' : 'false'
     });
   };
@@ -298,11 +311,17 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#202020] border border-slate-200 dark:border-[#383838] px-2 py-1 rounded-lg text-xs">
                 <span className="text-slate-500 dark:text-neutral-400 font-medium">Dias:</span>
                 <input
-                  type="number"
-                  min="1"
-                  max="90"
+                  type="text"
                   value={diasAtestado}
-                  onChange={(e) => setDiasAtestado(e.target.value)}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, '').slice(0, 2);
+                    setDiasAtestado(clean);
+                  }}
+                  onBlur={() => {
+                    const n = parseInt(diasAtestado, 10);
+                    if (n > 0) setDiasAtestado(n <= 9 ? `0${n}` : String(n));
+                    else setDiasAtestado('01');
+                  }}
                   className="w-10 text-center font-bold text-slate-800 dark:text-ice-100 bg-transparent focus:outline-none"
                 />
               </div>

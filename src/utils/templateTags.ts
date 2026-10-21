@@ -38,7 +38,12 @@ export function getDataExtenso(d: Date = new Date()): string {
 
 export function formatUsoWithColon(text: string): string {
   if (!text || typeof text !== 'string') return '';
-  return text.replace(/\b(USO\s+[A-ZÀ-Úa-zà-ú]+)(?!\s*:)\b/g, '$1:');
+  let cleaned = text.replace(/USO\s+CONT[IÍ]:\s*NUO/gi, 'USO CONTÍNUO');
+  cleaned = cleaned.replace(
+    /\b(USO\s+(?:ORAL|INTRAMUSCULAR|ENDOVENOSO|INTRAVENOSO|SUBCUT[AÁÂ]NEO|SUBLINGUAL|T[OÓ]PICO|INALAT[OÓ]RIO|OFT[AÁ]LMICO|OTOL[OÓ]GICO|NASAL|RETAL|VAGINAL|DERMATOL[OÓ]GICO|OCULAR|PARENTERAL))\b(?!\s*:)/gi,
+    (match) => `${match.toUpperCase()}:`
+  );
+  return cleaned;
 }
 
 export function ensureOriento(text: string): string {
@@ -325,6 +330,8 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{DIA_OU_DIAS\}\}/gi, palavraDia);
   output = output.replace(/\{\{PALAVRA_DIA\}\}/gi, palavraDia);
   output = output.replace(/dia\(s\)/gi, palavraDia);
+  output = output.replace(/\(([1-9])\)\s*(?:dia\(s\)|dias?)/gi, (_, d) => `(0${d}) ${d === '1' ? 'dia' : 'dias'}`);
+  output = output.replace(/\b([1-9])\s+dia(s)?\b/gi, (_, d, plural) => `0${d} ${d === '1' && !plural ? 'dia' : 'dias'}`);
   output = output.replace(/\{\{BLOCO_CID\}\}/gi, blocoCidFinal ? `\n${blocoCidFinal.trim()}\n` : '');
   output = output.replace(/\{\{CID_CODIGO\}\}/gi, cleanCidOnly || '[Código]');
 

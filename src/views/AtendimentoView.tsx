@@ -1464,7 +1464,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                 <span className="shrink-0">📝</span>
                 <span>
                   <strong>Atestado Médico:</strong>{' '}
-                  {aiResults.medicalLeaveDays || '1 dia'} ({aiResults.medicalLeaveReason || 'Repouso'})
+                  {aiResults.medicalLeaveDays || '01 dia'} ({aiResults.medicalLeaveReason || 'Repouso'})
                 </span>
               </div>
             )}
