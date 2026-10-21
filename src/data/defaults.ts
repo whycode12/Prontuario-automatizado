@@ -82,7 +82,12 @@ PA: {{PA}} mmHg | FC: {{FC}} bpm | FR: {{FR}} irpm | SatO2: {{SAT}}% | Tax: {{TA
 #CONDUTAS:
 {{CONDUTAS}}
 - {{orientacoes_prontuario}}
-- {{alarme_prontuario}}`,
+- {{alarme_prontuario}}
+
+———————————————————————————————————
+
+PRESCRIÇÃO INTERNA:
+{{MEDICACOES_UNIDADE}}`,
   receitaInterna: `PRESCRIÇÃO UNIDADE / PRONTO ATENDIMENTO
 Paciente: {{NOME}} | Idade: {{IDADE}} anos | Data: {{DATA}}
 ———————————————————————————————————
@@ -131,7 +136,7 @@ Paciente: {{NOME}} | Idade: {{IDADE}} | Sexo: {{SEXO}} | Leito de Observação
 
 #HIPÓTESE INICIAL: {{HIPOTESE_INICIAL}}
 
-#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:
+#PRESCRIÇÃO INTERNA:
 {{MEDICACOES_UNIDADE}}
 
 #RESULTADOS DE EXAMES: {{RESULTADOS_EXAMES}}

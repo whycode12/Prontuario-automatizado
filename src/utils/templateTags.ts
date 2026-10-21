@@ -165,7 +165,7 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{ALTURA\}\}/gi, patient.altura || '--');
   output = output.replace(/\{\{DATA\}\}/gi, todayDate);
   output = output.replace(/\{\{DATA_HORA\}\}/gi, dataHora);
-  const horaAdmissao = patient.horaInicio || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const horaAdmissao = patient.horaInicio || '--:--';
   const admissaoFormatted = patient.dataHoraInicio || `${todayDate} - ${horaAdmissao}`;
   output = output.replace(/\{\{ADMISSAO\}\}/gi, admissaoFormatted);
   output = output.replace(/\{\{MEDICO_RESPONSAVEL\}\}/gi, 'Dr.');
@@ -272,24 +272,9 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
     ? `- ${observation.whatToReevaluate}`
     : '- Aguardar RL para definição de conduta';
   output = output.replace(/\{\{PROPOSTAS\}\}/gi, customReplacements?.PROPOSTAS || propostasDefault);
+  output = output.replace(/\{\{PRESCRICAO_INTERNA\}\}/gi, medsUnidadeText);
 
-  // 10. Injeção de Prescrição Interna no Prontuário se houver medicações na unidade
-  const hasUnitMeds = rawUnitMeds.some((m) => m && m.trim() && !/^nenhuma\b/i.test(m.trim()));
-  if (hasUnitMeds && /#CONDUTAS:/i.test(output) && !/PRESCRIÇÃO INTERNA:/i.test(output)) {
-    const formattedInterna = rawUnitMeds.filter((m) => m && m.trim()).join('\n\n');
-    const internalBlock = `———————————————————————————————————\n\nPRESCRIÇÃO INTERNA:\n\n${formattedInterna}`;
-
-    const footerMatch = output.match(/(\n\s*(?:Paciente atendido|Atenciosamente|Dr\.|Acadêmico)[\s\S]*$)/i);
-    if (footerMatch && footerMatch.index !== undefined) {
-      const beforeFooter = output.slice(0, footerMatch.index).trimEnd();
-      const footer = footerMatch[1];
-      output = `${beforeFooter}\n\n${internalBlock}\n${footer}`;
-    } else {
-      output = `${output.trimEnd()}\n\n${internalBlock}\n`;
-    }
-  }
-
-  // 11. Tags específicas para Atestado Médico e Encaminhamento PSF
+  // 10. Tags específicas para Atestado Médico e Encaminhamento PSF
   const cpfFormatted = patient.cpf?.trim() || '_________________';
   const portadorCpf = patient.sexo === 'M'
     ? `portador do CPF nº ${cpfFormatted}`
@@ -335,9 +320,64 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{BLOCO_CID\}\}/gi, blocoCidFinal ? `\n${blocoCidFinal.trim()}\n` : '');
   output = output.replace(/\{\{CID_CODIGO\}\}/gi, cleanCidOnly || '[Código]');
 
-  // Encaminhamento PSF
-  const textoEncaminhamentoDefault = `Encaminho o(a) paciente ${patient.nome || 'Não identificado(a)'}, ${patient.idade ? `${patient.idade} anos` : '--'}, atendido(a) na UPA de Mateus Leme nesta data com quadro de ${qp || 'queixa clínica'}. ${hma ? `Histórico clínico: ${hma.slice(0, 200)}... ` : ''}Foram realizadas condutas sintomáticas e estabilização clínica na unidade. Solicito seguimento ambulatorial junto à equipe da Atenção Primária à Saúde (PSF) para propedêutica e acompanhamento clínico continuado.`;
-  output = output.replace(/\{\{TEXTO_ENCAMINHAMENTO\}\}/gi, customReplacements?.TEXTO_ENCAMINHAMENTO || textoEncaminhamentoDefault);
+  // Encaminhamento PSF com concordância estrita de gênero (evita 'o(a)')
+  const artigo = patient.sexo === 'F' ? 'a' : patient.sexo === 'M' ? 'o' : 'o(a)';
+  const identificado = patient.sexo === 'F' ? 'Não identificada' : patient.sexo === 'M' ? 'Não identificado' : 'Não identificado(a)';
+  const atendido = patient.sexo === 'F' ? 'atendida' : patient.sexo === 'M' ? 'atendido' : 'atendido(a)';
+  const textoEncaminhamentoDefault = `Encaminho ${artigo} paciente ${patient.nome || identificado}, ${patient.idade ? `${patient.idade} anos` : '--'}, ${atendido} na UPA de Mateus Leme nesta data com quadro de ${qp || 'queixa clínica'}. ${hma ? `Histórico clínico: ${hma.slice(0, 200)}... ` : ''}Foram realizadas condutas sintomáticas e estabilização clínica na unidade. Solicito seguimento ambulatorial junto à equipe da Atenção Primária à Saúde (PSF) para propedêutica e acompanhamento clínico continuado.`;
+  
+  let textoEncFinal = customReplacements?.TEXTO_ENCAMINHAMENTO || textoEncaminhamentoDefault;
+  if (patient.sexo === 'M') {
+    textoEncFinal = textoEncFinal
+      .replace(/\bo\(a\)\b/gi, 'o')
+      .replace(/\bdo\(a\)\b/gi, 'do')
+      .replace(/\bno\(a\)\b/gi, 'no')
+      .replace(/\bao\(à\)\b/gi, 'ao')
+      .replace(/atendido\(a\)/gi, 'atendido')
+      .replace(/identificado\(a\)/gi, 'identificado')
+      .replace(/encaminhado\(a\)/gi, 'encaminhado')
+      .replace(/internado\(a\)/gi, 'internado')
+      .replace(/portador\(a\)/gi, 'portador');
+  } else if (patient.sexo === 'F') {
+    textoEncFinal = textoEncFinal
+      .replace(/\bo\(a\)\b/gi, 'a')
+      .replace(/\bdo\(a\)\b/gi, 'da')
+      .replace(/\bno\(a\)\b/gi, 'na')
+      .replace(/\bao\(à\)\b/gi, 'à')
+      .replace(/atendido\(a\)/gi, 'atendida')
+      .replace(/identificado\(a\)/gi, 'identificada')
+      .replace(/encaminhado\(a\)/gi, 'encaminhada')
+      .replace(/internado\(a\)/gi, 'internada')
+      .replace(/portador\(a\)/gi, 'portadora');
+  }
+  output = output.replace(/\{\{TEXTO_ENCAMINHAMENTO\}\}/gi, textoEncFinal);
+
+  // Se o documento compilado for encaminhamento ou contiver cabeçalho de encaminhamento, limpa resíduos de o(a)
+  if (templateStr.includes('ENCAMINHAMENTO MÉDICO') || templateStr.includes('{{TEXTO_ENCAMINHAMENTO}}')) {
+    if (patient.sexo === 'M') {
+      output = output
+        .replace(/\bo\(a\)\b/gi, 'o')
+        .replace(/\bdo\(a\)\b/gi, 'do')
+        .replace(/\bno\(a\)\b/gi, 'no')
+        .replace(/\bao\(à\)\b/gi, 'ao')
+        .replace(/atendido\(a\)/gi, 'atendido')
+        .replace(/identificado\(a\)/gi, 'identificado')
+        .replace(/encaminhado\(a\)/gi, 'encaminhado')
+        .replace(/internado\(a\)/gi, 'internado')
+        .replace(/portador\(a\)/gi, 'portador');
+    } else if (patient.sexo === 'F') {
+      output = output
+        .replace(/\bo\(a\)\b/gi, 'a')
+        .replace(/\bdo\(a\)\b/gi, 'da')
+        .replace(/\bno\(a\)\b/gi, 'na')
+        .replace(/\bao\(à\)\b/gi, 'à')
+        .replace(/atendido\(a\)/gi, 'atendida')
+        .replace(/identificado\(a\)/gi, 'identificada')
+        .replace(/encaminhado\(a\)/gi, 'encaminhada')
+        .replace(/internado\(a\)/gi, 'internada')
+        .replace(/portador\(a\)/gi, 'portadora');
+    }
+  }
 
   // 12. Padronização de vias com dois pontos (ex: 'USO ORAL:', 'USO INTRAMUSCULAR:')
   output = formatUsoWithColon(output);

@@ -13,7 +13,8 @@ DIRETRIZES OBRIGATÓRIAS:
 2. Redija em texto corrido, contínuo e fluido (sem divisões em tópicos excessivos), uma história clínica BREVE e concisa, relatando em ordem cronológica que o paciente foi consultado na UPA de Mateus Leme nesta data.
 3. Descreva de forma direta e objetiva o que foi investigado e administrado na unidade (exames complementares e medicações administradas).
 4. Explique com clareza e justifique por QUAL motivo o paciente necessita de seguimento ambulatorial na Atenção Básica (ex: investigação etiológica de ITU de repetição, ajuste de anti-hipertensivo, controle glicêmico, acompanhamento de lesão, propedêutica complementar, etc.).
-5. Mantenha tom colegial, respeitoso e colaborativo de médico da urgência para médico da atenção primária.`;
+5. Mantenha tom colegial, respeitoso e colaborativo de médico da urgência para médico da atenção primária.
+6. Concordância estrita de gênero: se o paciente for do sexo masculino, use exclusivamente termos masculinos ("o paciente", "atendido", "encaminhado", "avaliado"). Se for do sexo feminino, use exclusivamente termos femininos ("a paciente", "atendida", "encaminhada", "avaliada"). NUNCA use "o(a)", "(a)" ou barras de gênero.`;
 
 interface UseAiWorkflowParams {
   apiKey: string;
@@ -27,6 +28,7 @@ interface UseAiWorkflowParams {
   setDocuments: React.Dispatch<React.SetStateAction<FinalDocuments>>;
   showToast: (msg: string) => void;
   openAiLogModal?: () => void;
+  patient?: any;
 }
 
 export function useAiWorkflow({
@@ -40,7 +42,8 @@ export function useAiWorkflow({
   setAiResults,
   setDocuments,
   showToast,
-  openAiLogModal
+  openAiLogModal,
+  patient
 }: UseAiWorkflowParams) {
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
 
@@ -431,9 +434,33 @@ DIRETRIZES OBRIGATÓRIAS:
         model,
         prompts.encaminhamento || DEFAULT_ENCAMINHAMENTO_PROMPT,
         payload,
-        'Gere o relatório de encaminhamento médico para o PSF em texto corrido humanizado, conciso e direto ao ponto, relatando atendimento na UPA de Mateus Leme e o motivo clínico do seguimento ambulatorial.'
+        'Gere o relatório de encaminhamento médico para o PSF em texto corrido humanizado, conciso e direto ao ponto, relatando atendimento na UPA de Mateus Leme e o motivo clínico do seguimento ambulatorial. Respeite rigorosamente o gênero do paciente (se masculino trate no masculino, se feminino trate no feminino), nunca utilize barras como "o(a)".'
       );
-      setDocuments((prev: FinalDocuments) => ({ ...prev, encaminhamento: response.trim() }));
+      let cleanResponse = response.trim();
+      if (patient?.sexo === 'M') {
+        cleanResponse = cleanResponse
+          .replace(/\bo\(a\)\b/gi, 'o')
+          .replace(/\bdo\(a\)\b/gi, 'do')
+          .replace(/\bno\(a\)\b/gi, 'no')
+          .replace(/\bao\(à\)\b/gi, 'ao')
+          .replace(/atendido\(a\)/gi, 'atendido')
+          .replace(/identificado\(a\)/gi, 'identificado')
+          .replace(/encaminhado\(a\)/gi, 'encaminhado')
+          .replace(/internado\(a\)/gi, 'internado')
+          .replace(/portador\(a\)/gi, 'portador');
+      } else if (patient?.sexo === 'F') {
+        cleanResponse = cleanResponse
+          .replace(/\bo\(a\)\b/gi, 'a')
+          .replace(/\bdo\(a\)\b/gi, 'da')
+          .replace(/\bno\(a\)\b/gi, 'na')
+          .replace(/\bao\(à\)\b/gi, 'à')
+          .replace(/atendido\(a\)/gi, 'atendida')
+          .replace(/identificado\(a\)/gi, 'identificada')
+          .replace(/encaminhado\(a\)/gi, 'encaminhada')
+          .replace(/internado\(a\)/gi, 'internada')
+          .replace(/portador\(a\)/gi, 'portadora');
+      }
+      setDocuments((prev: FinalDocuments) => ({ ...prev, encaminhamento: cleanResponse }));
     });
   };
 

@@ -13,7 +13,6 @@ interface EvolucaoViewProps {
   examResults: string;
   setExamResults: (val: string) => void;
   aiResults: AIResult;
-  setAiResults: React.Dispatch<React.SetStateAction<AIResult>>;
   aiLoading: Record<string, boolean>;
   prompts: SystemPrompts;
   templates: SystemTemplates;
@@ -41,7 +40,6 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   examResults,
   setExamResults,
   aiResults,
-  setAiResults,
   aiLoading,
   prompts,
   templates,
@@ -65,21 +63,22 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   const [prevConclusionHypothesis, setPrevConclusionHypothesis] = React.useState<string | null>(null);
   const [prevNewConducts, setPrevNewConducts] = React.useState<string | null>(null);
 
-  const handleSelectOutcome = (dest: 'alta' | 'observacao' | 'internacao' | 'transferencia') => {
-    setAiResults((prev) => ({ ...prev, clinicalOutcome: dest }));
+  const currentOutcome = observation.outcome || (observation.inObservation ? 'observacao' : undefined);
 
+  const handleSelectOutcome = (dest: 'alta' | 'observacao' | 'internacao' | 'transferencia') => {
     if (dest === 'observacao') {
-      if (!observation.inObservation) {
-        setObservation((prev) => ({
-          ...prev,
-          inObservation: true,
-          startedAt: prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        }));
-      }
+      setObservation((prev) => ({
+        ...prev,
+        outcome: 'observacao',
+        inObservation: true,
+        startedAt: prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      }));
     } else {
-      if (observation.inObservation) {
-        setObservation((prev) => ({ ...prev, inObservation: false }));
-      }
+      setObservation((prev) => ({
+        ...prev,
+        outcome: dest,
+        inObservation: false,
+      }));
     }
   };
 
@@ -313,12 +312,12 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             type="button"
             onClick={() => handleSelectOutcome('alta')}
             className={`h-10 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
-              aiResults.clinicalOutcome === 'alta'
+              currentOutcome === 'alta'
                 ? 'bg-emerald-500/[0.04] dark:bg-emerald-400/[0.06] text-emerald-700/90 dark:text-emerald-300/90 border-emerald-500/25 dark:border-emerald-500/20 font-semibold ring-1 ring-emerald-500/20'
                 : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
             }`}
           >
-            <Home className={`w-3.5 h-3.5 shrink-0 ${aiResults.clinicalOutcome === 'alta' ? 'text-emerald-600/80 dark:text-emerald-400/80' : ''}`} />
+            <Home className={`w-3.5 h-3.5 shrink-0 ${currentOutcome === 'alta' ? 'text-emerald-600/80 dark:text-emerald-400/80' : ''}`} />
             <span>Alta Médica</span>
           </button>
 
@@ -327,12 +326,12 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             type="button"
             onClick={() => handleSelectOutcome('observacao')}
             className={`h-10 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
-              aiResults.clinicalOutcome === 'observacao'
+              currentOutcome === 'observacao'
                 ? 'bg-amber-500/[0.04] dark:bg-amber-400/[0.06] text-amber-700/90 dark:text-amber-300/90 border-amber-500/25 dark:border-amber-500/20 font-semibold ring-1 ring-amber-500/20'
                 : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
             }`}
           >
-            <Bed className={`w-3.5 h-3.5 shrink-0 ${aiResults.clinicalOutcome === 'observacao' ? 'text-amber-600/80 dark:text-amber-400/80' : ''}`} />
+            <Bed className={`w-3.5 h-3.5 shrink-0 ${currentOutcome === 'observacao' ? 'text-amber-600/80 dark:text-amber-400/80' : ''}`} />
             <span>Observação</span>
           </button>
 
@@ -341,12 +340,12 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             type="button"
             onClick={() => handleSelectOutcome('internacao')}
             className={`h-10 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
-              aiResults.clinicalOutcome === 'internacao'
+              currentOutcome === 'internacao'
                 ? 'bg-indigo-500/[0.04] dark:bg-indigo-400/[0.06] text-indigo-700/90 dark:text-indigo-300/90 border-indigo-500/25 dark:border-indigo-500/20 font-semibold ring-1 ring-indigo-500/20'
                 : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
             }`}
           >
-            <Building2 className={`w-3.5 h-3.5 shrink-0 ${aiResults.clinicalOutcome === 'internacao' ? 'text-indigo-600/80 dark:text-indigo-400/80' : ''}`} />
+            <Building2 className={`w-3.5 h-3.5 shrink-0 ${currentOutcome === 'internacao' ? 'text-indigo-600/80 dark:text-indigo-400/80' : ''}`} />
             <span>Internação</span>
           </button>
 
@@ -355,18 +354,18 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             type="button"
             onClick={() => handleSelectOutcome('transferencia')}
             className={`h-10 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
-              aiResults.clinicalOutcome === 'transferencia'
+              currentOutcome === 'transferencia'
                 ? 'bg-rose-500/[0.04] dark:bg-rose-400/[0.06] text-rose-700/90 dark:text-rose-300/90 border-rose-500/25 dark:border-rose-500/20 font-semibold ring-1 ring-rose-500/20'
                 : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
             }`}
           >
-            <Ambulance className={`w-3.5 h-3.5 shrink-0 ${aiResults.clinicalOutcome === 'transferencia' ? 'text-rose-600/80 dark:text-rose-400/80' : ''}`} />
+            <Ambulance className={`w-3.5 h-3.5 shrink-0 ${currentOutcome === 'transferencia' ? 'text-rose-600/80 dark:text-rose-400/80' : ''}`} />
             <span>Transferência</span>
           </button>
         </div>
 
         {/* CAMPOS AO DEFINIR OBSERVAÇÃO */}
-        {aiResults.clinicalOutcome === 'observacao' && (
+        {currentOutcome === 'observacao' && (
           <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-[#202020] space-y-3 animate-in fade-in duration-150">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-ice-100">
               <span className="flex items-center gap-1.5">

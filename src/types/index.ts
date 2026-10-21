@@ -82,6 +82,7 @@ export interface ObservationData {
   clinicalReevaluationText: string;
   conclusionNewHypothesis: string;
   newConducts: string;
+  outcome?: 'alta' | 'observacao' | 'internacao' | 'transferencia';
 }
 
 export interface FinalDocuments {

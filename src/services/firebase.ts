@@ -359,6 +359,12 @@ export async function fetchGlobalDefaultConfig(): Promise<{
     if (rawTemplates.passometro && (rawTemplates.passometro.includes('[PASSÔMETRO]') || rawTemplates.passometro.includes('LEITO / PACIENTE'))) {
       rawTemplates.passometro = DEFAULT_TEMPLATES.passometro;
     }
+    if (rawTemplates.prontuario && !rawTemplates.prontuario.includes('MEDICACOES_UNIDADE') && !rawTemplates.prontuario.includes('PRESCRIÇÃO INTERNA')) {
+      rawTemplates.prontuario = `${rawTemplates.prontuario.trim()}\n\n———————————————————————————————————\n\nPRESCRIÇÃO INTERNA:\n{{MEDICACOES_UNIDADE}}`;
+    }
+    if (rawTemplates.evolucao && rawTemplates.evolucao.includes('#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:')) {
+      rawTemplates.evolucao = rawTemplates.evolucao.replace('#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:', '#PRESCRIÇÃO INTERNA:');
+    }
     const rawPrompts = { ...DEFAULT_PROMPTS, ...(data.prompts || {}) };
     if (rawPrompts.passometro && rawPrompts.passometro.includes('Identificação e Leito')) {
       rawPrompts.passometro = DEFAULT_PROMPTS.passometro;
@@ -387,6 +393,12 @@ export function subscribeToGlobalDefaultConfig(
         const rawTemplates = { ...DEFAULT_TEMPLATES, ...(data.templates || {}) };
         if (rawTemplates.passometro && (rawTemplates.passometro.includes('[PASSÔMETRO]') || rawTemplates.passometro.includes('LEITO / PACIENTE'))) {
           rawTemplates.passometro = DEFAULT_TEMPLATES.passometro;
+        }
+        if (rawTemplates.prontuario && !rawTemplates.prontuario.includes('MEDICACOES_UNIDADE') && !rawTemplates.prontuario.includes('PRESCRIÇÃO INTERNA')) {
+          rawTemplates.prontuario = `${rawTemplates.prontuario.trim()}\n\n———————————————————————————————————\n\nPRESCRIÇÃO INTERNA:\n{{MEDICACOES_UNIDADE}}`;
+        }
+        if (rawTemplates.evolucao && rawTemplates.evolucao.includes('#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:')) {
+          rawTemplates.evolucao = rawTemplates.evolucao.replace('#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:', '#PRESCRIÇÃO INTERNA:');
         }
         const rawPrompts = { ...DEFAULT_PROMPTS, ...(data.prompts || {}) };
         if (rawPrompts.passometro && rawPrompts.passometro.includes('Identificação e Leito')) {

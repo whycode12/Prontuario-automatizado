@@ -116,6 +116,20 @@ function computeObservationCountdown(startedAt?: string, revaluationMinutes: num
   return { status, text, badgeClass, remaining };
 }
 
+function sanitizeTemplates(raw: Partial<SystemTemplates>): SystemTemplates {
+  const updated = { ...DEFAULT_TEMPLATES, ...raw };
+  if (!updated.passometro || updated.passometro.includes('[PASSÔMETRO]') || updated.passometro.includes('LEITO / PACIENTE')) {
+    updated.passometro = DEFAULT_TEMPLATES.passometro;
+  }
+  if (updated.prontuario && !updated.prontuario.includes('MEDICACOES_UNIDADE') && !updated.prontuario.includes('PRESCRIÇÃO INTERNA')) {
+    updated.prontuario = `${updated.prontuario.trim()}\n\n———————————————————————————————————\n\nPRESCRIÇÃO INTERNA:\n{{MEDICACOES_UNIDADE}}`;
+  }
+  if (updated.evolucao && updated.evolucao.includes('#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:')) {
+    updated.evolucao = updated.evolucao.replace('#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:', '#PRESCRIÇÃO INTERNA:');
+  }
+  return updated;
+}
+
 export default function App() {
   // Theme state: default to 'dark'
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -140,11 +154,7 @@ export default function App() {
     const saved = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
     if (!saved) return DEFAULT_TEMPLATES;
     try {
-      const parsed = { ...DEFAULT_TEMPLATES, ...JSON.parse(saved) };
-      if (!parsed.passometro || parsed.passometro.includes('[PASSÔMETRO]') || parsed.passometro.includes('LEITO / PACIENTE')) {
-        parsed.passometro = DEFAULT_TEMPLATES.passometro;
-      }
-      return parsed;
+      return sanitizeTemplates(JSON.parse(saved));
     } catch {
       return DEFAULT_TEMPLATES;
     }
@@ -285,10 +295,7 @@ export default function App() {
         if (configSource === 'user') {
           unsubscribeConfig = subscribeToCloudConfig(key, (cloudConfig) => {
             if (cloudConfig?.templates) {
-              const updatedT = { ...cloudConfig.templates };
-              if (updatedT.passometro && (updatedT.passometro.includes('[PASSÔMETRO]') || updatedT.passometro.includes('LEITO / PACIENTE'))) {
-                updatedT.passometro = DEFAULT_TEMPLATES.passometro;
-              }
+              const updatedT = sanitizeTemplates(cloudConfig.templates);
               setTemplates((prev) => ({ ...prev, ...updatedT }));
               localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updatedT));
             }
@@ -308,10 +315,7 @@ export default function App() {
       if (configSource === 'global') {
         unsubscribeGlobalConfig = subscribeToGlobalDefaultConfig((globalConfig) => {
           if (globalConfig?.templates) {
-            const updatedT = { ...globalConfig.templates };
-            if (updatedT.passometro && (updatedT.passometro.includes('[PASSÔMETRO]') || updatedT.passometro.includes('LEITO / PACIENTE'))) {
-              updatedT.passometro = DEFAULT_TEMPLATES.passometro;
-            }
+            const updatedT = sanitizeTemplates(globalConfig.templates);
             setTemplates((prev) => ({ ...prev, ...updatedT }));
             localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updatedT));
           }
@@ -733,9 +737,12 @@ export default function App() {
 
     if (!hasData) return;
 
+    const existingIndex = savedRecords.findIndex((r) => r.id === currentRecordId);
+    const existingRecord = existingIndex >= 0 ? savedRecords[existingIndex] : undefined;
+
     const recordToSave: SavedPatientRecord = {
       id: currentRecordId,
-      savedAt: new Date().toISOString(),
+      savedAt: existingRecord?.savedAt || new Date().toISOString(),
       patient,
       vitals,
       qp,
@@ -750,7 +757,6 @@ export default function App() {
     };
 
     setSavedRecords((prevRecords) => {
-      const existingIndex = prevRecords.findIndex((r) => r.id === currentRecordId);
       let updated: SavedPatientRecord[];
       if (existingIndex >= 0) {
         updated = [...prevRecords];
@@ -988,7 +994,23 @@ export default function App() {
 
   const handleLoadRecord = (rec: SavedPatientRecord) => {
     setCurrentRecordId(rec.id);
-    setPatient(rec.patient);
+    const loadedPatient = { ...rec.patient };
+    if (!loadedPatient.horaInicio) {
+      if (rec.savedAt) {
+        const d = new Date(rec.savedAt);
+        if (!isNaN(d.getTime())) {
+          loadedPatient.horaInicio = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          loadedPatient.dataHoraInicio = `${d.toLocaleDateString('pt-BR')} - ${loadedPatient.horaInicio}`;
+        }
+      } else if (!isNaN(Number(rec.id))) {
+        const d = new Date(Number(rec.id));
+        if (!isNaN(d.getTime())) {
+          loadedPatient.horaInicio = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          loadedPatient.dataHoraInicio = `${d.toLocaleDateString('pt-BR')} - ${loadedPatient.horaInicio}`;
+        }
+      }
+    }
+    setPatient(loadedPatient);
     setVitals(rec.vitals);
     setQp(rec.qp);
     setHma(rec.hma);
@@ -1041,7 +1063,8 @@ export default function App() {
     setAiResults,
     setDocuments,
     showToast,
-    openAiLogModal: () => setAiLogModalOpen(true)
+    openAiLogModal: () => setAiLogModalOpen(true),
+    patient
   });
 
 
@@ -1681,7 +1704,6 @@ export default function App() {
             examResults={examResults}
             setExamResults={setExamResults}
             aiResults={aiResults}
-            setAiResults={setAiResults}
             aiLoading={aiLoading}
             prompts={prompts}
             templates={templates}
