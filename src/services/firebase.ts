@@ -355,9 +355,17 @@ export async function fetchGlobalDefaultConfig(): Promise<{
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) return null;
     const data = docSnap.data();
+    const rawTemplates = { ...DEFAULT_TEMPLATES, ...(data.templates || {}) };
+    if (rawTemplates.passometro && (rawTemplates.passometro.includes('[PASSÔMETRO]') || rawTemplates.passometro.includes('LEITO / PACIENTE'))) {
+      rawTemplates.passometro = DEFAULT_TEMPLATES.passometro;
+    }
+    const rawPrompts = { ...DEFAULT_PROMPTS, ...(data.prompts || {}) };
+    if (rawPrompts.passometro && rawPrompts.passometro.includes('Identificação e Leito')) {
+      rawPrompts.passometro = DEFAULT_PROMPTS.passometro;
+    }
     return {
-      templates: { ...DEFAULT_TEMPLATES, ...(data.templates || {}) },
-      prompts: { ...DEFAULT_PROMPTS, ...(data.prompts || {}) }
+      templates: rawTemplates,
+      prompts: rawPrompts
     };
   } catch (err) {
     console.warn('[Sync] Não foi possível carregar padrão global:', err);
@@ -376,9 +384,17 @@ export function subscribeToGlobalDefaultConfig(
       if (!docSnap.exists()) return;
       const data = docSnap.data();
       if (data) {
+        const rawTemplates = { ...DEFAULT_TEMPLATES, ...(data.templates || {}) };
+        if (rawTemplates.passometro && (rawTemplates.passometro.includes('[PASSÔMETRO]') || rawTemplates.passometro.includes('LEITO / PACIENTE'))) {
+          rawTemplates.passometro = DEFAULT_TEMPLATES.passometro;
+        }
+        const rawPrompts = { ...DEFAULT_PROMPTS, ...(data.prompts || {}) };
+        if (rawPrompts.passometro && rawPrompts.passometro.includes('Identificação e Leito')) {
+          rawPrompts.passometro = DEFAULT_PROMPTS.passometro;
+        }
         onConfigUpdated({
-          templates: { ...DEFAULT_TEMPLATES, ...(data.templates || {}) },
-          prompts: { ...DEFAULT_PROMPTS, ...(data.prompts || {}) }
+          templates: rawTemplates,
+          prompts: rawPrompts
         });
       }
     },

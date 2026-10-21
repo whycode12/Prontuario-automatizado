@@ -400,12 +400,16 @@ DIRETRIZES OBRIGATÓRIAS:
   const runAiPassometro = async () => {
     await executeAiAction('Passômetro', 'passometro', async () => {
       const payload = getCasePayload('payloadPassometro');
+      const activePrompt = (prompts.passometro && !prompts.passometro.includes('Identificação e Leito') && prompts.passometro.includes('PACIENTE:'))
+        ? prompts.passometro
+        : DEFAULT_PROMPTS.passometro;
+      const userInstruction = `Preencha o PASSÔMETRO respeitando ESTRITAMENTE a seguinte estrutura e ordem de campos:\n\nPACIENTE: [Nome]\nIDADE: [Idade] anos\nADMISSÃO:: [Data e hora: DD/MM/AAAA - HH:MM]\nMÉDICO RESPONSÁVEL: Dr.\nLOCAL DO PACIENTE:: [SALA DE MEDICAÇÃO // ENFERMARIA // SALA VERMELHA]\nBREVE CONTEXTO: [HMA reduzida com o que é importante]\n\nVÍCIOS: [Tabagista, etilista ou Nega]\nCOMORBIDADES: [HAS, DM2NIR ou Nega]\nMEDICAÇÕES DE USO CONTÍNUO: [Medicações ou Nega]\nALERGIAS MEDICAMENTOSAS: [Alergias ou Nega]\nEXAME FÍSICO ATUAL (somente dados relevantes ao caso): [Dados relevantes]\nHIPÓTESES DIAGNÓSTICAS: [Hipótese]\n\nCONDUTAS:\n-\n\nPROPOSTAS:\n- Aguardar RL para definição de conduta\n\nDiretrizes obrigatórias: Siga estritamente esta estrutura exata de tópicos.`;
       const response = await callGeminiApi(
         apiKey,
         model,
-        prompts.passometro,
+        activePrompt,
         payload,
-        'Preencha o passômetro do paciente respeitando estritamente a estrutura solicitada (PACIENTE, IDADE, ADMISSÃO::, MÉDICO RESPONSÁVEL, LOCAL DO PACIENTE::, BREVE CONTEXTO, VÍCIOS, COMORBIDADES, MEDICAÇÕES DE USO CONTÍNUO, ALERGIAS MEDICAMENTOSAS, EXAME FÍSICO ATUAL, HIPÓTESES DIAGNÓSTICAS, CONDUTAS, PROPOSTAS).'
+        userInstruction
       );
       setDocuments((prev: FinalDocuments) => ({ ...prev, passometro: response.trim() }));
     });

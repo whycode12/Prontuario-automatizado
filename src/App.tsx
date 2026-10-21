@@ -141,7 +141,7 @@ export default function App() {
     if (!saved) return DEFAULT_TEMPLATES;
     try {
       const parsed = { ...DEFAULT_TEMPLATES, ...JSON.parse(saved) };
-      if (parsed.passometro && parsed.passometro.includes('[PASSÔMETRO]')) {
+      if (!parsed.passometro || parsed.passometro.includes('[PASSÔMETRO]') || parsed.passometro.includes('LEITO / PACIENTE')) {
         parsed.passometro = DEFAULT_TEMPLATES.passometro;
       }
       return parsed;
@@ -154,7 +154,7 @@ export default function App() {
     if (!saved) return DEFAULT_PROMPTS;
     try {
       const parsed = { ...DEFAULT_PROMPTS, ...JSON.parse(saved) };
-      if (parsed.passometro && parsed.passometro.includes('Identificação e Leito')) {
+      if (!parsed.passometro || parsed.passometro.includes('Identificação e Leito') || !parsed.passometro.includes('PACIENTE:')) {
         parsed.passometro = DEFAULT_PROMPTS.passometro;
       }
       return parsed;
@@ -285,12 +285,20 @@ export default function App() {
         if (configSource === 'user') {
           unsubscribeConfig = subscribeToCloudConfig(key, (cloudConfig) => {
             if (cloudConfig?.templates) {
-              setTemplates((prev) => ({ ...prev, ...cloudConfig.templates }));
-              localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(cloudConfig.templates));
+              const updatedT = { ...cloudConfig.templates };
+              if (updatedT.passometro && (updatedT.passometro.includes('[PASSÔMETRO]') || updatedT.passometro.includes('LEITO / PACIENTE'))) {
+                updatedT.passometro = DEFAULT_TEMPLATES.passometro;
+              }
+              setTemplates((prev) => ({ ...prev, ...updatedT }));
+              localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updatedT));
             }
             if (cloudConfig?.prompts) {
-              setPrompts((prev) => ({ ...prev, ...cloudConfig.prompts }));
-              localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(cloudConfig.prompts));
+              const updatedP = { ...cloudConfig.prompts };
+              if (updatedP.passometro && updatedP.passometro.includes('Identificação e Leito')) {
+                updatedP.passometro = DEFAULT_PROMPTS.passometro;
+              }
+              setPrompts((prev) => ({ ...prev, ...updatedP }));
+              localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(updatedP));
             }
           });
         }
@@ -300,12 +308,20 @@ export default function App() {
       if (configSource === 'global') {
         unsubscribeGlobalConfig = subscribeToGlobalDefaultConfig((globalConfig) => {
           if (globalConfig?.templates) {
-            setTemplates((prev) => ({ ...prev, ...globalConfig.templates }));
-            localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(globalConfig.templates));
+            const updatedT = { ...globalConfig.templates };
+            if (updatedT.passometro && (updatedT.passometro.includes('[PASSÔMETRO]') || updatedT.passometro.includes('LEITO / PACIENTE'))) {
+              updatedT.passometro = DEFAULT_TEMPLATES.passometro;
+            }
+            setTemplates((prev) => ({ ...prev, ...updatedT }));
+            localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(updatedT));
           }
           if (globalConfig?.prompts) {
-            setPrompts((prev) => ({ ...prev, ...globalConfig.prompts }));
-            localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(globalConfig.prompts));
+            const updatedP = { ...globalConfig.prompts };
+            if (updatedP.passometro && updatedP.passometro.includes('Identificação e Leito')) {
+              updatedP.passometro = DEFAULT_PROMPTS.passometro;
+            }
+            setPrompts((prev) => ({ ...prev, ...updatedP }));
+            localStorage.setItem(STORAGE_KEYS.PROMPTS, JSON.stringify(updatedP));
           }
         });
       }

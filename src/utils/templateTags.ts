@@ -185,7 +185,7 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
     if (!val) {
       const linePattern = new RegExp(`^[ \\t]*\\|[ \\t]*${f.label}:[ \\t]*\\{\\{${f.key}\\}\\}[ \\t]*(?:\\r?\\n)?`, 'gmi');
       output = output.replace(linePattern, '');
-      output = output.replace(new RegExp(`\\{\\{${f.key}\\}\\}`, 'gi'), '');
+      output = output.replace(new RegExp(`\\{\\{${f.key}\\}\\}`, 'gi'), 'Nega');
     } else {
       output = output.replace(new RegExp(`\\{\\{${f.key}\\}\\}`, 'gi'), val);
     }
@@ -240,7 +240,9 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{CIDS\}\}/gi, aiResults.selectedCid ? `CID: ${aiResults.selectedCid}` : '');
 
   // 8. Condutas
-  output = output.replace(/\{\{CONDUTAS\}\}/gi, condutas.trim() || 'Condutas sintomáticas e orientações');
+  const isPassometroTemplate = templateStr.includes('ADMISSÃO::') || templateStr.includes('LOCAL DO PACIENTE::');
+  const condutasFallback = isPassometroTemplate ? '-' : 'Condutas sintomáticas e orientações';
+  output = output.replace(/\{\{CONDUTAS\}\}/gi, condutas.trim() || condutasFallback);
   output = output.replace(/\{\{CONDUTAS_UNIDADE\}\}/gi, rawUnitMeds.join(', ') || condutas || 'Sintomáticos');
   output = output.replace(/\{\{CONDUTAS_FEITAS\}\}/gi, rawUnitMeds.join(', ') || 'Sintomáticos');
   output = output.replace(/\{\{MEDS_UNIDADE\}\}/gi, medsUnidadeLinha);
@@ -263,7 +265,7 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{SINAIS_ALERTA\}\}/gi, 'Piora hemodinâmica ou dor refratária');
   const propostasDefault = observation.whatToReevaluate
     ? `- ${observation.whatToReevaluate}`
-    : (observation.inObservation ? '- Reavaliação clínica e aguardar exames/condutas' : '- Aguardar RL para definição de conduta');
+    : '- Aguardar RL para definição de conduta';
   output = output.replace(/\{\{PROPOSTAS\}\}/gi, customReplacements?.PROPOSTAS || propostasDefault);
 
   // 10. Injeção de Prescrição Interna no Prontuário se houver medicações na unidade

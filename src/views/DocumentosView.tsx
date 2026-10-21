@@ -13,8 +13,10 @@ import { TemplateEditorButton } from '../components/TemplateEditorButton';
 import {
   type CompilableDocType,
   DEFAULT_ATESTADO_TEMPLATE,
-  DEFAULT_ENCAMINHAMENTO_TEMPLATE
+  DEFAULT_ENCAMINHAMENTO_TEMPLATE,
+  DEFAULT_PASSOMETRO_TEMPLATE
 } from '../utils/documentCompiler';
+import { DEFAULT_PROMPTS } from '../data/defaults';
 import { DEFAULT_ENCAMINHAMENTO_PROMPT } from '../hooks/useAiWorkflow';
 
 interface DocumentosViewProps {
@@ -518,7 +520,11 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               <TemplateEditorButton
                 label="Passômetro"
                 templateKey="passometro"
-                currentTemplate={templates.passometro}
+                currentTemplate={
+                  templates.passometro && templates.passometro.includes('PACIENTE:') && !templates.passometro.includes('[PASSÔMETRO]') && !templates.passometro.includes('LEITO / PACIENTE')
+                    ? templates.passometro
+                    : DEFAULT_PASSOMETRO_TEMPLATE
+                }
                 onSaveTemplate={(t) => handleSaveTemplate('passometro', t)}
                 onSaveGlobalTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('passometro', t) : undefined}
               />
@@ -527,7 +533,11 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                 onExecute={runAiPassometro}
                 isLoading={!!aiLoading.passometro}
                 promptKey="passometro"
-                currentPrompt={prompts.passometro}
+                currentPrompt={
+                  prompts.passometro && !prompts.passometro.includes('Identificação e Leito') && prompts.passometro.includes('PACIENTE:')
+                    ? prompts.passometro
+                    : DEFAULT_PROMPTS.passometro
+                }
                 onSavePrompt={(p) => handleSavePrompt('passometro', p)}
                 onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('passometro', p) : undefined}
                 onResetPrompt={() => handleResetSinglePrompt('passometro')}

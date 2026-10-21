@@ -25,6 +25,26 @@ Paciente: {{NOME}} | Idade: {{IDADE}} anos | Data: {{DATA}}
 ———————————————————————————————————
 Mateus Leme - MG, {{DATA_EXTENSO}}.`;
 
+export const DEFAULT_PASSOMETRO_TEMPLATE = `PACIENTE: {{NOME}}
+IDADE: {{IDADE}} anos
+ADMISSÃO:: {{ADMISSAO}}
+MÉDICO RESPONSÁVEL: Dr.
+LOCAL DO PACIENTE:: SALA DE MEDICAÇÃO // ENFERMARIA // SALA VERMELHA
+BREVE CONTEXTO: {{HMA_RESUMO}}
+
+VÍCIOS: {{VICIOS}}
+COMORBIDADES: {{COMORBIDADES}}
+MEDICAÇÕES DE USO CONTÍNUO: {{MUC}}
+ALERGIAS MEDICAMENTOSAS: {{ALERGIAS}}
+EXAME FÍSICO ATUAL (somente dados relevantes ao caso): {{EXAME_RESUMO}}
+HIPÓTESES DIAGNÓSTICAS: {{HIPOTESE}}
+
+CONDUTAS:
+{{CONDUTAS}}
+
+PROPOSTAS: 
+{{PROPOSTAS}}`;
+
 /**
  * Monta o conteúdo de um documento médico específico aplicando as tags no template.
  */
@@ -34,9 +54,10 @@ export function buildDocument(
   contextData: TagContextData
 ): string {
   let template = templates[docType];
-  if (!template) {
+  if (!template || (docType === 'passometro' && (!template.includes('PACIENTE:') || template.includes('[PASSÔMETRO]') || template.includes('LEITO / PACIENTE')))) {
     if (docType === 'atestado') template = DEFAULT_ATESTADO_TEMPLATE;
     else if (docType === 'encaminhamento') template = DEFAULT_ENCAMINHAMENTO_TEMPLATE;
+    else if (docType === 'passometro') template = DEFAULT_PASSOMETRO_TEMPLATE;
     else return '';
   }
   return replaceTemplateTags(template, contextData);
