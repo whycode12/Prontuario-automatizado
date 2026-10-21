@@ -740,9 +740,22 @@ export default function App() {
     const existingIndex = savedRecords.findIndex((r) => r.id === currentRecordId);
     const existingRecord = existingIndex >= 0 ? savedRecords[existingIndex] : undefined;
 
+    let recordSavedAt = existingRecord?.savedAt || new Date().toISOString();
+    if (patient.dataHoraInicio && patient.dataHoraInicio.includes(' - ')) {
+      const [datePart, timePart] = patient.dataHoraInicio.split(' - ');
+      const [d, m, y] = datePart.split('/');
+      const [hour, min] = timePart.split(':');
+      if (d && m && y && hour && min) {
+        const parsedDate = new Date(Number(y), Number(m) - 1, Number(d), Number(hour), Number(min));
+        if (!isNaN(parsedDate.getTime())) {
+          recordSavedAt = parsedDate.toISOString();
+        }
+      }
+    }
+
     const recordToSave: SavedPatientRecord = {
       id: currentRecordId,
-      savedAt: existingRecord?.savedAt || new Date().toISOString(),
+      savedAt: recordSavedAt,
       patient,
       vitals,
       qp,

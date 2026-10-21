@@ -32,7 +32,14 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
     const matchesSearch = nome.includes(term) || qp.includes(term) || hd.includes(term);
 
     if (!selectedDate) return matchesSearch;
-    const recordDateStr = new Date(r.savedAt).toLocaleDateString('en-CA'); // YYYY-MM-DD
+    const recordDateStr = (() => {
+      if (r.patient?.dataHoraInicio && r.patient.dataHoraInicio.includes(' - ')) {
+        const [d, m, y] = r.patient.dataHoraInicio.split(' - ')[0].split('/');
+        if (d && m && y) return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      }
+      const d = new Date(r.savedAt);
+      return !isNaN(d.getTime()) ? d.toLocaleDateString('en-CA') : '';
+    })();
     return matchesSearch && recordDateStr === selectedDate;
   });
 
@@ -126,12 +133,18 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredRecords.map((rec) => {
             const isCurrent = rec.id === currentRecordId;
-            const savedDate = new Date(rec.savedAt).toLocaleString('pt-BR', {
-              day: '2-digit',
-              month: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-            });
+            const savedDate = (() => {
+              const displayTime = rec.patient?.horaInicio || (rec.savedAt ? new Date(rec.savedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--');
+              const displayDate = (rec.patient?.dataHoraInicio && rec.patient.dataHoraInicio.includes(' - '))
+                ? rec.patient.dataHoraInicio.split(' - ')[0]
+                : (rec.savedAt && !isNaN(new Date(rec.savedAt).getTime()) ? new Date(rec.savedAt).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR'));
+              return `${displayDate}, ${displayTime}`;
+            })();
+
+
+
+
+
 
             return (
               <div
