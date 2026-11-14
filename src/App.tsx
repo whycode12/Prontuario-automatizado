@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   FileText,
   UserPlus,
@@ -511,6 +511,7 @@ export default function App() {
     atestado: '',
     encaminhamento: ''
   });
+  const isRecordLoadedRef = useRef(false);
 
   // Notification Toast - Interface silenciosa (apenas erros críticos reais do sistema)
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -821,6 +822,7 @@ export default function App() {
         return;
       }
     }
+    isRecordLoadedRef.current = false;
     setCurrentRecordId(Date.now().toString());
     setPatient({ nome: '', idade: '', idadeAnos: '', idadeMeses: '', sexo: '', peso: '', altura: '', cpf: '', horaInicio: undefined, dataHoraInicio: undefined });
     setQp('');
@@ -1006,6 +1008,7 @@ export default function App() {
   };
 
   const handleLoadRecord = (rec: SavedPatientRecord) => {
+    isRecordLoadedRef.current = true;
     setCurrentRecordId(rec.id);
     const loadedPatient = { ...rec.patient };
     if (!loadedPatient.horaInicio) {
@@ -1221,6 +1224,76 @@ export default function App() {
     aiResults,
     observation
   };
+
+  // Auto-atualização de prontuário e receitas em tempo real conforme dados clínicos mudam
+  useEffect(() => {
+    if (activeTab === 'documentos') return;
+    if (isRecordLoadedRef.current) {
+      isRecordLoadedRef.current = false;
+      if (documents.prontuario || documents.receitaDomiciliar) {
+        return;
+      }
+    }
+
+    const hasClinicalData = Boolean(
+      patient.nome?.trim() ||
+      qp?.trim() ||
+      hma?.trim() ||
+      condutas?.trim() ||
+      examResults?.trim() ||
+      vitals.pa?.trim() ||
+      vitals.fc?.trim() ||
+      vitals.tax?.trim() ||
+      (exameFisico && exameFisico !== templates.exameFisico) ||
+      (aiResults.unitMedications && aiResults.unitMedications.length > 0) ||
+      (aiResults.homeMedications && aiResults.homeMedications.length > 0) ||
+      aiResults.techOrientations?.trim() ||
+      aiResults.layOrientations?.trim() ||
+      aiResults.mainHypothesis?.trim() ||
+      (aiResults.differentialDiagnoses && aiResults.differentialDiagnoses.length > 0) ||
+      aiResults.condutasSuggestion?.trim()
+    );
+
+    if (!hasClinicalData) return;
+
+    const timer = setTimeout(() => {
+      const newProntuario = buildDocument('prontuario', templates, tagContextData);
+      const newReceitaDomiciliar = buildDocument('receitaDomiciliar', templates, tagContextData);
+      const newReceitaInterna = buildDocument('receitaInterna', templates, tagContextData);
+
+      setDocuments((prev) => {
+        if (
+          prev.prontuario === newProntuario &&
+          prev.receitaDomiciliar === newReceitaDomiciliar &&
+          prev.receitaInterna === newReceitaInterna
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          prontuario: newProntuario,
+          receitaDomiciliar: newReceitaDomiciliar,
+          receitaInterna: newReceitaInterna
+        };
+      });
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [
+    patient,
+    qp,
+    hma,
+    hpp,
+    vitals,
+    exameFisico,
+    examResults,
+    condutas,
+    aiResults,
+    observation,
+    templates.prontuario,
+    templates.receitaDomiciliar,
+    templates.receitaInterna
+  ]);
 
   // Generate Evolution Text from Template
   const generateEvolucaoDocument = () => {

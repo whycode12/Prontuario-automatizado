@@ -369,21 +369,23 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   };
 
   const handleCopyProntuario = () => {
-    let text = documents?.prontuario;
-    if (!text && tagContextData) {
-      text = buildDocument('prontuario', templates, tagContextData);
-      if (setDocuments) setDocuments((prev) => ({ ...prev, prontuario: text || '' }));
+    const text = tagContextData
+      ? buildDocument('prontuario', templates, tagContextData)
+      : (documents?.prontuario || '');
+    if (setDocuments && text) {
+      setDocuments((prev) => ({ ...prev, prontuario: text }));
     }
-    copyToClipboard(text || '', 'prontuario');
+    copyToClipboard(text, 'prontuario');
   };
 
   const handleCopyReceita = () => {
-    let text = documents?.receitaDomiciliar;
-    if (!text && tagContextData) {
-      text = buildDocument('receitaDomiciliar', templates, tagContextData);
-      if (setDocuments) setDocuments((prev) => ({ ...prev, receitaDomiciliar: text || '' }));
+    const text = tagContextData
+      ? buildDocument('receitaDomiciliar', templates, tagContextData)
+      : (documents?.receitaDomiciliar || '');
+    if (setDocuments && text) {
+      setDocuments((prev) => ({ ...prev, receitaDomiciliar: text }));
     }
-    copyToClipboard(text || '', 'receita');
+    copyToClipboard(text, 'receita');
   };
 
   const handleCopyAtestado = () => {
@@ -399,7 +401,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           INCLUIR_CID: incluirCid ? 'true' : 'false'
         }
       });
-      if (setDocuments) setDocuments((prev) => ({ ...prev, atestado: text || '' }));
+      if (setDocuments && text) setDocuments((prev) => ({ ...prev, atestado: text }));
     }
     copyToClipboard(text || '', 'atestado');
   };
@@ -408,7 +410,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     let text = documents?.encaminhamento;
     if (!text && tagContextData) {
       text = buildDocument('encaminhamento', templates, tagContextData);
-      if (setDocuments) setDocuments((prev) => ({ ...prev, encaminhamento: text || '' }));
+      if (setDocuments && text) setDocuments((prev) => ({ ...prev, encaminhamento: text }));
     }
     copyToClipboard(text || '', 'relatorio');
   };
