@@ -393,11 +393,11 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
           />
         </section>
 
-        {/* ENCAMINHAMENTO PSF */}
+        {/* RELATÓRIO */}
         <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
             <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              ENCAMINHAMENTO PSF
+              RELATÓRIO
             </h2>
 
             <div className="flex items-center gap-1.5">
@@ -405,12 +405,12 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                 type="button"
                 onClick={handleCompileEncaminhamento}
                 className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
-                title="Compilar Encaminhamento PSF"
+                title="Compilar Relatório"
               >
                 <FileText className="w-4 h-4" />
               </button>
               <TemplateEditorButton
-                label="Encaminhamento PSF"
+                label="Relatório"
                 templateKey="encaminhamento"
                 currentTemplate={templates.encaminhamento || DEFAULT_ENCAMINHAMENTO_TEMPLATE}
                 onSaveTemplate={(t) => handleSaveTemplate('encaminhamento', t)}
@@ -418,8 +418,8 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               />
               {runAiEncaminhamento && (
                 <AIActionButton
-                  label="Gerar Encaminhamento com IA"
-                  onExecute={runAiEncaminhamento}
+                  label="Gerar Relatório com IA"
+                  onExecute={() => runAiEncaminhamento()}
                   isLoading={!!aiLoading.encaminhamento}
                   promptKey="encaminhamento"
                   currentPrompt={prompts.encaminhamento || DEFAULT_ENCAMINHAMENTO_PROMPT}
@@ -437,15 +437,15 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                 type="button"
                 onClick={() => copyToClipboard(documents.encaminhamento || '', 'encaminhamento')}
                 className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
-                title="Copiar Encaminhamento PSF"
+                title="Copiar Relatório"
               >
                 {copiedSection === 'encaminhamento' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
               </button>
               <button
                 type="button"
-                onClick={() => handlePrint(documents.encaminhamento || '', 'Encaminhamento PSF')}
+                onClick={() => handlePrint(documents.encaminhamento || '', 'Relatório Médico')}
                 className="h-8 px-2.5 text-slate-600 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white rounded-lg border border-slate-200 dark:border-[#383838] bg-white dark:bg-[#252525] hover:bg-[#f5f5f5] dark:hover:bg-[#2e2e2e] transition-colors shadow-2xs flex items-center justify-center"
-                title="Imprimir Encaminhamento PSF"
+                title="Imprimir Relatório"
               >
                 <Printer className="w-4 h-4" />
               </button>

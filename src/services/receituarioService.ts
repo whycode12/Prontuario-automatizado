@@ -361,3 +361,233 @@ export function searchPrescricaoDomiciliar(
 
   return results;
 }
+
+export function findMedicationInDb(query: string): Medicamento | null {
+  if (!db || !query) return null;
+  const normInput = normalize(query);
+  const cleanTokens = normInput
+    .replace(/uso\s+(oral|intramuscular|endovenoso|topico|retal|inalatorio)/g, '')
+    .replace(/\b(ev|im|vo|sc|vr|top|vi)\b/g, '')
+    .replace(/\b\d+([,.]\d+)?\s*(mg|g|ml|mcg|ui|gotas|comprimidos|ampolas?)\b/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(
+      (t) =>
+        t.length >= 3 &&
+        ![
+          'tomar',
+          'administrar',
+          'aplicar',
+          'agora',
+          'caixa',
+          'comprimido',
+          'ampola',
+          'diluido',
+          'lento',
+          'bolsa',
+          'frasco',
+          'cada',
+          'horas',
+          'dias'
+        ].includes(t)
+    );
+
+  if (cleanTokens.length === 0) return null;
+
+  let bestMed: Medicamento | null = null;
+  let bestScore = -1;
+
+  for (const m of db.medicamentos) {
+    const nomeNorm = normalize(m.nome);
+    const buscaNorm = normalize(m.nome_busca || '');
+    let matchedTokenCount = 0;
+    let score = 0;
+
+    for (const token of cleanTokens) {
+      let matched = false;
+      if (nomeNorm === token) {
+        score += 10;
+        matched = true;
+      } else if (nomeNorm.split(/\s+/).includes(token)) {
+        score += 8;
+        matched = true;
+      } else if (nomeNorm.includes(token)) {
+        score += 4;
+        matched = true;
+      }
+
+      if (buscaNorm.split(/\s+/).includes(token)) {
+        score += 6;
+        matched = true;
+      } else if (buscaNorm.includes(token)) {
+        score += 3;
+        matched = true;
+      }
+
+      if (matched) matchedTokenCount++;
+    }
+
+    score += matchedTokenCount * 15;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMed = m;
+    }
+  }
+
+  return bestScore >= 3 ? bestMed : null;
+}
+
+export function detectRouteFromText(text: string): string | null {
+  const t = (text || '').toUpperCase();
+  if (/\b(EV|IV|ENDOVENOS[OA]|INTRAVENOS[OA])\b/.test(t)) return 'EV';
+  if (/\b(IM|INTRAMUSCULAR)\b/.test(t)) return 'IM';
+  if (/\b(VO|ORAL)\b/.test(t)) return 'VO';
+  if (/\b(SC|SUBCUTANE[OA]|SUBCUTÂNE[OA])\b/.test(t)) return 'SC';
+  if (/\b(TOP|TOPIC[OA]|TÓPIC[OA])\b/.test(t)) return 'TOP';
+  if (/\b(VI|INALATORI[OA]|INALATÓRI[OA])\b/.test(t)) return 'VI';
+  if (/\b(VR|RETAL)\b/.test(t)) return 'VR';
+  return null;
+}
+
+export function getStandardizedInternaMedication(
+  med: Medicamento,
+  desiredRoute?: string | null
+): { text: string; adm: string } | null {
+  const internals = (med.vias_administracao || []).filter(
+    (v) => v.source === 'remedios_prescricao_interna'
+  );
+  if (internals.length === 0) return null;
+
+  if (desiredRoute) {
+    const rUpper = desiredRoute.toUpperCase().trim();
+    const found = internals.find((v) => v.adm?.toUpperCase() === rUpper);
+    if (found) return { text: found.text.trim(), adm: found.adm || 'VO' };
+  }
+
+  const im = internals.find((v) => v.adm?.toUpperCase() === 'IM');
+  if (im) return { text: im.text.trim(), adm: im.adm || 'IM' };
+
+  return { text: internals[0].text.trim(), adm: internals[0].adm || 'VO' };
+}
+
+export function getStandardizedDomiciliarMedication(
+  med: Medicamento,
+  pesoStr?: string | null
+): { text: string; route: string } | null {
+  const peso = parseAndRoundPeso(pesoStr);
+  const route = med.via_administracao_padrao || 'USO ORAL';
+
+  if (peso !== null && med.tem_pediatrico && med.receita_pediatrica?.tem_pediatrico) {
+    const key = String(peso);
+    const dosePorPeso = med.receita_pediatrica.doses_por_peso?.[key];
+    if (dosePorPeso) {
+      return { text: dosePorPeso.texto_completo.trim(), route };
+    }
+    if (peso >= 40 && med.receita_pediatrica.doses_por_peso?.['39']) {
+      return { text: med.receita_pediatrica.doses_por_peso['39'].texto_completo.trim(), route };
+    }
+    if (med.receita_pediatrica.texto_padrao) {
+      return { text: med.receita_pediatrica.texto_padrao.trim(), route };
+    }
+  }
+
+  if (med.tem_adulto && med.receita_adulto) {
+    return { text: med.receita_adulto.texto_completo.trim(), route };
+  }
+
+  if (med.receita_pediatrica?.texto_padrao) {
+    return { text: med.receita_pediatrica.texto_padrao.trim(), route };
+  }
+
+  return null;
+}
+
+export function standardizeSingleMedication(
+  input: string,
+  type: 'interna' | 'domiciliar',
+  pesoStr?: string | null
+): { text: string; route: string } {
+  const detectedRoute = detectRouteFromText(input) || (type === 'interna' ? 'IM' : 'VO');
+  const matchedMed = findMedicationInDb(input);
+
+  if (matchedMed) {
+    if (type === 'interna') {
+      const std = getStandardizedInternaMedication(matchedMed, detectedRoute);
+      if (std) {
+        return { text: std.text, route: std.adm };
+      }
+    } else {
+      const std = getStandardizedDomiciliarMedication(matchedMed, pesoStr);
+      if (std) {
+        return { text: std.text, route: std.route };
+      }
+    }
+  }
+
+  let clean = input.trim();
+  clean = clean.replace(ROUTE_HEADER_REGEX, '').trim();
+  clean = clean.replace(/^[ \t]*[-*•\d.]+[ \t]*/, '').trim();
+
+  return { text: clean, route: detectedRoute };
+}
+
+export function standardizePrescriptionList(
+  itemsInput: string[] | string,
+  type: 'interna' | 'domiciliar',
+  pesoStr?: string | null
+): string[] {
+  const rawList: string[] = Array.isArray(itemsInput)
+    ? itemsInput
+    : [itemsInput];
+
+  const extractedItems: string[] = [];
+
+  for (const block of rawList) {
+    if (!block || typeof block !== 'string') continue;
+    const trimmed = block.trim();
+    if (!trimmed) continue;
+
+    const sections = trimmed.split(ROUTE_HEADER_REGEX).filter(Boolean);
+    if (sections.length > 1) {
+      for (const sec of sections) {
+        const secItems = splitItems(sec);
+        if (secItems.length > 0) {
+          extractedItems.push(...secItems);
+        } else if (sec.trim()) {
+          extractedItems.push(sec.trim());
+        }
+      }
+    } else {
+      const split = splitItems(trimmed);
+      if (split.length > 0) {
+        extractedItems.push(...split);
+      } else {
+        const lines = trimmed
+          .split(/\n{2,}|\n(?=[-*•\d]+\.?\s+)/)
+          .map((l) => l.trim())
+          .filter(Boolean);
+        if (lines.length > 0) extractedItems.push(...lines);
+        else extractedItems.push(trimmed);
+      }
+    }
+  }
+
+  if (extractedItems.length === 0) return [];
+
+  let assembledPrescription = '';
+
+  for (const rawItem of extractedItems) {
+    if (!rawItem.trim()) continue;
+    const std = standardizeSingleMedication(rawItem, type, pesoStr);
+    if (std.text) {
+      assembledPrescription = appendMedicationToPrescription(
+        assembledPrescription,
+        std.text,
+        std.route
+      );
+    }
+  }
+
+  return assembledPrescription ? [assembledPrescription] : [];
+}

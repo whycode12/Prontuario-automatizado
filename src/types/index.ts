@@ -134,6 +134,7 @@ export interface SystemPrompts {
   conclusaoObs: string;
   encaminhamento?: string;
   atestado?: string;
+  gerarCondutas?: string;
 }
 
 export interface SavedPatientRecord {

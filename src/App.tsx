@@ -1060,6 +1060,7 @@ export default function App() {
     runAiExameFisico,
     runAiDiagnostico,
     runAiConduta,
+    runAiGerarCondutas,
     runAiPassagemPlantao,
     runAiPassometro,
     runAiEncaminhamento,
@@ -1077,7 +1078,10 @@ export default function App() {
     setDocuments,
     showToast,
     openAiLogModal: () => setAiLogModalOpen(true),
-    patient
+    patient,
+    aiResults,
+    documents,
+    observation
   });
 
 
@@ -1678,6 +1682,12 @@ export default function App() {
             runAiExameFisico={runAiExameFisico}
             runAiDiagnostico={runAiDiagnostico}
             runAiConduta={runAiConduta}
+            runAiGerarCondutas={runAiGerarCondutas}
+            runAiEncaminhamento={runAiEncaminhamento}
+            documents={documents}
+            setDocuments={setDocuments}
+            compileSingleDocument={compileSingleDocument}
+            tagContextData={tagContextData}
             showToast={showToast}
             hideAiBoxes={hideAiBoxes}
           />

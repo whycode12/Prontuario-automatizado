@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import type { SystemPrompts, SystemTemplates, AIResult, FinalDocuments } from '../types';
+import type { SystemPrompts, SystemTemplates, AIResult, FinalDocuments, ObservationData } from '../types';
 import { callGeminiApi } from '../services/gemini';
 import { safeJsonParse } from '../utils/jsonSafe';
 import { DEFAULT_PROMPTS } from '../data/defaults';
 import { addAiLog, updateAiLog } from '../utils/aiLogger';
 import { formatUsoWithColon, ensureOriento } from '../utils/templateTags';
+import { ensureReceituarioDb, standardizePrescriptionList } from '../services/receituarioService';
 
 export const DEFAULT_ENCAMINHAMENTO_PROMPT = `Você é um médico experiente atuando na UPA de Mateus Leme - MG.
 Elabore um relatório de encaminhamento médico para o PSF (Posto de Saúde da Família / Atenção Básica) de forma humanizada, profissional, empática e sem qualquer aspecto robótico de inteligência artificial.
@@ -15,6 +16,35 @@ DIRETRIZES OBRIGATÓRIAS:
 4. Explique com clareza e justifique por QUAL motivo o paciente necessita de seguimento ambulatorial na Atenção Básica (ex: investigação etiológica de ITU de repetição, ajuste de anti-hipertensivo, controle glicêmico, acompanhamento de lesão, propedêutica complementar, etc.).
 5. Mantenha tom colegial, respeitoso e colaborativo de médico da urgência para médico da atenção primária.
 6. Concordância estrita de gênero: se o paciente for do sexo masculino, use exclusivamente termos masculinos ("o paciente", "atendido", "encaminhado", "avaliado"). Se for do sexo feminino, use exclusivamente termos femininos ("a paciente", "atendida", "encaminhada", "avaliada"). NUNCA use "o(a)", "(a)" ou barras de gênero.`;
+
+export const DEFAULT_GERAR_CONDUTAS_PROMPT = `Você é um médico experiente atuando no pronto atendimento (UPA/SUS).
+Gere APENAS as condutas médicas objetivas do atendimento em tópicos com hífen (- ), de forma ultra concisa, profissional e direta ao ponto, baseando-se estritamente no que foi decidido e realizado no caso clínico.
+
+PADRÃO E ESTRUTURA DOS TÓPICOS:
+1. Medicações prescritas:
+   - Sintetize as classes e os nomes principais dos medicamentos prescritos (na unidade e/ou domiciliar), agrupando sintomáticos.
+   - Exemplos:
+     "- Prescrevo ATB (Amoxicilina-Clavulanato) e sintomáticos."
+     "- Prescrevo sintomáticos e analgesia venosa na unidade."
+     "- Prescrevo sintomáticos via oral para uso domiciliar."
+2. Exames solicitados (se houver pedido de exames laboratoriais ou de imagem):
+   - Cite diretamente os exames pedidos usando siglas médicas habituais.
+   - Exemplos:
+     "- Solicito RX de tórax em AP e PERFIL."
+     "- Solicito HMG, Cr, Ur, K, Na."
+3. Orientações clínicas dadas ao paciente (extraídas das orientações):
+   - Exemplo: "- Oriento hidratação oral frequente, dieta pastosa e repouso relativo."
+4. Sinais de alarme alertados ao paciente (extraídos dos sinais de alarme):
+   - Exemplo: "- Oriento retorno imediato se surgimento de exantema, dificuldade respiratória, trismo ou incapacidade de deglutir saliva."
+5. Documentos emitidos (leia se foi fornecido atestado médico ou relatório):
+   - Se houver relatório/encaminhamento gerado ou indicado: "- Fornecido relatório para continuidade do acompanhamento em PSF."
+   - Se houver atestado médico gerado ou indicado: "- Fornecido atestado médico de 01 dias." (com os dias informados, ex: 01 dias, 02 dias).
+6. Desfecho clínico (OBRIGATORIAMENTE o último tópico):
+   - Se alta médica: "- Alta médica com orientações."
+   - Se em observação: "- Mantenho em observação, reavaliar após resultados de exames." (ou reavaliar após término da medicação).
+
+DIRETRIZES:
+- Retorne APENAS os tópicos iniciados com hífen (- ), sem introduções, sem saudações e sem comentários adicionais.`;
 
 interface UseAiWorkflowParams {
   apiKey: string;
@@ -29,6 +59,9 @@ interface UseAiWorkflowParams {
   showToast: (msg: string) => void;
   openAiLogModal?: () => void;
   patient?: any;
+  aiResults?: AIResult;
+  documents?: FinalDocuments;
+  observation?: ObservationData;
 }
 
 export function useAiWorkflow({
@@ -43,7 +76,10 @@ export function useAiWorkflow({
   setDocuments,
   showToast,
   openAiLogModal,
-  patient
+  patient,
+  aiResults,
+  documents,
+  observation
 }: UseAiWorkflowParams) {
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
 
@@ -217,7 +253,7 @@ export function useAiWorkflow({
   };
 
   const runAiConduta = async () => {
-    await executeAiAction('Condutas, Prescrições e Orientações', 'conduta', async () => {
+    await executeAiAction('Prescrições e Orientações', 'conduta', async () => {
       const jsonExample = `{
   "medicacoesUnidade": [
     "USO INTRAMUSCULAR:\\n\\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
@@ -239,26 +275,21 @@ export function useAiWorkflow({
   "atestadoNecessario": true,
   "diasAtestado": "1 dia",
   "motivoAtestado": "Repouso durante fase álgica aguda.",
-  "condutasSintetizadas": "- Prescrevo Ondansetrona IM na unidade.\\n- Solicito RX de braço esquerdo AP e PERFIL na unidade.\\n- Solicito HMG, Ur e Cr na unidade.\\n- Prescrevo Amoxicilina + Clavulanato VO e Dipirona VO para uso domiciliar.\\n- Alta médica com orientações",
   "orientacoesProntuario": "Oriento hidratação oral vigorosa e repouso relativo durante a fase sintomática.",
   "sinaisAlarmeProntuario": "Oriento retorno imediato ao pronto atendimento se febre persistente, vômitos refratários ou piora da dor.",
   "orientacoesReceita": "Repouso relativo, hidratação hídrica adequada e tomar os medicamentos nos horários prescritos.",
   "sinaisAlarmeReceita": "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não cede, dor intensa ou vômitos recorrentes."
 }`;
-      const instruction = `Você é um médico experiente atuando no Brasil (UPA/SUS). Gere a conduta médica completa e rigorosa para este caso, preenchendo todos os campos do JSON.
+      const instruction = `Você é um médico experiente atuando no Brasil (UPA/SUS). Decida as prescrições (unidade e domiciliar), exames estritamente necessários e orientações para este caso clínico.
 DIRETRIZES OBRIGATÓRIAS:
-1. RIGOR EXTREMO EM EXAMES E PRESCRIÇÕES: Seja estritamente criterioso. NÃO seja permissivo. Só prescreva medicações ou solicite exames laboratoriais / exames de imagem se forem REALMENTE estritamente necessários para o caso clínico apresentado. Se não houver indicação clara para exames, retorne vazio ("") em "examesLaboratorio" e "examesImagem".
+1. RIGOR EXTREMO EM EXAMES E PRESCRIÇÕES: Seja estritamente criterioso. NÃO seja permissivo. Só prescreva medicações ou solicite exames se forem estritamente necessários para o caso clínico apresentado. Se não houver indicação clara para exames, retorne vazio ("") em "examesLaboratorio" e "examesImagem".
 2. PRESCRIÇÃO INTERNA (Unidade) E DOMICILIAR:
-   - PREFIRA via Intramuscular (IM) quando não for fazer várias medicações simultâneas ou quando a medicação não exigir infusão contínua em bolsa de soro, para não puncionar acesso venoso sem real necessidade.
-   - OBRIGATÓRIO: Sempre que indicar uma via de administração em prescrições (USO ORAL, USO INTRAMUSCULAR, USO ENDOVENOSO, etc.), coloque SEMPRE os dois-pontos logo após a via (ex: 'USO ORAL:', 'USO INTRAMUSCULAR:', 'USO ENDOVENOSO:').
-   - Siga rigorosamente o padrão com blocos de via, itens com travessões para a quantidade (ex: '1 ampola (2 mL)', '———— 1 caixa', '——— 04 envelopes'), seguido da posologia por extenso e instruções de preparo/uso se necessário. Use sempre as apresentações e posologias mais habituais no Brasil e no SUS.
-3. CONDUTAS SINTETIZADAS ('condutasSintetizadas'):
-   - Use a MENOR quantidade de palavras possível, direto ao ponto e objetivo, sintetizando o que foi feito na unidade e domiciliar em tópicos com palavras-chave e abreviações médicas habituais (ex: 'HMG', 'Ur', 'Cr', 'RX AP e PERFIL', 'VO', 'IM', 'EV'). NÃO inclua doses ou tempos desnecessários já descritos nas receitas.
-   - OBRIGATÓRIO: O último tópico DEVE ser o desfecho do paciente, exatamente no padrão: '- Alta médica com orientações' OU '- Em observação para reavaliação após medicação/exames'.
-4. ORIENTAÇÕES E SINAIS DE ALARME:
-   - Personalize estritamente adaptado ao agravo e à pessoa consultada (faixa etária e contexto do paciente). Jamais utilize orientações genéricas desconexas (ex: jamais cite amamentação se for paciente adulto).
-   - OBRIGATÓRIO: Em 'orientacoesProntuario' e 'sinaisAlarmeProntuario' para o prontuário, comece SEMPRE obrigatoriamente com a palavra 'Oriento...'. Seja conciso e objetivo com poucas palavras.
-5. SEGURANÇA E SUS: Checagem estrita de alergias conforme a HPP, avisos para idoso frágil/nefropatas em 'disclaimers', profilaxia de tétano/raiva se aplicável em 'alertaProfilaxiaVacinal'. ${
+   - Defina as medicações clínicas indicadas. O aplicativo consultará o banco de dados oficial do sistema para formatar a prescrição no padrão rigoroso cadastrado.
+   - PREFIRA via Intramuscular (IM) na unidade quando não for fazer várias medicações simultâneas ou quando não exigir infusão venosa contínua.
+3. ORIENTAÇÕES E SINAIS DE ALARME:
+   - Personalize estritamente adaptado ao agravo e à pessoa consultada (faixa etária e contexto do paciente). Jamais utilize orientações genéricas desconexas.
+   - OBRIGATÓRIO: Em 'orientacoesProntuario' e 'sinaisAlarmeProntuario' para o prontuário, comece SEMPRE com a palavra 'Oriento...'. Seja conciso e objetivo.
+4. SEGURANÇA E SUS: Checagem estrita de alergias conforme a HPP, avisos para idoso frágil/nefropatas em 'disclaimers', profilaxia de tétano/raiva se aplicável em 'alertaProfilaxiaVacinal'. ${
         susFilter ? 'PRIORIZE FORTEMENTE FÁRMACOS DA RENAME / FARMÁCIA BÁSICA DO SUS.' : ''
       }`;
 
@@ -305,16 +336,21 @@ DIRETRIZES OBRIGATÓRIAS:
         return [String(val)];
       };
 
-      if (parsed.condutasSintetizadas && setCondutas) {
-        setCondutas(parsed.condutasSintetizadas);
-      }
+      await ensureReceituarioDb();
+      const rawUnit = formatMedList(parsed.medicacoesUnidade);
+      const rawHome = formatMedList(parsed.medicacoesCasa);
+      const stdUnit = standardizePrescriptionList(rawUnit, 'interna', patient?.peso);
+      const stdHome = standardizePrescriptionList(rawHome, 'domiciliar', patient?.peso);
+
+      const finalUnit = stdUnit.length > 0 ? stdUnit.map(formatUsoWithColon) : rawUnit.map(formatUsoWithColon);
+      const finalHome = stdHome.length > 0 ? stdHome.map(formatUsoWithColon) : rawHome.map(formatUsoWithColon);
 
       const aiSuggested = (parsed.desfechoSugerido as 'alta' | 'observacao' | 'internacao' | 'transferencia') || 'alta';
 
       setAiResults((prev) => ({
         ...prev,
-        unitMedications: formatMedList(parsed.medicacoesUnidade).map(formatUsoWithColon),
-        homeMedications: formatMedList(parsed.medicacoesCasa).map(formatUsoWithColon),
+        unitMedications: finalUnit,
+        homeMedications: finalHome,
         medicationDisclaimers: parsed.disclaimers || [],
         tetanusRabiesAlert: parsed.alertaProfilaxiaVacinal || '',
         orderedLabs: formatExamList(parsed.examesLaboratorio),
@@ -335,11 +371,85 @@ DIRETRIZES OBRIGATÓRIAS:
           return `${formattedN} ${p}`;
         })(),
         medicalLeaveReason: parsed.motivoAtestado || '',
-        condutasSuggestion: parsed.condutasSintetizadas || '',
         techOrientations: ensureOriento(parsed.orientacoesProntuario || parsed.textoTecnico || ''),
         techAlarmSignals: ensureOriento(parsed.sinaisAlarmeProntuario || ''),
         layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
         layAlarmSignals: parsed.sinaisAlarmeReceita || ''
+      }));
+    });
+  };
+
+  const runAiGerarCondutas = async () => {
+    await executeAiAction('Gerar Condutas', 'gerarCondutas', async () => {
+      const payloadBase = getCasePayload('payloadConduta');
+
+      const medsUnidadeText = Array.isArray(aiResults?.unitMedications)
+        ? aiResults.unitMedications.join('\n\n').trim()
+        : (aiResults?.unitMedications || '').trim();
+      const medsCasaText = Array.isArray(aiResults?.homeMedications)
+        ? aiResults.homeMedications.join('\n\n').trim()
+        : (aiResults?.homeMedications || '').trim();
+      const labsText = (aiResults?.orderedLabs || '').trim();
+      const imagesText = (aiResults?.orderedImages || '').trim();
+      const orientText = (aiResults?.techOrientations || '').trim();
+      const alarmText = (aiResults?.techAlarmSignals || '').trim();
+      const outcomeText = observation?.inObservation
+        ? 'Em observação clínica para reavaliação após medicação/exames'
+        : (aiResults?.clinicalOutcome === 'observacao' ? 'Em observação clínica' : 'Alta médica com orientações');
+
+      const atestadoText = (documents?.atestado || '').trim() || (aiResults?.medicalLeaveDays ? `${aiResults.medicalLeaveDays}` : '');
+      const relatorioText = (documents?.encaminhamento || '').trim() || (aiResults?.referralReason ? `Sim (${aiResults.referralReason})` : '');
+
+      const factualActionsPayload = `=== AÇÕES CLÍNICAS REALIZADAS E DEFINIDAS NESTE ATENDIMENTO ===
+- PRESCRIÇÃO INTERNA (Unidade):
+${medsUnidadeText || 'Nenhuma medicação prescrita na unidade'}
+
+- PRESCRIÇÃO DOMICILIAR:
+${medsCasaText || 'Nenhuma medicação domiciliar prescrita'}
+
+- EXAMES LABORATORIAIS SOLICITADOS:
+${labsText || 'Nenhum exame laboratorial solicitado'}
+
+- EXAMES DE IMAGEM SOLICITADOS:
+${imagesText || 'Nenhum exame de imagem solicitado'}
+
+- ORIENTAÇÕES CLÍNICAS (Prontuário):
+${orientText || 'Orientações gerais de repouso e hidratação'}
+
+- SINAIS DE ALARME (Prontuário):
+${alarmText || 'Retorno imediato se piora dos sintomas ou sinais de alerta'}
+
+- ATESTADO MÉDICO:
+${atestadoText ? `Sim (${atestadoText})` : 'Não emitido'}
+
+- RELATÓRIO / ENCAMINHAMENTO:
+${relatorioText ? `Sim (${relatorioText})` : 'Não emitido'}
+
+- DESFECHO CLÍNICO:
+${outcomeText}`;
+
+      const fullPayload = `${payloadBase}\n\n${factualActionsPayload}`;
+
+      const activePrompt = prompts.gerarCondutas || DEFAULT_GERAR_CONDUTAS_PROMPT;
+      const response = await callGeminiApi(
+        apiKey,
+        model,
+        activePrompt,
+        fullPayload,
+        'Gere a síntese final de condutas em tópicos objetivos com hífen (- ), cobrindo estritamente as medicações feitas e prescritas, exames pedidos, orientações dadas, documentos emitidos e o desfecho do paciente como último tópico.'
+      );
+
+      const cleaned = response
+        .replace(/```[a-z]*\r?\n?/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+      if (setCondutas) {
+        setCondutas(cleaned);
+      }
+      setAiResults((prev) => ({
+        ...prev,
+        condutasSuggestion: cleaned
       }));
     });
   };
@@ -426,15 +536,22 @@ DIRETRIZES OBRIGATÓRIAS:
     });
   };
 
-  const runAiEncaminhamento = async () => {
-    await executeAiAction('Encaminhamento PSF', 'encaminhamento', async () => {
+  const runAiEncaminhamento = async (customInstruction?: string) => {
+    await executeAiAction('Relatório', 'encaminhamento', async () => {
       const payload = getCasePayload('payloadEncaminhamento');
+      let userInstruction =
+        'Gere o relatório de encaminhamento médico para o PSF em texto corrido humanizado, conciso e direto ao ponto, relatando atendimento na UPA de Mateus Leme e o motivo clínico do seguimento ambulatorial. Respeite rigorosamente o gênero do paciente (se masculino trate no masculino, se feminino trate no feminino), nunca utilize barras como "o(a)".';
+
+      if (customInstruction && customInstruction.trim()) {
+        userInstruction += `\n\n=== DIRETRIZ ESPECÍFICA DO MÉDICO PARA ESTE RELATÓRIO ===\n${customInstruction.trim()}`;
+      }
+
       const response = await callGeminiApi(
         apiKey,
         model,
         prompts.encaminhamento || DEFAULT_ENCAMINHAMENTO_PROMPT,
         payload,
-        'Gere o relatório de encaminhamento médico para o PSF em texto corrido humanizado, conciso e direto ao ponto, relatando atendimento na UPA de Mateus Leme e o motivo clínico do seguimento ambulatorial. Respeite rigorosamente o gênero do paciente (se masculino trate no masculino, se feminino trate no feminino), nunca utilize barras como "o(a)".'
+        userInstruction
       );
       let cleanResponse = response.trim();
       if (patient?.sexo === 'M') {
@@ -524,6 +641,7 @@ DIRETRIZES OBRIGATÓRIAS:
     runAiExameFisico,
     runAiDiagnostico,
     runAiConduta,
+    runAiGerarCondutas,
     runAiMelhorarCondutas,
     runAiOrientacoes,
     runAiPassagemPlantao,

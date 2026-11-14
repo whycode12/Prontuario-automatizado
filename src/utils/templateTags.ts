@@ -251,7 +251,19 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{CONDUTAS_UNIDADE\}\}/gi, rawUnitMeds.join(', ') || condutas || 'Sintomáticos');
   output = output.replace(/\{\{CONDUTAS_FEITAS\}\}/gi, rawUnitMeds.join(', ') || 'Sintomáticos');
   output = output.replace(/\{\{MEDS_UNIDADE\}\}/gi, medsUnidadeLinha);
-  output = output.replace(/\{\{MEDICACOES_UNIDADE\}\}/gi, medsUnidadeText);
+
+  const hasUnitMeds = rawUnitMeds.length > 0 && rawUnitMeds.some((m) => m && m.trim().length > 0);
+  if (!hasUnitMeds) {
+    output = output.replace(
+      /(?:(?:\r?\n)*[ \t]*[-—_]{3,}[ \t]*)?(?:\r?\n)+[ \t]*#?[ \t]*PRESCRIÇÃO INTERNA:[ \t]*(?:\r?\n)+[ \t]*\{\{(MEDICACOES_UNIDADE|PRESCRICAO_INTERNA)\}\}/gi,
+      ''
+    );
+    output = output.replace(/\{\{(MEDICACOES_UNIDADE|PRESCRICAO_INTERNA)\}\}/gi, '');
+  } else {
+    output = output.replace(/\{\{MEDICACOES_UNIDADE\}\}/gi, medsUnidadeText);
+    output = output.replace(/\{\{PRESCRICAO_INTERNA\}\}/gi, medsUnidadeText);
+  }
+
   output = output.replace(/\{\{MEDS_CASA\}\}/gi, medsCasaLinha);
   output = output.replace(/\{\{MEDICACOES_CASA\}\}/gi, medsCasaText);
   output = output.replace(/\{\{EXAMES_SOLICITADOS\}\}/gi, templateStr.includes('=== DADOS') ? examesSolicitadosLinha : examesSolicitados);

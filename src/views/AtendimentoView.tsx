@@ -10,6 +10,8 @@ import {
   X,
   Pill,
   Clock,
+  Copy,
+  FileText,
 } from 'lucide-react';
 import type {
   PatientData,
@@ -19,6 +21,7 @@ import type {
   ObservationData,
   SystemTemplates,
   SystemPrompts,
+  FinalDocuments,
 } from '../types';
 import { UndoableTextarea } from '../components/UndoableTextarea';
 import { AIActionButton } from '../components/AIActionButton';
@@ -27,6 +30,9 @@ import { AIDrawer } from '../components/AIDrawer';
 import { MedicationSearchDropdown } from '../components/MedicationSearchDropdown';
 import { appendMedicationToPrescription } from '../services/receituarioService';
 import { parseHppText } from '../data/defaults';
+import { DEFAULT_GERAR_CONDUTAS_PROMPT } from '../hooks/useAiWorkflow';
+import { buildDocument, type CompilableDocType } from '../utils/documentCompiler';
+import type { TagContextData } from '../utils/templateTags';
 
 function parseIdadeParts(idadeStr?: string, anosProp?: string, mesesProp?: string): { anos: string; meses: string } {
   if (anosProp !== undefined && mesesProp !== undefined) {
@@ -111,8 +117,17 @@ interface AtendimentoViewProps {
   runAiExameFisico: () => void;
   runAiDiagnostico: () => void;
   runAiConduta: () => void;
+  runAiGerarCondutas?: () => void;
   runAiMelhorarCondutas?: () => void;
   runAiOrientacoes?: () => void;
+  runAiEncaminhamento?: (customInstruction?: string) => void;
+  documents?: FinalDocuments;
+  setDocuments?: React.Dispatch<React.SetStateAction<FinalDocuments>>;
+  compileSingleDocument?: (
+    docType: CompilableDocType,
+    customReplacements?: Record<string, string>
+  ) => void;
+  tagContextData?: TagContextData;
   showToast: (msg: string) => void;
   hideAiBoxes?: boolean;
 }
@@ -152,6 +167,12 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   runAiExameFisico,
   runAiDiagnostico,
   runAiConduta,
+  runAiGerarCondutas,
+  runAiEncaminhamento,
+  documents,
+  setDocuments,
+  compileSingleDocument,
+  tagContextData,
   showToast,
   hideAiBoxes = false,
 }) => {
@@ -294,6 +315,102 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
       setCondutas(prevCondutas);
       setPrevCondutas(current);
     }
+  };
+
+  const [activeDocDrawer, setActiveDocDrawer] = React.useState<'atestado' | 'relatorio' | null>(null);
+  const [diasAtestado, setDiasAtestado] = React.useState<string>(() => {
+    const raw = aiResults?.medicalLeaveDays || '';
+    const m = String(raw).match(/\d+/);
+    const n = m ? parseInt(m[0], 10) : 1;
+    return n <= 9 ? `0${n}` : String(n);
+  });
+  const [incluirCid, setIncluirCid] = React.useState<boolean>(true);
+  const [relatorioCustomInstruction, setRelatorioCustomInstruction] = React.useState<string>('');
+  const [copiedDoc, setCopiedDoc] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (aiResults?.medicalLeaveDays) {
+      const m = String(aiResults.medicalLeaveDays).match(/\d+/);
+      if (m) {
+        const n = parseInt(m[0], 10);
+        setDiasAtestado(n <= 9 ? `0${n}` : String(n));
+      }
+    }
+  }, [aiResults?.medicalLeaveDays]);
+
+  const copyToClipboard = (text: string, id: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedDoc(id);
+    setTimeout(() => setCopiedDoc(null), 1800);
+  };
+
+  const handleCompileAtestado = () => {
+    if (compileSingleDocument) {
+      const n = parseInt(diasAtestado, 10) || 1;
+      const formatted = n <= 9 ? `0${n}` : String(n);
+      compileSingleDocument('atestado', {
+        DIAS: formatted,
+        INCLUIR_CID: incluirCid ? 'true' : 'false'
+      });
+    }
+  };
+
+  const handleCompileRelatorio = () => {
+    if (compileSingleDocument) {
+      compileSingleDocument('encaminhamento');
+    }
+  };
+
+  const handleRunAiRelatorio = () => {
+    if (runAiEncaminhamento) {
+      runAiEncaminhamento(relatorioCustomInstruction);
+    }
+  };
+
+  const handleCopyProntuario = () => {
+    let text = documents?.prontuario;
+    if (!text && tagContextData) {
+      text = buildDocument('prontuario', templates, tagContextData);
+      if (setDocuments) setDocuments((prev) => ({ ...prev, prontuario: text }));
+    }
+    copyToClipboard(text || '', 'prontuario');
+  };
+
+  const handleCopyReceita = () => {
+    let text = documents?.receitaDomiciliar;
+    if (!text && tagContextData) {
+      text = buildDocument('receitaDomiciliar', templates, tagContextData);
+      if (setDocuments) setDocuments((prev) => ({ ...prev, receitaDomiciliar: text }));
+    }
+    copyToClipboard(text || '', 'receita');
+  };
+
+  const handleCopyAtestado = () => {
+    let text = documents?.atestado;
+    if (!text && tagContextData) {
+      const n = parseInt(diasAtestado, 10) || 1;
+      const formatted = n <= 9 ? `0${n}` : String(n);
+      text = buildDocument('atestado', templates, {
+        ...tagContextData,
+        customReplacements: {
+          ...tagContextData.customReplacements,
+          DIAS: formatted,
+          INCLUIR_CID: incluirCid ? 'true' : 'false'
+        }
+      });
+      if (setDocuments) setDocuments((prev) => ({ ...prev, atestado: text }));
+    }
+    copyToClipboard(text || '', 'atestado');
+  };
+
+  const handleCopyRelatorio = () => {
+    let text = documents?.encaminhamento;
+    if (!text && tagContextData) {
+      text = buildDocument('encaminhamento', templates, tagContextData);
+      if (setDocuments) setDocuments((prev) => ({ ...prev, encaminhamento: text }));
+    }
+    copyToClipboard(text || '', 'relatorio');
   };
 
   const idadeParts = useMemo(() => {
@@ -917,7 +1034,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadDiagnostico')}
             />
             <AIActionButton
-              label="Gerar Condutas, Prescrições e Orientações"
+              label="Gerar Prescrições e Orientações"
               actionIcon={<Pill className="w-4 h-4" />}
               onExecute={runAiConduta}
               isLoading={!!aiLoading.conduta}
@@ -1238,36 +1355,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
       </section>
 
-      {/* CONDUTAS */}
-      <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-            CONDUTAS
-          </h2>
-        </div>
-
-        <UndoableTextarea
-          value={condutas}
-          onChange={setCondutas}
-          rows={4}
-        />
-
-        {/* Sugestão da IA para Condutas com engavetar */}
-        {!hideAiBoxes && aiResults.condutasSuggestion && condutas !== aiResults.condutasSuggestion && (
-          <AIDrawer
-            title="Sugestão da IA para Condutas:"
-            onImplement={handleImplementCondutas}
-            onUndo={handleUndoCondutas}
-            canUndo={prevCondutas !== null}
-            triggerUpdate={aiResults.condutasSuggestion}
-          >
-            <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
-              {aiResults.condutasSuggestion}
-            </p>
-          </AIDrawer>
-        )}
-      </section>
-
       {/* ORIENTAÇÕES E SINAIS DE ALARME */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
@@ -1319,6 +1406,264 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               rows={3}
             />
           </div>
+        </div>
+      </section>
+
+      {/* DOCUMENTOS RÁPIDOS */}
+      <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-xs space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-slate-500 dark:text-neutral-400" />
+            <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+              DOCUMENTOS RÁPIDOS
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveDocDrawer(activeDocDrawer === 'atestado' ? null : 'atestado')}
+              className={`h-7 px-2.5 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 shadow-2xs ${
+                activeDocDrawer === 'atestado'
+                  ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848]'
+                  : 'bg-white dark:bg-[#202020] border-slate-200 dark:border-[#333] text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-[#262626]'
+              }`}
+            >
+              <span>GERAR ATESTADO</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDocDrawer(activeDocDrawer === 'relatorio' ? null : 'relatorio')}
+              className={`h-7 px-2.5 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 shadow-2xs ${
+                activeDocDrawer === 'relatorio'
+                  ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848]'
+                  : 'bg-white dark:bg-[#202020] border-slate-200 dark:border-[#333] text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-[#262626]'
+              }`}
+            >
+              <span>GERAR RELATÓRIO</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Gaveta Atestado */}
+        {activeDocDrawer === 'atestado' && (
+          <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-navy-900/60 space-y-3 animate-in fade-in duration-150">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200/60 dark:border-slate-800">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Dias */}
+                <div className="flex items-center gap-1 bg-white dark:bg-[#202020] border border-slate-200 dark:border-[#383838] px-2 py-0.5 rounded-md text-xs">
+                  <span className="text-slate-500 dark:text-neutral-400 font-medium">Dias:</span>
+                  <input
+                    type="text"
+                    value={diasAtestado}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, '').slice(0, 2);
+                      setDiasAtestado(clean);
+                    }}
+                    onBlur={() => {
+                      const n = parseInt(diasAtestado, 10);
+                      if (n > 0) setDiasAtestado(n <= 9 ? `0${n}` : String(n));
+                      else setDiasAtestado('01');
+                    }}
+                    className="w-8 text-center font-bold text-slate-800 dark:text-ice-100 bg-transparent focus:outline-hidden"
+                  />
+                </div>
+
+                {/* Toggle CID */}
+                <button
+                  type="button"
+                  onClick={() => setIncluirCid(!incluirCid)}
+                  className={`h-7 px-2 rounded-md text-xs font-medium border transition-colors ${
+                    incluirCid
+                      ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848]'
+                      : 'bg-white dark:bg-[#202020] border-slate-200 dark:border-[#333] text-slate-600 dark:text-neutral-400 hover:bg-[#f5f5f5] dark:hover:bg-[#262626]'
+                  }`}
+                >
+                  <span>{incluirCid ? 'Com CID' : 'Sem CID'}</span>
+                </button>
+
+                {/* CPF */}
+                <div className="flex items-center gap-1 bg-white dark:bg-[#202020] border border-slate-200 dark:border-[#383838] px-2 py-0.5 rounded-md text-xs">
+                  <span className="text-slate-500 dark:text-neutral-400 font-medium">CPF:</span>
+                  <input
+                    type="text"
+                    value={patient.cpf || ''}
+                    onChange={(e) => setPatient({ ...patient, cpf: e.target.value })}
+                    className="w-24 text-center text-xs text-slate-800 dark:text-ice-100 bg-transparent focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleCompileAtestado}
+                  className="h-7 px-2.5 text-xs font-medium text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-md transition-colors flex items-center gap-1 shadow-2xs"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Compilar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyAtestado}
+                  className="h-7 px-2.5 text-xs font-medium text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-md transition-colors flex items-center gap-1 shadow-2xs"
+                >
+                  {copiedDoc === 'atestado' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>Copiar</span>
+                </button>
+              </div>
+            </div>
+
+            <UndoableTextarea
+              value={documents?.atestado || ''}
+              onChange={(val) => setDocuments && setDocuments((prev) => ({ ...prev, atestado: val }))}
+              rows={6}
+              className="font-mono text-xs leading-relaxed"
+            />
+          </div>
+        )}
+
+        {/* Gaveta Relatório */}
+        {activeDocDrawer === 'relatorio' && (
+          <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-navy-900/60 space-y-3 animate-in fade-in duration-150">
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold text-slate-600 dark:text-neutral-400 uppercase tracking-wide">
+                Delimitação / Instrução Específica para a IA:
+              </span>
+              <textarea
+                value={relatorioCustomInstruction}
+                onChange={(e) => setRelatorioCustomInstruction(e.target.value)}
+                rows={2}
+                placeholder=""
+                className="w-full text-xs p-2.5 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-navy-950 text-slate-800 dark:text-neutral-200 focus:outline-hidden focus:border-slate-400 dark:focus:border-slate-600 transition-colors"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-200/60 dark:border-slate-800">
+              <span className="text-[11px] font-semibold text-slate-600 dark:text-neutral-400 uppercase tracking-wide">
+                Texto do Relatório:
+              </span>
+              <div className="flex items-center gap-1.5">
+                {runAiEncaminhamento && (
+                  <button
+                    type="button"
+                    onClick={handleRunAiRelatorio}
+                    disabled={!!aiLoading.encaminhamento}
+                    className="h-7 px-2.5 text-xs font-semibold text-white bg-slate-900 dark:bg-[#303030] hover:bg-slate-800 dark:hover:bg-[#383838] rounded-md transition-colors flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+                  >
+                    <span>{aiLoading.encaminhamento ? 'Gerando...' : 'Gerar com IA'}</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCompileRelatorio}
+                  className="h-7 px-2.5 text-xs font-medium text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-md transition-colors flex items-center gap-1 shadow-2xs"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Compilar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyRelatorio}
+                  className="h-7 px-2.5 text-xs font-medium text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-md transition-colors flex items-center gap-1 shadow-2xs"
+                >
+                  {copiedDoc === 'relatorio' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>Copiar</span>
+                </button>
+              </div>
+            </div>
+
+            <UndoableTextarea
+              value={documents?.encaminhamento || ''}
+              onChange={(val) => setDocuments && setDocuments((prev) => ({ ...prev, encaminhamento: val }))}
+              rows={6}
+              className="font-mono text-xs leading-relaxed"
+            />
+          </div>
+        )}
+      </section>
+
+      {/* CONDUTAS */}
+      <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-1">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+            CONDUTAS
+          </h2>
+          {runAiGerarCondutas && (
+            <AIActionButton
+              label="Gerar Condutas com IA"
+              onExecute={runAiGerarCondutas}
+              isLoading={!!aiLoading.gerarCondutas}
+              promptKey="gerarCondutas"
+              currentPrompt={prompts.gerarCondutas || DEFAULT_GERAR_CONDUTAS_PROMPT}
+              onSavePrompt={(p) => handleSavePrompt('gerarCondutas', p)}
+              onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('gerarCondutas', p) : undefined}
+              onResetPrompt={() => handleResetSinglePrompt('gerarCondutas')}
+              contextPayload={getCasePayload('payloadConduta')}
+              payloadTemplate={getPayloadTemplate('payloadConduta')}
+              onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConduta', t)}
+              onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConduta', t) : undefined}
+              onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConduta')}
+            />
+          )}
+        </div>
+
+        <UndoableTextarea
+          value={condutas}
+          onChange={setCondutas}
+          rows={4}
+        />
+
+        {/* Sugestão da IA para Condutas com engavetar */}
+        {!hideAiBoxes && aiResults.condutasSuggestion && condutas !== aiResults.condutasSuggestion && (
+          <AIDrawer
+            title="Sugestão da IA para Condutas:"
+            onImplement={handleImplementCondutas}
+            onUndo={handleUndoCondutas}
+            canUndo={prevCondutas !== null}
+            triggerUpdate={aiResults.condutasSuggestion}
+          >
+            <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
+              {aiResults.condutasSuggestion}
+            </p>
+          </AIDrawer>
+        )}
+
+        {/* Botões de Cópia Rápida */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleCopyProntuario}
+            className="h-8 px-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+          >
+            {copiedDoc === 'prontuario' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+            <span>COPIAR PRONTUÁRIO</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyReceita}
+            className="h-8 px-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+          >
+            {copiedDoc === 'receita' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+            <span>COPIAR RECEITA</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyAtestado}
+            className="h-8 px-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+          >
+            {copiedDoc === 'atestado' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+            <span>COPIAR ATESTADO</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyRelatorio}
+            className="h-8 px-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+          >
+            {copiedDoc === 'relatorio' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+            <span>COPIAR RELATÓRIO</span>
+          </button>
         </div>
       </section>
 
