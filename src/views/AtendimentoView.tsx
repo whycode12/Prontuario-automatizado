@@ -1635,38 +1635,77 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         )}
 
         {/* Botões de Cópia Rápida */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center gap-2">
+        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* Prontuário */}
           <button
             type="button"
             onClick={handleCopyProntuario}
-            className="h-8 px-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+            className={`h-8 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+              copiedDoc === 'prontuario'
+                ? 'bg-emerald-500/[0.04] dark:bg-emerald-400/[0.06] text-emerald-700/90 dark:text-emerald-300/90 border-emerald-500/25 dark:border-emerald-500/20 font-semibold ring-1 ring-emerald-500/20'
+                : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
+            }`}
           >
-            {copiedDoc === 'prontuario' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-            <span>COPIAR PRONTUÁRIO</span>
+            {copiedDoc === 'prontuario' ? (
+              <Check className="w-3.5 h-3.5 shrink-0 text-emerald-600/80 dark:text-emerald-400/80" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-neutral-400" />
+            )}
+            <span className="truncate">Copiar Prontuário</span>
           </button>
+
+          {/* Receita */}
           <button
             type="button"
             onClick={handleCopyReceita}
-            className="h-8 px-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+            className={`h-8 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+              copiedDoc === 'receita'
+                ? 'bg-emerald-500/[0.04] dark:bg-emerald-400/[0.06] text-emerald-700/90 dark:text-emerald-300/90 border-emerald-500/25 dark:border-emerald-500/20 font-semibold ring-1 ring-emerald-500/20'
+                : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
+            }`}
           >
-            {copiedDoc === 'receita' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-            <span>COPIAR RECEITA</span>
+            {copiedDoc === 'receita' ? (
+              <Check className="w-3.5 h-3.5 shrink-0 text-emerald-600/80 dark:text-emerald-400/80" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-neutral-400" />
+            )}
+            <span className="truncate">Copiar Receita</span>
           </button>
+
+          {/* Atestado */}
           <button
             type="button"
             onClick={handleCopyAtestado}
-            className="h-8 px-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+            className={`h-8 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+              copiedDoc === 'atestado'
+                ? 'bg-emerald-500/[0.04] dark:bg-emerald-400/[0.06] text-emerald-700/90 dark:text-emerald-300/90 border-emerald-500/25 dark:border-emerald-500/20 font-semibold ring-1 ring-emerald-500/20'
+                : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
+            }`}
           >
-            {copiedDoc === 'atestado' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-            <span>COPIAR ATESTADO</span>
+            {copiedDoc === 'atestado' ? (
+              <Check className="w-3.5 h-3.5 shrink-0 text-emerald-600/80 dark:text-emerald-400/80" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-neutral-400" />
+            )}
+            <span className="truncate">Copiar Atestado</span>
           </button>
+
+          {/* Relatório */}
           <button
             type="button"
             onClick={handleCopyRelatorio}
-            className="h-8 px-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-200 bg-white dark:bg-[#202020] hover:bg-slate-50 dark:hover:bg-[#282828] border border-slate-200 dark:border-[#383838] rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+            className={`h-8 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+              copiedDoc === 'relatorio'
+                ? 'bg-emerald-500/[0.04] dark:bg-emerald-400/[0.06] text-emerald-700/90 dark:text-emerald-300/90 border-emerald-500/25 dark:border-emerald-500/20 font-semibold ring-1 ring-emerald-500/20'
+                : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
+            }`}
           >
-            {copiedDoc === 'relatorio' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-            <span>COPIAR RELATÓRIO</span>
+            {copiedDoc === 'relatorio' ? (
+              <Check className="w-3.5 h-3.5 shrink-0 text-emerald-600/80 dark:text-emerald-400/80" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-neutral-400" />
+            )}
+            <span className="truncate">Copiar Relatório</span>
           </button>
         </div>
       </section>
