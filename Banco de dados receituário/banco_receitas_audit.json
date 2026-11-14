@@ -1,0 +1,36 @@
+{
+  "status": "SUCESSO_100_PORCENTO",
+  "data_auditoria": "2026-11-14T00:12:39.246883",
+  "metricas": {
+    "total_medicamentos": 386,
+    "total_adultos": 384,
+    "total_pediatricos": 137,
+    "total_categorias": 86,
+    "pesos_pediatricos_testados": 36,
+    "doses_pediatricas_totais_armazenadas": 3815
+  },
+  "testes_de_fidelidade": [
+    {
+      "teste": "Nitrofurantoína Adulto Texto Verbatim",
+      "medicamento_id": "5740fe02-d18a-40bf-a32a-63e5d59e3a9f",
+      "sucesso": true,
+      "hash_api": "70ca6154a72d57aae74ad5bcf69937b2c6a8e03f12f644726baeb5a6d4b66c22",
+      "hash_db": "70ca6154a72d57aae74ad5bcf69937b2c6a8e03f12f644726baeb5a6d4b66c22"
+    },
+    {
+      "teste": "Nitrofurantoína Pediátrico 20kg (Foto do Usuário) Verbatim",
+      "medicamento_id": "5740fe02-d18a-40bf-a32a-63e5d59e3a9f",
+      "sucesso": true,
+      "hash_api": "e5006775c09360d22e1c5872e8be52d6fcb10257b21a2073440a466a6a6ef00d",
+      "hash_db": "e5006775c09360d22e1c5872e8be52d6fcb10257b21a2073440a466a6a6ef00d",
+      "texto_db": "Nitrofurantoína 5mg/mL (HANTINA®) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2 frascos\nTomar 5mL, de 6/6 horas, por 7 dias.\nSugestão de horários: 6h, 12h, 18h e 24h."
+    },
+    {
+      "teste": "Dipirona Adulto Texto Verbatim",
+      "medicamento_id": "95776e3b-2925-484f-a200-8bb66ca980b1",
+      "sucesso": true,
+      "hash_api": "47679fe91eb29175c27c778265a11635cc313506d0643413cfbd5d337e15b8ac",
+      "hash_db": "47679fe91eb29175c27c778265a11635cc313506d0643413cfbd5d337e15b8ac"
+    }
+  ]
+}

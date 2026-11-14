@@ -24,6 +24,7 @@ import { UndoableTextarea } from '../components/UndoableTextarea';
 import { AIActionButton } from '../components/AIActionButton';
 import { TemplateEditorButton } from '../components/TemplateEditorButton';
 import { AIDrawer } from '../components/AIDrawer';
+import { MedicationSearchDropdown } from '../components/MedicationSearchDropdown';
 import { parseHppText } from '../data/defaults';
 
 function parseIdadeParts(idadeStr?: string, anosProp?: string, mesesProp?: string): { anos: string; meses: string } {
@@ -1158,9 +1159,22 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         {/* Medications suggested: Unit vs Home */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/40 dark:bg-navy-900/60 space-y-2">
-            <span className="font-bold text-slate-800 dark:text-ice-100 text-xs block uppercase tracking-wide">
-              PRESCRIÇÃO INTERNA
-            </span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <span className="font-bold text-slate-800 dark:text-ice-100 text-xs block uppercase tracking-wide">
+                PRESCRIÇÃO INTERNA
+              </span>
+              <MedicationSearchDropdown
+                boxType="interna"
+                peso={patient.peso}
+                onSelectMedication={(val) => {
+                  const current = Array.isArray(aiResults.unitMedications)
+                    ? aiResults.unitMedications.join('\n\n').trim()
+                    : (aiResults.unitMedications || '').trim();
+                  const updated = current ? `${current}\n\n${val}` : val;
+                  setAiResults({ ...aiResults, unitMedications: [updated] });
+                }}
+              />
+            </div>
             <UndoableTextarea
               value={Array.isArray(aiResults.unitMedications) ? aiResults.unitMedications.join('\n\n') : (aiResults.unitMedications || '')}
               onChange={(val) =>
@@ -1171,9 +1185,22 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           </div>
 
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-3 bg-slate-50/40 dark:bg-navy-900/60 space-y-2">
-            <span className="font-bold text-slate-800 dark:text-ice-100 text-xs block uppercase tracking-wide">
-              PRESCRIÇÃO DOMICILIAR
-            </span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <span className="font-bold text-slate-800 dark:text-ice-100 text-xs block uppercase tracking-wide">
+                PRESCRIÇÃO DOMICILIAR
+              </span>
+              <MedicationSearchDropdown
+                boxType="domiciliar"
+                peso={patient.peso}
+                onSelectMedication={(val) => {
+                  const current = Array.isArray(aiResults.homeMedications)
+                    ? aiResults.homeMedications.join('\n\n').trim()
+                    : (aiResults.homeMedications || '').trim();
+                  const updated = current ? `${current}\n\n${val}` : val;
+                  setAiResults({ ...aiResults, homeMedications: [updated] });
+                }}
+              />
+            </div>
             <UndoableTextarea
               value={Array.isArray(aiResults.homeMedications) ? aiResults.homeMedications.join('\n\n') : (aiResults.homeMedications || '')}
               onChange={(val) =>
