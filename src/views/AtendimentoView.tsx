@@ -372,7 +372,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     let text = documents?.prontuario;
     if (!text && tagContextData) {
       text = buildDocument('prontuario', templates, tagContextData);
-      if (setDocuments) setDocuments((prev) => ({ ...prev, prontuario: text }));
+      if (setDocuments) setDocuments((prev) => ({ ...prev, prontuario: text || '' }));
     }
     copyToClipboard(text || '', 'prontuario');
   };
@@ -381,7 +381,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     let text = documents?.receitaDomiciliar;
     if (!text && tagContextData) {
       text = buildDocument('receitaDomiciliar', templates, tagContextData);
-      if (setDocuments) setDocuments((prev) => ({ ...prev, receitaDomiciliar: text }));
+      if (setDocuments) setDocuments((prev) => ({ ...prev, receitaDomiciliar: text || '' }));
     }
     copyToClipboard(text || '', 'receita');
   };
@@ -399,7 +399,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           INCLUIR_CID: incluirCid ? 'true' : 'false'
         }
       });
-      if (setDocuments) setDocuments((prev) => ({ ...prev, atestado: text }));
+      if (setDocuments) setDocuments((prev) => ({ ...prev, atestado: text || '' }));
     }
     copyToClipboard(text || '', 'atestado');
   };
@@ -408,7 +408,7 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     let text = documents?.encaminhamento;
     if (!text && tagContextData) {
       text = buildDocument('encaminhamento', templates, tagContextData);
-      if (setDocuments) setDocuments((prev) => ({ ...prev, encaminhamento: text }));
+      if (setDocuments) setDocuments((prev) => ({ ...prev, encaminhamento: text || '' }));
     }
     copyToClipboard(text || '', 'relatorio');
   };

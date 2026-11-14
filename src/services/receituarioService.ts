@@ -1,4 +1,4 @@
-import type { BancoReceitasJSON, PrescricaoOption } from '../types/receituario';
+import type { BancoReceitasJSON, PrescricaoOption, Medicamento } from '../types/receituario';
 
 let db: BancoReceitasJSON | null = null;
 let loadPromise: Promise<BancoReceitasJSON> | null = null;
