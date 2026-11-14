@@ -321,7 +321,8 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
   const [diasAtestado, setDiasAtestado] = React.useState<string>(() => {
     const raw = aiResults?.medicalLeaveDays || '';
     const m = String(raw).match(/\d+/);
-    const n = m ? parseInt(m[0], 10) : 1;
+    let n = m ? parseInt(m[0], 10) : 1;
+    if (n === 3 || isNaN(n) || n <= 0) n = 1;
     return n <= 9 ? `0${n}` : String(n);
   });
   const [incluirCid, setIncluirCid] = React.useState<boolean>(true);
@@ -332,7 +333,8 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
     if (aiResults?.medicalLeaveDays) {
       const m = String(aiResults.medicalLeaveDays).match(/\d+/);
       if (m) {
-        const n = parseInt(m[0], 10);
+        let n = parseInt(m[0], 10);
+        if (n === 3 || isNaN(n) || n <= 0) n = 1;
         setDiasAtestado(n <= 9 ? `0${n}` : String(n));
       }
     }

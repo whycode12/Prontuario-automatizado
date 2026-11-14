@@ -38,7 +38,7 @@ PADRÃO E ESTRUTURA DOS TÓPICOS:
    - Exemplo: "- Oriento retorno imediato se surgimento de exantema, dificuldade respiratória, trismo ou incapacidade de deglutir saliva."
 5. Documentos emitidos (leia se foi fornecido atestado médico ou relatório):
    - Se houver relatório/encaminhamento gerado ou indicado: "- Fornecido relatório para continuidade do acompanhamento em PSF."
-   - Se houver atestado médico gerado ou indicado: "- Fornecido atestado médico de 01 dias." (com os dias informados, ex: 01 dias, 02 dias).
+   - Se houver atestado médico gerado ou indicado: "- Fornecido atestado médico de 01 dias." (o padrão em pronto atendimento é sempre 01 dia, nunca 03).
 6. Desfecho clínico (OBRIGATORIAMENTE o último tópico):
    - Se alta médica: "- Alta médica com orientações."
    - Se em observação: "- Mantenho em observação, reavaliar após resultados de exames." (ou reavaliar após término da medicação).
@@ -273,7 +273,7 @@ export function useAiWorkflow({
   "encaminhamentoUbs": true,
   "motivoEncaminhamento": "Seguimento ambulatorial na UBS de referência.",
   "atestadoNecessario": true,
-  "diasAtestado": "1 dia",
+  "diasAtestado": "01 dia",
   "motivoAtestado": "Repouso durante fase álgica aguda.",
   "orientacoesProntuario": "Oriento hidratação oral vigorosa e repouso relativo durante a fase sintomática.",
   "sinaisAlarmeProntuario": "Oriento retorno imediato ao pronto atendimento se febre persistente, vômitos refratários ou piora da dor.",
@@ -289,7 +289,8 @@ DIRETRIZES OBRIGATÓRIAS:
 3. ORIENTAÇÕES E SINAIS DE ALARME:
    - Personalize estritamente adaptado ao agravo e à pessoa consultada (faixa etária e contexto do paciente). Jamais utilize orientações genéricas desconexas.
    - OBRIGATÓRIO: Em 'orientacoesProntuario' e 'sinaisAlarmeProntuario' para o prontuário, comece SEMPRE com a palavra 'Oriento...'. Seja conciso e objetivo.
-4. SEGURANÇA E SUS: Checagem estrita de alergias conforme a HPP, avisos para idoso frágil/nefropatas em 'disclaimers', profilaxia de tétano/raiva se aplicável em 'alertaProfilaxiaVacinal'. ${
+4. ATESTADO MÉDICO: O padrão de dias de atestado em Pronto Atendimento / UPA é RIGOROSAMENTE 01 dia ("01 dia"). NUNCA sugira 3 dias nem prazos estendidos; em UPA o padrão é estritamente 01 dia para o repouso imediato.
+5. SEGURANÇA E SUS: Checagem estrita de alergias conforme a HPP, avisos para idoso frágil/nefropatas em 'disclaimers', profilaxia de tétano/raiva se aplicável em 'alertaProfilaxiaVacinal'. ${
         susFilter ? 'PRIORIZE FORTEMENTE FÁRMACOS DA RENAME / FARMÁCIA BÁSICA DO SUS.' : ''
       }`;
 
@@ -364,8 +365,8 @@ DIRETRIZES OBRIGATÓRIAS:
         medicalLeaveDays: (() => {
           const raw = parsed.diasAtestado || '';
           const m = String(raw).match(/\d+/);
-          if (!m) return raw;
-          const n = parseInt(m[0], 10);
+          let n = m ? parseInt(m[0], 10) : 1;
+          if (n === 3 || isNaN(n) || n <= 0) n = 1;
           const formattedN = n <= 9 ? `0${n}` : String(n);
           const p = n === 1 ? 'dia' : 'dias';
           return `${formattedN} ${p}`;
@@ -436,7 +437,7 @@ ${outcomeText}`;
         model,
         activePrompt,
         fullPayload,
-        'Gere a síntese final de condutas em tópicos objetivos com hífen (- ), cobrindo estritamente as medicações feitas e prescritas, exames pedidos, orientações dadas, documentos emitidos e o desfecho do paciente como último tópico.'
+        'Gere a síntese final de condutas em tópicos objetivos com hífen (- ), cobrindo estritamente as medicações feitas e prescritas, exames pedidos, orientações dadas, documentos emitidos (se houver atestado médico, o padrão da unidade é estritamente 01 dias) e o desfecho do paciente como último tópico.'
       );
 
       const cleaned = response
