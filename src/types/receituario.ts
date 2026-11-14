@@ -89,4 +89,5 @@ export interface PrescricaoOption {
   badge?: string;
   subtitle?: string;
   fullText: string;
+  route: string;
 }

@@ -54,6 +54,150 @@ function detectFormType(presentation?: string | null, posology?: string | null):
   return 'Adulto';
 }
 
+const ROUTE_HEADER_REGEX =
+  /^[ \t]*(USO\s+(?:ORAL|INTRAMUSCULAR|ENDOVENOSO|INTRAVENOSO|SUBCUT[AÁÂ]NEO|SUBLINGUAL|T[OÓ]PICO|INALAT[OÓ]RIO|OFT[AÁ]LMICO|OTOL[OÓ]GICO|NASAL|RETAL|VAGINAL|DERMATOL[OÓ]GICO|OCULAR|PARENTERAL|INJET[AÁ]VEL))\s*:?/gim;
+
+export function normalizeRouteHeader(route?: string | null): string {
+  if (!route) return 'USO ORAL:';
+  const rUpper = route.trim().toUpperCase();
+
+  const mapping: Record<string, string> = {
+    VO: 'USO ORAL:',
+    IM: 'USO INTRAMUSCULAR:',
+    EV: 'USO ENDOVENOSO:',
+    IV: 'USO ENDOVENOSO:',
+    SC: 'USO SUBCUTÂNEO:',
+    TOP: 'USO TÓPICO:',
+    VI: 'USO INALATÓRIO:',
+    VR: 'USO RETAL:',
+    NASAL: 'USO NASAL:',
+    TÓPICO: 'USO TÓPICO:',
+    TOPICO: 'USO TÓPICO:',
+    ORAL: 'USO ORAL:',
+    INALATÓRIO: 'USO INALATÓRIO:',
+    INALATORIO: 'USO INALATÓRIO:',
+    OFTÁLMICO: 'USO OFTÁLMICO:',
+    OFTALMICO: 'USO OFTÁLMICO:',
+    OTOLÓGICO: 'USO OTOLÓGICO:',
+    OTOLOGICO: 'USO OTOLÓGICO:',
+    RETAL: 'USO RETAL:',
+    VAGINAL: 'USO VAGINAL:',
+    SUBLINGUAL: 'USO SUBLINGUAL:',
+    INJETÁVEL: 'USO INJETÁVEL:',
+    INJETAVEL: 'USO INJETÁVEL:'
+  };
+
+  if (mapping[rUpper]) return mapping[rUpper];
+
+  if (/^USO\s+/i.test(rUpper)) {
+    let clean = rUpper.replace(/[:\s]+$/, '');
+    clean = clean.replace(/\bTOPICO\b/, 'TÓPICO');
+    clean = clean.replace(/\bINALATORIO\b/, 'INALATÓRIO');
+    clean = clean.replace(/\bOFTALMICO\b/, 'OFTÁLMICO');
+    clean = clean.replace(/\bOTOLOGICO\b/, 'OTOLÓGICO');
+    clean = clean.replace(/\bSUBCUTANEO\b/, 'SUBCUTÂNEO');
+    clean = clean.replace(/\bINJETAVEL\b/, 'INJETÁVEL');
+    return clean + ':';
+  }
+
+  return `USO ${rUpper}:`;
+}
+
+function splitItems(sectionBody: string): string[] {
+  const body = sectionBody.trim();
+  if (!body) return [];
+
+  const itemRegex = /^[ \t]*(\d+)\.[ \t]+/gm;
+  const matches = [...body.matchAll(itemRegex)];
+
+  if (matches.length > 0) {
+    const items: string[] = [];
+    for (let i = 0; i < matches.length; i++) {
+      const start = matches[i].index!;
+      const end = i + 1 < matches.length ? matches[i + 1].index! : body.length;
+      const text = body.slice(start, end).trim();
+      const clean = text.replace(/^[ \t]*\d+\.[ \t]*/, '').trim();
+      if (clean) items.push(clean);
+    }
+    return items;
+  }
+
+  return body
+    .split(/\n{2,}/)
+    .map((b) => b.replace(/^[ \t]*\d+\.[ \t]*/, '').trim())
+    .filter(Boolean);
+}
+
+function formatSection(header: string, items: string[]): string {
+  if (items.length === 0) return '';
+  const lines: string[] = [header, ''];
+  for (let i = 0; i < items.length; i++) {
+    const cleanItem = items[i].replace(/^[ \t]*\d+\.[ \t]*/, '').trim();
+    lines.push(`${i + 1}. ${cleanItem}`);
+    lines.push('');
+  }
+  return lines.join('\n').trim();
+}
+
+export function appendMedicationToPrescription(
+  currentText: string,
+  newMedText: string,
+  route?: string | null
+): string {
+  const routeHeader = normalizeRouteHeader(route);
+  const cleanMed = newMedText.trim().replace(/^[ \t]*\d+\.[ \t]*/, '').trim();
+  if (!cleanMed) return currentText;
+
+  const text = (currentText || '').trim();
+  if (!text) {
+    return `${routeHeader}\n\n1. ${cleanMed}`;
+  }
+
+  const matches = [...text.matchAll(ROUTE_HEADER_REGEX)];
+  if (matches.length === 0) {
+    return `${text}\n\n${routeHeader}\n\n1. ${cleanMed}`;
+  }
+
+  const sections: { header: string; items: string[] }[] = [];
+  let headerBefore: string | null = null;
+
+  if (matches[0].index! > 0) {
+    const pre = text.slice(0, matches[0].index!).trim();
+    if (pre) headerBefore = pre;
+  }
+
+  let foundTarget = false;
+
+  for (let i = 0; i < matches.length; i++) {
+    const hdr = normalizeRouteHeader(matches[i][1]);
+    const startPos = matches[i].index! + matches[i][0].length;
+    const endPos = i + 1 < matches.length ? matches[i + 1].index! : text.length;
+    const sectionBody = text.slice(startPos, endPos).trim();
+    const items = splitItems(sectionBody);
+
+    if (hdr.toUpperCase() === routeHeader.toUpperCase()) {
+      items.push(cleanMed);
+      foundTarget = true;
+    }
+
+    sections.push({ header: hdr, items });
+  }
+
+  if (!foundTarget) {
+    sections.push({ header: routeHeader, items: [cleanMed] });
+  }
+
+  const resultParts: string[] = [];
+  if (headerBefore) resultParts.push(headerBefore);
+
+  for (const sec of sections) {
+    const secText = formatSection(sec.header, sec.items);
+    if (secText) resultParts.push(secText);
+  }
+
+  return resultParts.join('\n\n');
+}
+
 export function searchPrescricaoInterna(query: string): PrescricaoOption[] {
   if (!db) return [];
   const q = normalize(query);
@@ -89,7 +233,8 @@ export function searchPrescricaoInterna(query: string): PrescricaoOption[] {
         label: firstLine,
         badge: v.adm || 'INTERNA',
         subtitle: secondLine || capitalize(med.categoria),
-        fullText: v.text.trim()
+        fullText: v.text.trim(),
+        route: v.adm || 'VO'
       });
     }
 
@@ -122,6 +267,7 @@ export function searchPrescricaoDomiciliar(
   for (const med of matchedMeds) {
     const hasAdulto = Boolean(med.tem_adulto && med.receita_adulto);
     const hasPed = Boolean(med.tem_pediatrico && med.receita_pediatrica?.tem_pediatrico);
+    const defaultRoute = med.via_administracao_padrao || 'USO ORAL';
 
     let pedText = '';
     let pedApres = med.receita_pediatrica?.apresentacao_padrao || '';
@@ -173,7 +319,8 @@ export function searchPrescricaoDomiciliar(
         label: med.receita_adulto.apresentacao || capitalize(med.nome),
         badge: adultBadge,
         subtitle: med.receita_adulto.posologia || '',
-        fullText: med.receita_adulto.texto_completo.trim()
+        fullText: med.receita_adulto.texto_completo.trim(),
+        route: defaultRoute
       });
 
       if (pedText) {
@@ -182,7 +329,8 @@ export function searchPrescricaoDomiciliar(
           label: pedApres || `${capitalize(med.nome)} (Pediátrico)`,
           badge: pedBadge,
           subtitle: pedPosologia,
-          fullText: pedText.trim()
+          fullText: pedText.trim(),
+          route: defaultRoute
         });
       }
     } else if (hasAdulto && med.receita_adulto) {
@@ -194,7 +342,8 @@ export function searchPrescricaoDomiciliar(
           med.receita_adulto.posologia
         ),
         subtitle: med.receita_adulto.posologia || '',
-        fullText: med.receita_adulto.texto_completo.trim()
+        fullText: med.receita_adulto.texto_completo.trim(),
+        route: defaultRoute
       });
     } else if (hasPed && pedText) {
       results.push({
@@ -202,7 +351,8 @@ export function searchPrescricaoDomiciliar(
         label: pedApres || capitalize(med.nome),
         badge: pedBadge,
         subtitle: pedPosologia,
-        fullText: pedText.trim()
+        fullText: pedText.trim(),
+        route: defaultRoute
       });
     }
 

@@ -25,6 +25,7 @@ import { AIActionButton } from '../components/AIActionButton';
 import { TemplateEditorButton } from '../components/TemplateEditorButton';
 import { AIDrawer } from '../components/AIDrawer';
 import { MedicationSearchDropdown } from '../components/MedicationSearchDropdown';
+import { appendMedicationToPrescription } from '../services/receituarioService';
 import { parseHppText } from '../data/defaults';
 
 function parseIdadeParts(idadeStr?: string, anosProp?: string, mesesProp?: string): { anos: string; meses: string } {
@@ -1166,11 +1167,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               <MedicationSearchDropdown
                 boxType="interna"
                 peso={patient.peso}
-                onSelectMedication={(val) => {
+                onSelectMedication={(opt) => {
                   const current = Array.isArray(aiResults.unitMedications)
                     ? aiResults.unitMedications.join('\n\n').trim()
                     : (aiResults.unitMedications || '').trim();
-                  const updated = current ? `${current}\n\n${val}` : val;
+                  const updated = appendMedicationToPrescription(current, opt.fullText, opt.route);
                   setAiResults({ ...aiResults, unitMedications: [updated] });
                 }}
               />
@@ -1192,11 +1193,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               <MedicationSearchDropdown
                 boxType="domiciliar"
                 peso={patient.peso}
-                onSelectMedication={(val) => {
+                onSelectMedication={(opt) => {
                   const current = Array.isArray(aiResults.homeMedications)
                     ? aiResults.homeMedications.join('\n\n').trim()
                     : (aiResults.homeMedications || '').trim();
-                  const updated = current ? `${current}\n\n${val}` : val;
+                  const updated = appendMedicationToPrescription(current, opt.fullText, opt.route);
                   setAiResults({ ...aiResults, homeMedications: [updated] });
                 }}
               />

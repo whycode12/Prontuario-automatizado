@@ -11,7 +11,7 @@ import type { PrescricaoOption } from '../types/receituario';
 interface MedicationSearchDropdownProps {
   boxType: 'interna' | 'domiciliar';
   peso?: string;
-  onSelectMedication: (fullText: string) => void;
+  onSelectMedication: (option: PrescricaoOption) => void;
 }
 
 export const MedicationSearchDropdown: React.FC<MedicationSearchDropdownProps> = ({
@@ -41,10 +41,6 @@ export const MedicationSearchDropdown: React.FC<MedicationSearchDropdownProps> =
   }, [boxType, query, peso, isDbLoaded]);
 
   useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
-
-  useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
@@ -55,7 +51,7 @@ export const MedicationSearchDropdown: React.FC<MedicationSearchDropdownProps> =
   }, []);
 
   const handleSelect = (option: PrescricaoOption) => {
-    onSelectMedication(option.fullText);
+    onSelectMedication(option);
     setQuery('');
     setIsOpen(false);
   };
@@ -94,6 +90,7 @@ export const MedicationSearchDropdown: React.FC<MedicationSearchDropdownProps> =
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
+            setSelectedIndex(0);
             if (!isOpen) setIsOpen(true);
           }}
           onFocus={() => {
