@@ -259,7 +259,7 @@ export function useAiWorkflow({
     "USO INTRAMUSCULAR:\\n\\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
   ],
   "medicacoesCasa": [
-    "USO ORAL:\\n\\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\\n\\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\\nTomar 2 comprimidos, via oral, até de 6 em 6 horas, se dor ou febre."
+    "USO ORAL:\\n\\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\\n\\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\\nTomar 2 comprimidos, via oral, podendo repetir de 6 em 6 horas, se dor ou febre."
   ],
   "disclaimers": [
     {"med": "Cetoprofeno", "type": "warning", "note": "Cuidado em idoso frágil e nefropatas (risco renal)."},
@@ -285,6 +285,7 @@ DIRETRIZES OBRIGATÓRIAS:
 1. RIGOR EXTREMO EM EXAMES E PRESCRIÇÕES: Seja estritamente criterioso. NÃO seja permissivo. Só prescreva medicações ou solicite exames se forem estritamente necessários para o caso clínico apresentado. Se não houver indicação clara para exames, retorne vazio ("") em "examesLaboratorio" e "examesImagem".
 2. PRESCRIÇÃO INTERNA (Unidade) E DOMICILIAR:
    - Defina as medicações clínicas indicadas. O aplicativo consultará o banco de dados oficial do sistema para formatar a prescrição no padrão rigoroso cadastrado.
+   - Na prescrição domiciliar, utilize APENAS o princípio ativo com dosagem (nunca inclua nomes comerciais entre parênteses). Redija a posologia com via explícita (ex: 'Tomar 1 comprimido, via oral, podendo repetir de 8 em 8 horas, por até 5 dias, se dor ou febre.' ou 'Tomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.').
    - PREFIRA via Intramuscular (IM) na unidade quando não for fazer várias medicações simultâneas ou quando não exigir infusão venosa contínua.
 3. ORIENTAÇÕES E SINAIS DE ALARME:
    - Personalize estritamente adaptado ao agravo e à pessoa consultada (faixa etária e contexto do paciente). Jamais utilize orientações genéricas desconexas.

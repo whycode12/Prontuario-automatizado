@@ -31,6 +31,73 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+export function cleanCommercialName(text?: string | null): string {
+  return (text || '')
+    .replace(/\s*\([^)]*®[^)]*\)/gi, '')
+    .replace(/\s*\.[ \t.]+/g, ' ')
+    .trim();
+}
+
+export function formatMedicationHeader(apres?: string | null, qtd?: string | null, targetCol = 65): string {
+  const cleanApres = cleanCommercialName(apres);
+  const cleanQtd = (qtd || '').trim();
+  if (!cleanQtd) return cleanApres;
+  const needed = targetCol - cleanApres.length - cleanQtd.length - 2;
+  const numDashes = needed > 5 ? needed : 6;
+  return cleanApres + ' ' + '—'.repeat(numDashes) + ' ' + cleanQtd;
+}
+
+export function transformPosologia(pos: string, route?: string | null): string {
+  let p = (pos || '').trim();
+  if (!p) return '';
+  const isOral = !route || route.toUpperCase().includes('ORAL') || /^(tomar|ingerir|mastigar)\b/i.test(p);
+
+  if (isOral && !/\bvia oral\b/i.test(p)) {
+    p = p.replace(/^(tomar|ingerir|mastigar)\s+([^,]+),\s*/i, (_m, verb, dose) => {
+      return verb + ' ' + dose + ', via oral, ';
+    });
+  }
+
+  const isConditional = /\b(se\s+(dor|febre|n[aá]usea|v[oó]mito|c[oó]lica|azia|tosse|sintom|piora|crise)|at[eé]\s+(?:de|em))\b/i.test(p);
+
+  p = p.replace(/\bat[eé]\s+(?:de|em)\s+(\d+)\s*[\/\-]\s*(\d+)\s*(?:horas?|h)\b/gi, (_m, h1, h2) => {
+    return 'podendo repetir de ' + h1 + ' em ' + h2 + ' horas';
+  });
+
+  p = p.replace(/(?:\bde\s+)?(\d+)\s*[\/\-]\s*(\d+)\s*(?:horas?|h)\b/gi, (_m, h1, h2) => {
+    if (isConditional) {
+      return 'podendo repetir de ' + h1 + ' em ' + h2 + ' horas';
+    }
+    return 'de ' + h1 + ' em ' + h2 + ' horas';
+  });
+
+  if (isConditional) {
+    p = p.replace(/\bpor\s+(\d+)\s*dias\b/gi, (_m, d) => 'por até ' + d + ' dias');
+    p = p.replace(/\bpor\s+at[eé]\s+at[eé]\s+/gi, 'por até ');
+  }
+
+  return p;
+}
+
+export function formatReceitaItemText(fullText?: string | null, route?: string | null, targetCol = 65): string {
+  if (!fullText) return '';
+  const lines = fullText.split('\n');
+  const firstLine = lines[0] || '';
+  const restLines = lines.slice(1);
+
+  const dotMatch = firstLine.match(/^(.*?)(?:[ \t]*\.[ \t.]+|[ \t]*—+[ \t]*)(.*?)$/);
+  let apres = firstLine;
+  let qtd = '';
+  if (dotMatch) {
+    apres = dotMatch[1].trim();
+    qtd = dotMatch[2].trim();
+  }
+
+  const formattedHeader = formatMedicationHeader(apres, qtd, targetCol);
+  const formattedPos = restLines.map((l) => transformPosologia(l, route)).join('\n');
+  return formattedHeader + (formattedPos ? '\n' + formattedPos : '');
+}
+
 export function parseAndRoundPeso(pesoStr?: string | null): number | null {
   if (!pesoStr) return null;
   const cleaned = pesoStr.trim().replace(',', '.').replace(/[^\d.]/g, '');
@@ -316,42 +383,42 @@ export function searchPrescricaoDomiciliar(
 
       results.push({
         id: `${med.id}-dom-adulto`,
-        label: med.receita_adulto.apresentacao || capitalize(med.nome),
+        label: cleanCommercialName(med.receita_adulto.apresentacao) || capitalize(med.nome),
         badge: adultBadge,
-        subtitle: med.receita_adulto.posologia || '',
-        fullText: med.receita_adulto.texto_completo.trim(),
+        subtitle: transformPosologia(med.receita_adulto.posologia || '', defaultRoute),
+        fullText: formatReceitaItemText(med.receita_adulto.texto_completo.trim(), defaultRoute),
         route: defaultRoute
       });
 
       if (pedText) {
         results.push({
           id: `${med.id}-dom-ped`,
-          label: pedApres || `${capitalize(med.nome)} (Pediátrico)`,
+          label: cleanCommercialName(pedApres) || `${capitalize(med.nome)} (Pediátrico)`,
           badge: pedBadge,
-          subtitle: pedPosologia,
-          fullText: pedText.trim(),
+          subtitle: transformPosologia(pedPosologia, defaultRoute),
+          fullText: formatReceitaItemText(pedText.trim(), defaultRoute),
           route: defaultRoute
         });
       }
     } else if (hasAdulto && med.receita_adulto) {
       results.push({
         id: `${med.id}-dom-adulto`,
-        label: med.receita_adulto.apresentacao || capitalize(med.nome),
+        label: cleanCommercialName(med.receita_adulto.apresentacao) || capitalize(med.nome),
         badge: detectFormType(
           med.receita_adulto.apresentacao,
           med.receita_adulto.posologia
         ),
-        subtitle: med.receita_adulto.posologia || '',
-        fullText: med.receita_adulto.texto_completo.trim(),
+        subtitle: transformPosologia(med.receita_adulto.posologia || '', defaultRoute),
+        fullText: formatReceitaItemText(med.receita_adulto.texto_completo.trim(), defaultRoute),
         route: defaultRoute
       });
     } else if (hasPed && pedText) {
       results.push({
         id: `${med.id}-dom-ped`,
-        label: pedApres || capitalize(med.nome),
+        label: cleanCommercialName(pedApres) || capitalize(med.nome),
         badge: pedBadge,
-        subtitle: pedPosologia,
-        fullText: pedText.trim(),
+        subtitle: transformPosologia(pedPosologia, defaultRoute),
+        fullText: formatReceitaItemText(pedText.trim(), defaultRoute),
         route: defaultRoute
       });
     }
@@ -478,26 +545,29 @@ export function getStandardizedDomiciliarMedication(
   const peso = parseAndRoundPeso(pesoStr);
   const route = med.via_administracao_padrao || 'USO ORAL';
 
+  let rawResult: { text: string; route: string } | null = null;
+
   if (peso !== null && med.tem_pediatrico && med.receita_pediatrica?.tem_pediatrico) {
     const key = String(peso);
     const dosePorPeso = med.receita_pediatrica.doses_por_peso?.[key];
     if (dosePorPeso) {
-      return { text: dosePorPeso.texto_completo.trim(), route };
+      rawResult = { text: dosePorPeso.texto_completo.trim(), route };
+    } else if (peso >= 40 && med.receita_pediatrica.doses_por_peso?.['39']) {
+      rawResult = { text: med.receita_pediatrica.doses_por_peso['39'].texto_completo.trim(), route };
+    } else if (med.receita_pediatrica.texto_padrao) {
+      rawResult = { text: med.receita_pediatrica.texto_padrao.trim(), route };
     }
-    if (peso >= 40 && med.receita_pediatrica.doses_por_peso?.['39']) {
-      return { text: med.receita_pediatrica.doses_por_peso['39'].texto_completo.trim(), route };
-    }
-    if (med.receita_pediatrica.texto_padrao) {
-      return { text: med.receita_pediatrica.texto_padrao.trim(), route };
-    }
+  } else if (med.tem_adulto && med.receita_adulto) {
+    rawResult = { text: med.receita_adulto.texto_completo.trim(), route };
+  } else if (med.receita_pediatrica?.texto_padrao) {
+    rawResult = { text: med.receita_pediatrica.texto_padrao.trim(), route };
   }
 
-  if (med.tem_adulto && med.receita_adulto) {
-    return { text: med.receita_adulto.texto_completo.trim(), route };
-  }
-
-  if (med.receita_pediatrica?.texto_padrao) {
-    return { text: med.receita_pediatrica.texto_padrao.trim(), route };
+  if (rawResult) {
+    return {
+      text: formatReceitaItemText(rawResult.text, rawResult.route),
+      route: rawResult.route
+    };
   }
 
   return null;
@@ -528,6 +598,10 @@ export function standardizeSingleMedication(
   let clean = input.trim();
   clean = clean.replace(ROUTE_HEADER_REGEX, '').trim();
   clean = clean.replace(/^[ \t]*[-*•\d.]+[ \t]*/, '').trim();
+
+  if (type === 'domiciliar') {
+    clean = formatReceitaItemText(clean, detectedRoute);
+  }
 
   return { text: clean, route: detectedRoute };
 }
