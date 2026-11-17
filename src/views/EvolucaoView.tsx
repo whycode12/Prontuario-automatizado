@@ -8,7 +8,8 @@ import {
   Pill,
   Check,
   Copy,
-  ShieldAlert
+  ShieldAlert,
+  Clock
 } from 'lucide-react';
 import type {
   ObservationData,
@@ -374,6 +375,31 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             onSavePayloadTemplate={(t) => handleSaveTemplate('payloadReavaliacao', t)}
             onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadReavaliacao', t) : undefined}
             onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadReavaliacao')}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-700 dark:text-neutral-300 mb-1 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
+              O que reavaliar
+            </span>
+            {observation.revaluationTimeMinutes ? (
+              <span className="text-[11px] font-normal text-slate-400 dark:text-neutral-500">
+                (tempo: {observation.revaluationTimeMinutes} min)
+              </span>
+            ) : null}
+          </label>
+          <input
+            type="text"
+            value={observation.whatToReevaluate || ''}
+            onChange={(e) =>
+              setObservation((prev) => ({
+                ...prev,
+                whatToReevaluate: e.target.value,
+              }))
+            }
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-[#383838] bg-slate-50/60 dark:bg-[#1a1a1a] text-slate-800 dark:text-neutral-200 text-xs focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-colors"
           />
         </div>
 
