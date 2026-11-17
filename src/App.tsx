@@ -11,7 +11,7 @@ import {
   Sun,
   Moon,
   Stethoscope,
-  ClipboardList,
+  Activity,
   PanelLeftClose,
   PanelLeft,
   Cloud,
@@ -1480,26 +1480,7 @@ export default function App() {
               )}
             </button>
 
-            {/* 2. Prontuário & Documentos */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('documentos')}
-              className={`w-full flex items-center ${
-                sidebarOpen ? 'justify-between px-2.5 py-1.5' : 'justify-center p-2'
-              } rounded-md text-xs font-medium transition-colors ${
-                activeTab === 'documentos'
-                  ? 'bg-[#ececeb] dark:bg-[#2a2a2a] text-slate-900 dark:text-white font-semibold'
-                  : 'text-slate-600 dark:text-neutral-400 hover:bg-[#efefee] dark:hover:bg-[#262626] hover:text-slate-900 dark:hover:text-white'
-              }`}
-              title="2. Prontuário & Documentos"
-            >
-              <div className="flex items-center gap-2.5 truncate">
-                <FileText className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400 shrink-0" />
-                {sidebarOpen && <span className="truncate">Prontuário & Receitas</span>}
-              </div>
-            </button>
-
-            {/* 3. Evolução Médica */}
+            {/* 2. Evolução Médica */}
             <button
               type="button"
               onClick={() => setActiveTab('evolucao')}
@@ -1510,11 +1491,30 @@ export default function App() {
                   ? 'bg-[#ececeb] dark:bg-[#2a2a2a] text-slate-900 dark:text-white font-semibold'
                   : 'text-slate-600 dark:text-neutral-400 hover:bg-[#efefee] dark:hover:bg-[#262626] hover:text-slate-900 dark:hover:text-white'
               }`}
-              title="3. Evolução Médica"
+              title="2. Evolução Médica"
             >
               <div className="flex items-center gap-2.5 truncate">
-                <ClipboardList className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400 shrink-0" />
+                <Activity className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400 shrink-0" />
                 {sidebarOpen && <span className="truncate">Evolução Médica</span>}
+              </div>
+            </button>
+
+            {/* 3. Prontuário & Documentos */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('documentos')}
+              className={`w-full flex items-center ${
+                sidebarOpen ? 'justify-between px-2.5 py-1.5' : 'justify-center p-2'
+              } rounded-md text-xs font-medium transition-colors ${
+                activeTab === 'documentos'
+                  ? 'bg-[#ececeb] dark:bg-[#2a2a2a] text-slate-900 dark:text-white font-semibold'
+                  : 'text-slate-600 dark:text-neutral-400 hover:bg-[#efefee] dark:hover:bg-[#262626] hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="3. Prontuário & Documentos"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <FileText className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400 shrink-0" />
+                {sidebarOpen && <span className="truncate">Prontuário & Receitas</span>}
               </div>
             </button>
 
