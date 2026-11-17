@@ -5,7 +5,6 @@ import {
   Bed,
   Building2,
   Ambulance,
-  Pill,
   Check,
   Copy,
   ShieldAlert,
@@ -462,22 +461,6 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
               onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadCaso', t) : undefined}
               onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadCaso')}
             />
-            <AIActionButton
-              label="Gerar Prescrições e Orientações"
-              actionIcon={<Pill className="w-4 h-4" />}
-              onExecute={runAiCondutaEvolucao}
-              isLoading={!!aiLoading.condutaEvolucao}
-              promptKey="conduta"
-              currentPrompt={prompts.condutaEvolucao || prompts.conduta}
-              onSavePrompt={(p) => handleSavePrompt('conduta', p)}
-              onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('conduta', p) : undefined}
-              onResetPrompt={() => handleResetSinglePrompt('conduta')}
-              contextPayload={getCasePayload('payloadCaso')}
-              payloadTemplate={getPayloadTemplate('payloadCaso')}
-              onSavePayloadTemplate={(t) => handleSaveTemplate('payloadCaso', t)}
-              onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadCaso', t) : undefined}
-              onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadCaso')}
-            />
           </div>
         </div>
 
@@ -664,6 +647,21 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
               </span>
             )}
           </div>
+          <AIActionButton
+            label="Gerar Prescrições e Orientações com IA"
+            onExecute={runAiCondutaEvolucao}
+            isLoading={!!aiLoading.condutaEvolucao}
+            promptKey="conduta"
+            currentPrompt={prompts.condutaEvolucao || prompts.conduta}
+            onSavePrompt={(p) => handleSavePrompt('conduta', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('conduta', p) : undefined}
+            onResetPrompt={() => handleResetSinglePrompt('conduta')}
+            contextPayload={getCasePayload('payloadCaso')}
+            payloadTemplate={getPayloadTemplate('payloadCaso')}
+            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadCaso', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadCaso', t) : undefined}
+            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadCaso')}
+          />
         </div>
 
         {!hideAiBoxes && observation.tetanusRabiesAlert && (

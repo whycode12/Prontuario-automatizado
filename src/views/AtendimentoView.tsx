@@ -8,7 +8,6 @@ import {
   Check,
   Calculator,
   X,
-  Pill,
   Clock,
   Copy,
   FileText,
@@ -1078,22 +1077,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadDiagnostico', t) : undefined}
               onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadDiagnostico')}
             />
-            <AIActionButton
-              label="Gerar Prescrições e Orientações"
-              actionIcon={<Pill className="w-4 h-4" />}
-              onExecute={runAiConduta}
-              isLoading={!!aiLoading.conduta}
-              promptKey="conduta"
-              currentPrompt={prompts.conduta}
-              onSavePrompt={(p) => handleSavePrompt('conduta', p)}
-              onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('conduta', p) : undefined}
-              onResetPrompt={() => handleResetSinglePrompt('conduta')}
-              contextPayload={getCasePayload('payloadConduta')}
-              payloadTemplate={getPayloadTemplate('payloadConduta')}
-              onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConduta', t)}
-              onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConduta', t) : undefined}
-              onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConduta')}
-            />
           </div>
         </div>
 
@@ -1282,6 +1265,21 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               </span>
             )}
           </div>
+          <AIActionButton
+            label="Gerar Prescrições e Orientações com IA"
+            onExecute={runAiConduta}
+            isLoading={!!aiLoading.conduta}
+            promptKey="conduta"
+            currentPrompt={prompts.conduta}
+            onSavePrompt={(p) => handleSavePrompt('conduta', p)}
+            onSaveGlobalPrompt={handleSaveGlobalPrompt ? (p) => handleSaveGlobalPrompt('conduta', p) : undefined}
+            onResetPrompt={() => handleResetSinglePrompt('conduta')}
+            contextPayload={getCasePayload('payloadConduta')}
+            payloadTemplate={getPayloadTemplate('payloadConduta')}
+            onSavePayloadTemplate={(t) => handleSaveTemplate('payloadConduta', t)}
+            onSaveGlobalPayloadTemplate={handleSaveGlobalTemplate ? (t) => handleSaveGlobalTemplate('payloadConduta', t) : undefined}
+            onResetPayloadTemplate={() => handleResetSinglePayloadTemplate('payloadConduta')}
+          />
         </div>
 
         {/* Tetanus/Rabies Warning if present com engavetar */}
