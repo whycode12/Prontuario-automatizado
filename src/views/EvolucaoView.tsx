@@ -1123,18 +1123,20 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           </div>
         </div>
 
-        {!hideAiBoxes && observation.outcomeReason && (
+        {!hideAiBoxes && (observation.suggestedOutcome || observation.outcomeReason) && (
           <div className="p-3 rounded-lg border border-slate-200 dark:border-[#333] bg-slate-50/60 dark:bg-[#1c1c1c] text-xs space-y-1 animate-in fade-in duration-150">
             <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-neutral-200">
               <span className="w-2 h-2 rounded-full bg-slate-600 dark:bg-neutral-400" />
               <span>Sugestão da IA:</span>
               <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#2d2d2d] text-slate-700 dark:text-neutral-300 font-bold">
-                {observation.outcome}
+                {observation.suggestedOutcome || observation.outcome}
               </span>
             </div>
-            <p className="text-slate-600 dark:text-neutral-400 text-xs leading-relaxed pl-3.5">
-              {observation.outcomeReason}
-            </p>
+            {observation.outcomeReason && (
+              <p className="text-slate-600 dark:text-neutral-400 text-xs leading-relaxed pl-3.5">
+                {observation.outcomeReason}
+              </p>
+            )}
           </div>
         )}
 

@@ -909,10 +909,11 @@ DIRETRIZES OBRIGATÓRIAS:
       if (setObservation) {
         setObservation((prev) => ({
           ...prev,
-          outcome: aiSuggested,
+          suggestedOutcome: aiSuggested,
+          outcome: prev.outcome || aiSuggested,
           outcomeReason: parsed.motivoDesfecho || '',
-          inObservation: aiSuggested === 'observacao',
-          startedAt: aiSuggested === 'observacao' ? (prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })) : undefined,
+          inObservation: (prev.outcome || aiSuggested) === 'observacao',
+          startedAt: (prev.outcome || aiSuggested) === 'observacao' ? (prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })) : undefined,
           unitMedications: finalUnit,
           homeMedications: finalHome,
           orderedLabs: formatExamList(parsed.examesLaboratorio),

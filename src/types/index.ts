@@ -85,6 +85,7 @@ export interface ObservationData {
   clinicalReevaluationText: string;
   conclusionNewHypothesis: string;
   newConducts: string;
+  suggestedOutcome?: 'alta' | 'observacao' | 'internacao' | 'transferencia';
   outcome?: 'alta' | 'observacao' | 'internacao' | 'transferencia';
   conclusionCid?: string;
   hypothesisRankings?: HypothesisItem[];
