@@ -1076,7 +1076,10 @@ export default function App() {
     runAiPassometro,
     runAiEncaminhamento,
     runAiReavaliacao,
-    runAiConclusaoObs
+    runAiConclusaoObs,
+    runAiDiagnosticoEvolucao,
+    runAiCondutaEvolucao,
+    runAiGerarCondutasEvolucao
   } = useAiWorkflow({
     apiKey,
     model,
@@ -1092,29 +1095,15 @@ export default function App() {
     patient,
     aiResults,
     documents,
-    observation
+    observation,
+    setObservation,
+    examResults
   });
 
 
 
 
 
-
-  // Observation actions
-  const toggleObservation = () => {
-    const nextState = !observation.inObservation;
-    setObservation((prev) => ({
-      ...prev,
-      inObservation: nextState,
-      startedAt: nextState ? (prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })) : undefined
-    }));
-    if (nextState) {
-      setActiveTab('evolucao');
-      showToast('Paciente colocado em observação clínica.');
-    } else {
-      showToast('Observação clínica desativada.');
-    }
-  };
 
   // Undo state para liberação de leito de observação
   const [lastDischargedRecordId, setLastDischargedRecordId] = useState<string | null>(null);
@@ -1269,12 +1258,14 @@ export default function App() {
       const newProntuario = buildDocument('prontuario', templates, tagContextData);
       const newReceitaDomiciliar = buildDocument('receitaDomiciliar', templates, tagContextData);
       const newReceitaInterna = buildDocument('receitaInterna', templates, tagContextData);
+      const newEvolucao = generateEvolucaoText(templates.evolucao, tagContextData);
 
       setDocuments((prev) => {
         if (
           prev.prontuario === newProntuario &&
           prev.receitaDomiciliar === newReceitaDomiciliar &&
-          prev.receitaInterna === newReceitaInterna
+          prev.receitaInterna === newReceitaInterna &&
+          prev.evolucao === newEvolucao
         ) {
           return prev;
         }
@@ -1282,7 +1273,8 @@ export default function App() {
           ...prev,
           prontuario: newProntuario,
           receitaDomiciliar: newReceitaDomiciliar,
-          receitaInterna: newReceitaInterna
+          receitaInterna: newReceitaInterna,
+          evolucao: newEvolucao
         };
       });
     }, 120);
@@ -1301,7 +1293,8 @@ export default function App() {
     observation,
     templates.prontuario,
     templates.receitaDomiciliar,
-    templates.receitaInterna
+    templates.receitaInterna,
+    templates.evolucao
   ]);
 
   // Generate Evolution Text from Template
@@ -1803,12 +1796,15 @@ export default function App() {
 
         {activeTab === 'evolucao' && (
           <EvolucaoView
+            patient={patient}
+            setPatient={setPatient}
             patientName={patient.nome}
             observation={observation}
             setObservation={setObservation}
             examResults={examResults}
             setExamResults={setExamResults}
             aiResults={aiResults}
+            setAiResults={setAiResults}
             aiLoading={aiLoading}
             prompts={prompts}
             templates={templates}
@@ -1822,11 +1818,20 @@ export default function App() {
             handleResetSinglePayloadTemplate={handleResetSinglePayloadTemplate}
             runAiReavaliacao={runAiReavaliacao}
             runAiConclusaoObs={runAiConclusaoObs}
+            runAiDiagnosticoEvolucao={runAiDiagnosticoEvolucao}
+            runAiCondutaEvolucao={runAiCondutaEvolucao}
+            runAiGerarCondutasEvolucao={runAiGerarCondutasEvolucao}
+            runAiEncaminhamento={runAiEncaminhamento}
             evolucaoDocument={documents.evolucao}
             setEvolucaoDocument={(val) => setDocuments((prev) => ({ ...prev, evolucao: val }))}
             generateEvolucaoDocument={generateEvolucaoDocument}
-            toggleObservation={toggleObservation}
+            documents={documents}
+            setDocuments={setDocuments}
+            compileSingleDocument={compileSingleDocument}
+            tagContextData={tagContextData}
+            susFilter={susFilter}
             hideAiBoxes={hideAiBoxes}
+            showToast={showToast}
           />
         )}
 

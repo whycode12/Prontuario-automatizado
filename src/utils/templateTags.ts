@@ -279,8 +279,28 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{PENDENCIAS_OBSERVACAO\}\}/gi, observation.whatToReevaluate || 'N/A');
   output = output.replace(/\{\{PENDENCIAS\}\}/gi, observation.whatToReevaluate || (examResults ? 'Conferir exames' : 'Reavaliação clínica'));
   output = output.replace(/\{\{REAVALIACAO_TEXTO\}\}/gi, observation.clinicalReevaluationText || 'Paciente reavaliado em leito de observação, mantendo estabilidade clínica.');
-  output = output.replace(/\{\{NOVA_HIPOTESE\}\}/gi, observation.conclusionNewHypothesis || aiResults.mainHypothesis || 'Quadro clínico inalterado.');
-  output = output.replace(/\{\{NOVAS_CONDUTAS\}\}/gi, observation.newConducts || '- Alta clínica orientada com receitas e orientações domiciliares.');
+
+  let novaHipoteseBase = observation.conclusionNewHypothesis?.trim() || aiResults.mainHypothesis?.trim() || 'Quadro clínico inalterado.';
+  const evoCid = observation.conclusionCid?.trim() || (observation.conclusionNewHypothesis ? '' : aiResults.selectedCid?.trim());
+  if (evoCid) {
+    const cleanCid = evoCid.replace(/^CID:?\s*/i, '');
+    if (!novaHipoteseBase.includes(cleanCid)) {
+      novaHipoteseBase = `${novaHipoteseBase} (CID ${cleanCid})`;
+    }
+  }
+  output = output.replace(/\{\{NOVA_HIPOTESE\}\}/gi, novaHipoteseBase);
+  output = output.replace(/\{\{HIPOTESE_FINAL\}\}/gi, novaHipoteseBase);
+  output = output.replace(/\{\{NOVAS_CONDUTAS\}\}/gi, observation.newConducts || condutas || '- Alta clínica orientada com receitas e orientações domiciliares.');
+  
+  const desfechoMap: Record<string, string> = {
+    alta: 'Alta médica com orientações',
+    observacao: 'Em observação clínica',
+    internacao: 'Internação hospitalar',
+    transferencia: 'Transferência inter-hospitalar'
+  };
+  const currentOutcomeKey = observation.outcome || aiResults.clinicalOutcome || (observation.inObservation ? 'observacao' : undefined);
+  const desfechoDesc = currentOutcomeKey ? (desfechoMap[currentOutcomeKey] || currentOutcomeKey) : 'A definir';
+  output = output.replace(/\{\{(DESFECHO|DESFECHO_ATUAL|DESFECHO_FINAL)\}\}/gi, desfechoDesc);
   output = output.replace(/\{\{SINAIS_ALERTA\}\}/gi, 'Piora hemodinâmica ou dor refratária');
   const propostasDefault = observation.whatToReevaluate
     ? `- ${observation.whatToReevaluate}`

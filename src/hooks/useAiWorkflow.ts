@@ -62,6 +62,8 @@ interface UseAiWorkflowParams {
   aiResults?: AIResult;
   documents?: FinalDocuments;
   observation?: ObservationData;
+  setObservation?: React.Dispatch<React.SetStateAction<ObservationData>>;
+  examResults?: string;
 }
 
 export function useAiWorkflow({
@@ -79,7 +81,9 @@ export function useAiWorkflow({
   patient,
   aiResults,
   documents,
-  observation
+  observation,
+  setObservation,
+  examResults
 }: UseAiWorkflowParams) {
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
 
@@ -636,6 +640,359 @@ ${outcomeText}`;
     });
   };
 
+  const runAiDiagnosticoEvolucao = async () => {
+    await executeAiAction('Hipótese Final (Evolução)', 'diagnosticoEvolucao', async () => {
+      const jsonExample = `{
+  "hipotesePrincipal": "Cistite Aguda Não Complicada",
+  "rankingHipoteses": [
+    {"nome": "Cistite Aguda Não Complicada", "tipo": "Principal", "prob": "Alta"},
+    {"nome": "Pielonefrite Aguda", "tipo": "Diferencial", "prob": "Média"},
+    {"nome": "Vaginite Infecciosa", "tipo": "Diferencial", "prob": "Baixa"},
+    {"nome": "Urolitíase", "tipo": "Diferencial", "prob": "Baixa"}
+  ],
+  "cids": [
+    {"cid": "N30.0", "desc": "Cistite aguda", "prob": "Alta"},
+    {"cid": "N39.0", "desc": "Infecção do trato urinário de localização não especificada", "prob": "Média"},
+    {"cid": "N10", "desc": "Nefrite túbulo-intersticial aguda (Pielonefrite)", "prob": "Baixa"},
+    {"cid": "N20.0", "desc": "Cálculo do rim / urolitíase", "prob": "Baixa"},
+    {"cid": "R10.2", "desc": "Dor pélvica e perineal", "prob": "Baixa"}
+  ],
+  "notificacaoCompulsoria": false,
+  "detalhesNotificacao": "",
+  "escoresClinicos": [
+    {"name": "Centor / McIsaac", "score": "0 pontos", "interpretation": "Baixo risco de infecção estreptocócica"}
+  ]
+}`;
+      const basePayload = getCasePayload('payloadCaso');
+      const evolutionAddon = `\n=== DADOS COMPLETOS DA EVOLUÇÃO ATÉ O MOMENTO ===
+RESULTADOS DE EXAMES (LABORATÓRIO / IMAGEM):
+${examResults?.trim() || 'Nenhum exame informado até o momento'}
+
+REAVALIAÇÃO CLÍNICA ATUAL:
+${observation?.clinicalReevaluationText?.trim() || 'Reavaliação clínica não descrita'}
+
+STATUS DE OBSERVAÇÃO:
+${observation?.inObservation ? 'Em observação clínica' : 'Em atendimento'}`;
+
+      const payload = `${basePayload}\n${evolutionAddon}`;
+
+      const activePrompt = prompts.diagnosticoEvolucao || prompts.diagnostico;
+      const response = await callGeminiApi(
+        apiKey,
+        model,
+        activePrompt,
+        payload,
+        'Você é um médico assistente experiente em uma UPA no Brasil reavaliando a evolução clínica de um paciente. Analise rigorosamente TODO o caso (atendimento clínico inicial completo, queixa principal, HMA, HPP, exame físico, medicações já recebidas na unidade, resultados de exames complementares e a reavaliação clínica atual). Elabore a HIPÓTESE DIAGNÓSTICA FINAL refinada para a evolução médica (utilizando a nomenclatura médica oficial equivalente da tabela CID-10), o ranking de hipóteses diagnósticas (principal e diferenciais) com probabilidade (Alta, Média ou Baixa), ranking de 5 CIDs com probabilidade utilizando a nomenclatura estritamente oficial da tabela CID-10 (DATASUS/OMS), verificação de notificação compulsória (SINAN) e escores clínicos pertinentes ao momento evolutivo.',
+        jsonExample
+      );
+
+      const parsed = safeJsonParse(response);
+
+      let rankingHipoteses = parsed.rankingHipoteses || [];
+      if (!rankingHipoteses.length && parsed.hipotesePrincipal) {
+        rankingHipoteses.push({
+          nome: parsed.hipotesePrincipal,
+          tipo: 'Principal',
+          prob: 'Alta'
+        });
+        if (Array.isArray(parsed.diagnosticosDiferenciais)) {
+          parsed.diagnosticosDiferenciais.forEach((item: any, idx: number) => {
+            if (typeof item === 'string') {
+              rankingHipoteses.push({
+                nome: item,
+                tipo: 'Diferencial',
+                prob: idx === 0 ? 'Média' : 'Baixa'
+              });
+            } else if (item && typeof item === 'object') {
+              rankingHipoteses.push({
+                nome: item.nome || item.name || item.hipotese || '',
+                tipo: 'Diferencial',
+                prob: item.prob || item.probabilidade || (idx === 0 ? 'Média' : 'Baixa')
+              });
+            }
+          });
+        }
+      }
+
+      const diffStrings = rankingHipoteses
+        .filter((h: any) => h.tipo?.toLowerCase() !== 'principal' && h.nome !== parsed.hipotesePrincipal)
+        .map((h: any) => h.nome);
+
+      const cids = parsed.cids || [];
+      const defaultCid = cids.length > 0 ? `${cids[0].cid} - ${cids[0].desc}` : undefined;
+
+      if (setObservation) {
+        setObservation((prev) => ({
+          ...prev,
+          conclusionNewHypothesis: parsed.hipotesePrincipal || prev.conclusionNewHypothesis,
+          conclusionCid: defaultCid || prev.conclusionCid
+        }));
+      }
+
+      setAiResults((prev) => ({
+        ...prev,
+        conclusionHypothesisSuggestion: parsed.hipotesePrincipal || prev.conclusionHypothesisSuggestion,
+        conclusionHypothesisRankings: rankingHipoteses,
+        conclusionCidRankings: cids,
+        hypothesisRankings: rankingHipoteses,
+        differentialDiagnoses: diffStrings.length ? diffStrings : (parsed.diagnosticosDiferenciais || []),
+        cidRankings: cids,
+        selectedCid: prev.selectedCid || defaultCid,
+        isCompulsoryNotification: !!parsed.notificacaoCompulsoria,
+        compulsoryDetails: parsed.detalhesNotificacao || '',
+        clinicalScores: parsed.escoresClinicos || []
+      }));
+    });
+  };
+
+  const runAiCondutaEvolucao = async () => {
+    await executeAiAction('Prescrições e Orientações (Evolução)', 'condutaEvolucao', async () => {
+      const jsonExample = `{
+  "medicacoesUnidade": [
+    "USO INTRAMUSCULAR:\\n\\n1. Cloridrato de Ondansetrona (2mg/mL) —————————— 1 ampola (2 mL)\\nAdministrar 1 ampola (2 mL), IM, sem diluição, agora."
+  ],
+  "medicacoesCasa": [
+    "USO ORAL:\\n\\n1. Amoxicilina + Clavulanato 875mg + 125mg —————— 1 caixa\\nTomar 1 comprimido, via oral, de 8 em 8 horas, por 10 dias.\\n\\n2. Dipirona 500mg ——————————————————————————————— 1 caixa\\nTomar 2 comprimidos, via oral, podendo repetir de 6 em 6 horas, se dor ou febre."
+  ],
+  "disclaimers": [
+    {"med": "Cetoprofeno", "type": "warning", "note": "Cuidado em idoso frágil e nefropatas (risco renal)."},
+    {"med": "Dipirona", "type": "contraindication", "note": "ATENÇÃO: Checagem estrita de alergias conforme HPP."}
+  ],
+  "alertaProfilaxiaVacinal": "",
+  "examesLaboratorio": "",
+  "examesImagem": "",
+  "desfechoSugerido": "alta",
+  "motivoDesfecho": "Paciente apresentou melhora clínica expressiva dos sintomas, afebril, hemodinamicamente estável, tolerando dieta via oral e exames sem sinais de gravidade, permitindo alta médica segura com prescrição domiciliar.",
+  "encaminhamentoUbs": true,
+  "motivoEncaminhamento": "Seguimento ambulatorial na UBS de referência.",
+  "atestadoNecessario": true,
+  "diasAtestado": "01 dia",
+  "motivoAtestado": "Repouso durante fase de recuperação.",
+  "orientacoesProntuario": "Oriento hidratação oral vigorosa e repouso relativo durante a fase sintomática.",
+  "sinaisAlarmeProntuario": "Oriento retorno imediato ao pronto atendimento se febre persistente, vômitos refratários ou piora da dor.",
+  "orientacoesReceita": "Repouso relativo, hidratação hídrica adequada e tomar os medicamentos nos horários prescritos.",
+  "sinaisAlarmeReceita": "Retorne imediatamente ao pronto atendimento se apresentar: febre alta que não cede, dor intensa ou vômitos recorrentes."
+}`;
+
+      const basePayload = getCasePayload('payloadCaso');
+      const evolutionAddon = `\n=== DADOS COMPLETOS DA EVOLUÇÃO ATÉ O MOMENTO ===
+RESULTADOS DE EXAMES:
+${examResults?.trim() || 'Nenhum exame informado até o momento'}
+
+REAVALIAÇÃO CLÍNICA ATUAL:
+${observation?.clinicalReevaluationText?.trim() || 'Reavaliação clínica não descrita'}
+
+HIPÓTESE DIAGNÓSTICA FINAL:
+${observation?.conclusionNewHypothesis?.trim() || aiResults?.mainHypothesis || 'Em investigação'} ${observation?.conclusionCid ? `(CID ${observation.conclusionCid})` : ''}
+
+STATUS ATUAL:
+${observation?.inObservation ? 'Em observação clínica' : 'Em atendimento'}`;
+
+      const payload = `${basePayload}\n${evolutionAddon}`;
+
+      const instruction = `Você é um médico assistente experiente atuando no Brasil (UPA/SUS) definindo as novas condutas, prescrições, orientações e o DESFECHO ATUAL na EVOLUÇÃO MÉDICA do paciente.
+Analise rigorosamente todo o caso: dados do atendimento inicial, medicações recebidas, exames complementares realizados, reavaliação clínica atual e hipótese diagnóstica final.
+DIRETRIZES OBRIGATÓRIAS:
+1. DESFECHO ATUAL DA EVOLUÇÃO:
+   - Calcule e sugira com rigor clínico o DESFECHO ATUAL do paciente, escolhendo OBRIGATORIAMENTE um entre:
+     * "alta": paciente clinicamente estável, afebril, assintomático ou com dor aliviada, tolerância oral e exames sem critérios de gravidade. Indique alta médica segura com prescrição domiciliar e orientações.
+     * "observacao": se ainda necessitar de vigilância clínica, término de hidratação ou medicação na unidade, dose adicional ou aguardo de exames.
+     * "internacao": presença de critérios de gravidade, instabilidade hemodinâmica, necessidade de antibioticoterapia venosa contínua ou leito hospitalar/enfermaria.
+     * "transferencia": necessidade de CTI/UTI, intervenção cirúrgica de urgência ou suporte especializado não disponível na unidade.
+   - Forneça justificativa clínica clara e detalhada em "motivoDesfecho".
+2. PRESCRIÇÕES:
+   - Se o desfecho for "observacao", defina novas medicações na unidade em "medicacoesUnidade".
+   - Se o desfecho for "alta", "internacao" ou "transferencia", retorne vazio ("" ou []) em "medicacoesUnidade".
+   - Se o desfecho for "alta", prescreva medicações domiciliares com posologia completa e via explícita em "medicacoesCasa" (apenas princípio ativo com dosagem, sem marcas comerciais).
+3. EXAMES LABORATORIAIS E IMAGEM:
+   - Só solicite novos exames se houver estrita indicação clínica. Se não houver, retorne vazio ("").
+4. ORIENTAÇÕES E SINAIS DE ALARME:
+   - Personalize de forma estrita adaptada ao agravo e paciente. Em "orientacoesProntuario" e "sinaisAlarmeProntuario", inicie SEMPRE com a palavra "Oriento...".
+5. ATESTADO MÉDICO: O padrão em UPA é RIGOROSAMENTE 01 dia ("01 dia").
+6. SEGURANÇA E SUS: Checagem estrita de alergias conforme HPP, disclaimers farmacológicos e profilaxia de tétano/raiva se trauma/ferimento. ${
+        susFilter ? 'PRIORIZE FORTEMENTE MEDICAMENTOS DA RENAME / FARMÁCIA BÁSICA DO SUS.' : ''
+      }`;
+
+      const activePrompt = prompts.condutaEvolucao || prompts.conduta;
+      const response = await callGeminiApi(
+        apiKey,
+        model,
+        activePrompt,
+        payload,
+        instruction,
+        jsonExample
+      );
+
+      const parsed = safeJsonParse(response);
+
+      const formatExamList = (val: any): string => {
+        if (!val) return '';
+        if (Array.isArray(val)) {
+          return val.map((item) => String(item).trim()).filter(Boolean).join('\n');
+        }
+        if (typeof val === 'string') {
+          const trimmed = val.trim();
+          if (trimmed.includes('\n')) return trimmed;
+          if (trimmed.includes(',')) {
+            return trimmed
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .join('\n');
+          }
+          return trimmed;
+        }
+        return String(val);
+      };
+
+      const formatMedList = (val: any): string[] => {
+        if (!val) return [];
+        if (Array.isArray(val)) {
+          return val.map((item) => String(item).trim()).filter(Boolean);
+        }
+        if (typeof val === 'string') {
+          const trimmed = val.trim();
+          return trimmed ? [trimmed] : [];
+        }
+        return [String(val)];
+      };
+
+      await ensureReceituarioDb();
+      const rawUnit = formatMedList(parsed.medicacoesUnidade);
+      const rawHome = formatMedList(parsed.medicacoesCasa);
+      const stdUnit = standardizePrescriptionList(rawUnit, 'interna', patient?.peso);
+      const stdHome = standardizePrescriptionList(rawHome, 'domiciliar', patient?.peso);
+
+      const finalUnit = stdUnit.length > 0 ? stdUnit.map(formatUsoWithColon) : rawUnit.map(formatUsoWithColon);
+      const finalHome = stdHome.length > 0 ? stdHome.map(formatUsoWithColon) : rawHome.map(formatUsoWithColon);
+
+      const aiSuggested = (parsed.desfechoSugerido as 'alta' | 'observacao' | 'internacao' | 'transferencia') || 'alta';
+
+      if (setObservation) {
+        setObservation((prev) => ({
+          ...prev,
+          outcome: aiSuggested,
+          inObservation: aiSuggested === 'observacao',
+          startedAt: aiSuggested === 'observacao' ? (prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })) : undefined
+        }));
+      }
+
+      setAiResults((prev) => ({
+        ...prev,
+        unitMedications: finalUnit,
+        homeMedications: finalHome,
+        medicationDisclaimers: parsed.disclaimers || [],
+        tetanusRabiesAlert: parsed.alertaProfilaxiaVacinal || '',
+        orderedLabs: formatExamList(parsed.examesLaboratorio),
+        orderedImages: formatExamList(parsed.examesImagem),
+        suggestedOutcome: aiSuggested,
+        clinicalOutcome: aiSuggested,
+        outcomeReason: parsed.motivoDesfecho || '',
+        referralNeeded: !!parsed.encaminhamentoUbs,
+        referralReason: parsed.motivoEncaminhamento || '',
+        medicalLeaveNeeded: !!parsed.atestadoNecessario,
+        medicalLeaveDays: (() => {
+          const raw = parsed.diasAtestado || '';
+          const m = String(raw).match(/\d+/);
+          let n = m ? parseInt(m[0], 10) : 1;
+          if (n === 3 || isNaN(n) || n <= 0) n = 1;
+          const formattedN = n <= 9 ? `0${n}` : String(n);
+          const p = n === 1 ? 'dia' : 'dias';
+          return `${formattedN} ${p}`;
+        })(),
+        medicalLeaveReason: parsed.motivoAtestado || '',
+        techOrientations: ensureOriento(parsed.orientacoesProntuario || parsed.textoTecnico || ''),
+        techAlarmSignals: ensureOriento(parsed.sinaisAlarmeProntuario || ''),
+        layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
+        layAlarmSignals: parsed.sinaisAlarmeReceita || ''
+      }));
+    });
+  };
+
+  const runAiGerarCondutasEvolucao = async () => {
+    await executeAiAction('Gerar Condutas da Evolução', 'gerarCondutasEvolucao', async () => {
+      const payloadBase = getCasePayload('payloadCaso');
+
+      const medsUnidadeText = Array.isArray(aiResults?.unitMedications)
+        ? aiResults.unitMedications.join('\n\n').trim()
+        : (aiResults?.unitMedications || '').trim();
+      const medsCasaText = Array.isArray(aiResults?.homeMedications)
+        ? aiResults.homeMedications.join('\n\n').trim()
+        : (aiResults?.homeMedications || '').trim();
+      const labsText = (aiResults?.orderedLabs || '').trim();
+      const imagesText = (aiResults?.orderedImages || '').trim();
+      const orientText = (aiResults?.techOrientations || '').trim();
+      const alarmText = (aiResults?.techAlarmSignals || '').trim();
+      
+      const outcomeVal = observation?.outcome || (observation?.inObservation ? 'observacao' : 'alta');
+      const outcomeTextMap: Record<string, string> = {
+        alta: '- Alta médica com receitas e orientações domiciliares.',
+        observacao: '- Mantido em leito de observação clínica para continuidade do cuidado.',
+        internacao: '- Solicitada vaga de internação hospitalar via regulação (SUS Fácil / NIR).',
+        transferencia: '- Solicitada transferência inter-hospitalar / vaga de CTI via SAMU/SUS Fácil.'
+      };
+      const finalOutcomeText = outcomeTextMap[outcomeVal] || '- Alta médica com orientações.';
+
+      const atestadoText = (documents?.atestado || '').trim() || (aiResults?.medicalLeaveDays ? `${aiResults.medicalLeaveDays}` : '');
+      const relatorioText = (documents?.encaminhamento || '').trim() || (aiResults?.referralReason ? `Sim (${aiResults.referralReason})` : '');
+
+      const factualActionsPayload = `=== AÇÕES CLÍNICAS E DEFINIÇÕES DA EVOLUÇÃO MÉDICA ===
+- RESULTADOS DE EXAMES:
+${examResults?.trim() || 'Nenhum exame informado'}
+
+- REAVALIAÇÃO CLÍNICA:
+${observation?.clinicalReevaluationText?.trim() || 'Sem queixas agudas'}
+
+- HIPÓTESE DIAGNÓSTICA FINAL:
+${observation?.conclusionNewHypothesis?.trim() || aiResults?.mainHypothesis || 'Em investigação'}
+
+- PRESCRIÇÃO INTERNA:
+${medsUnidadeText || 'Nenhuma medicação na unidade'}
+
+- PRESCRIÇÃO DOMICILIAR:
+${medsCasaText || 'Nenhuma medicação domiciliar prescrita'}
+
+- EXAMES SOLICITADOS:
+${[labsText, imagesText].filter(Boolean).join('\n') || 'Nenhum exame solicitado'}
+
+- ORIENTAÇÕES E ALARME:
+${orientText || 'Orientações clínicas'} | ${alarmText || 'Sinais de alarme'}
+
+- DOCUMENTOS EMITIDOS:
+Atestado: ${atestadoText ? `Sim (${atestadoText})` : 'Não'} | Relatório: ${relatorioText ? `Sim` : 'Não'}
+
+- DESFECHO DEFINIDO:
+${finalOutcomeText}`;
+
+      const fullPayload = `${payloadBase}\n\n${factualActionsPayload}`;
+
+      const activePrompt = prompts.gerarCondutas || DEFAULT_GERAR_CONDUTAS_PROMPT;
+      const response = await callGeminiApi(
+        apiKey,
+        model,
+        activePrompt,
+        fullPayload,
+        'Gere a síntese das NOVAS CONDUTAS da EVOLUÇÃO MÉDICA em tópicos objetivos com hífen (- ), cobrindo medicações realizadas/prescritas, exames se houver, orientações dadas, documentos emitidos e OBRIGATORIAMENTE o desfecho atual do paciente como último tópico.'
+      );
+
+      const cleaned = response
+        .replace(/```[a-z]*\r?\n?/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+      if (setObservation) {
+        setObservation((prev) => ({
+          ...prev,
+          newConducts: cleaned
+        }));
+      }
+      setAiResults((prev) => ({
+        ...prev,
+        newConductsSuggestion: cleaned
+      }));
+    });
+  };
+
   return {
     aiLoading,
     setAiLoading,
@@ -650,6 +1007,9 @@ ${outcomeText}`;
     runAiPassometro,
     runAiEncaminhamento,
     runAiReavaliacao,
-    runAiConclusaoObs
+    runAiConclusaoObs,
+    runAiDiagnosticoEvolucao,
+    runAiCondutaEvolucao,
+    runAiGerarCondutasEvolucao
   };
 }

@@ -73,6 +73,8 @@ export interface AIResult {
   reevaluationSuggestion?: string;
   conclusionHypothesisSuggestion?: string;
   newConductsSuggestion?: string;
+  conclusionHypothesisRankings?: HypothesisItem[];
+  conclusionCidRankings?: Array<{ cid: string; desc: string; prob: string }>;
 }
 
 export interface ObservationData {
@@ -84,6 +86,7 @@ export interface ObservationData {
   conclusionNewHypothesis: string;
   newConducts: string;
   outcome?: 'alta' | 'observacao' | 'internacao' | 'transferencia';
+  conclusionCid?: string;
 }
 
 export interface FinalDocuments {
@@ -136,6 +139,8 @@ export interface SystemPrompts {
   encaminhamento?: string;
   atestado?: string;
   gerarCondutas?: string;
+  diagnosticoEvolucao?: string;
+  condutaEvolucao?: string;
 }
 
 export interface SavedPatientRecord {
