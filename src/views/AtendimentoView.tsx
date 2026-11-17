@@ -33,6 +33,14 @@ import { parseHppText } from '../data/defaults';
 import { DEFAULT_GERAR_CONDUTAS_PROMPT } from '../hooks/useAiWorkflow';
 import { buildDocument, type CompilableDocType } from '../utils/documentCompiler';
 import type { TagContextData } from '../utils/templateTags';
+import {
+  isPaAbnormal,
+  isFcAbnormal,
+  isFrAbnormal,
+  isSatAbnormal,
+  isTaxAbnormal,
+  isGlicemiaAbnormal,
+} from '../utils/vitalSigns';
 
 function parseIdadeParts(idadeStr?: string, anosProp?: string, mesesProp?: string): { anos: string; meses: string } {
   if (anosProp !== undefined && mesesProp !== undefined) {
@@ -925,14 +933,18 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
         </div>
 
         {/* Sinais Vitais */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 dark:bg-navy-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 bg-slate-50 dark:bg-navy-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-sm">
           <div>
             <label className="block text-slate-600 dark:text-slate-400 text-xs font-semibold mb-1">PA (mmHg)</label>
             <input
               type="text"
               value={vitals.pa}
               onChange={(e) => setVitals({ ...vitals, pa: e.target.value })}
-              className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ice-400/50"
+              className={`w-full px-2.5 py-1.5 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 transition-colors ${
+                isPaAbnormal(vitals.pa)
+                  ? 'border-rose-400 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 font-semibold focus:ring-rose-500/30'
+                  : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 focus:ring-ice-400/50'
+              }`}
             />
           </div>
           <div>
@@ -941,7 +953,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               type="text"
               value={vitals.fc}
               onChange={(e) => setVitals({ ...vitals, fc: e.target.value })}
-              className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ice-400/50"
+              className={`w-full px-2.5 py-1.5 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 transition-colors ${
+                isFcAbnormal(vitals.fc)
+                  ? 'border-rose-400 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 font-semibold focus:ring-rose-500/30'
+                  : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 focus:ring-ice-400/50'
+              }`}
             />
           </div>
           <div>
@@ -950,7 +966,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               type="text"
               value={vitals.fr}
               onChange={(e) => setVitals({ ...vitals, fr: e.target.value })}
-              className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ice-400/50"
+              className={`w-full px-2.5 py-1.5 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 transition-colors ${
+                isFrAbnormal(vitals.fr)
+                  ? 'border-rose-400 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 font-semibold focus:ring-rose-500/30'
+                  : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 focus:ring-ice-400/50'
+              }`}
             />
           </div>
           <div>
@@ -959,7 +979,11 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               type="text"
               value={vitals.sat}
               onChange={(e) => setVitals({ ...vitals, sat: e.target.value })}
-              className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ice-400/50"
+              className={`w-full px-2.5 py-1.5 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 transition-colors ${
+                isSatAbnormal(vitals.sat)
+                  ? 'border-rose-400 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 font-semibold focus:ring-rose-500/30'
+                  : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 focus:ring-ice-400/50'
+              }`}
             />
           </div>
           <div>
@@ -968,7 +992,24 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
               type="text"
               value={vitals.tax}
               onChange={(e) => setVitals({ ...vitals, tax: e.target.value })}
-              className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ice-400/50"
+              className={`w-full px-2.5 py-1.5 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 transition-colors ${
+                isTaxAbnormal(vitals.tax)
+                  ? 'border-rose-400 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 font-semibold focus:ring-rose-500/30'
+                  : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 focus:ring-ice-400/50'
+              }`}
+            />
+          </div>
+          <div>
+            <label className="block text-slate-600 dark:text-slate-400 text-xs font-semibold mb-1">GLICEMIA (mg/dL)</label>
+            <input
+              type="text"
+              value={vitals.glicemia || ''}
+              onChange={(e) => setVitals({ ...vitals, glicemia: e.target.value })}
+              className={`w-full px-2.5 py-1.5 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 transition-colors ${
+                isGlicemiaAbnormal(vitals.glicemia)
+                  ? 'border-rose-400 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 font-semibold focus:ring-rose-500/30'
+                  : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-navy-850 text-slate-800 dark:text-ice-100 focus:ring-ice-400/50'
+              }`}
             />
           </div>
         </div>
@@ -1427,25 +1468,27 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             <button
               type="button"
               onClick={() => setActiveDocDrawer(activeDocDrawer === 'atestado' ? null : 'atestado')}
-              className={`h-7 px-2.5 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 shadow-2xs ${
+              className={`h-8 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
                 activeDocDrawer === 'atestado'
-                  ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848]'
-                  : 'bg-white dark:bg-[#202020] border-slate-200 dark:border-[#333] text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-[#262626]'
+                  ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848] font-semibold ring-1 ring-slate-400/30'
+                  : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
               }`}
             >
-              <span>GERAR ATESTADO</span>
+              <FileText className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-neutral-400" />
+              <span className="truncate">Gerar Atestado</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveDocDrawer(activeDocDrawer === 'relatorio' ? null : 'relatorio')}
-              className={`h-7 px-2.5 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 shadow-2xs ${
+              className={`h-8 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
                 activeDocDrawer === 'relatorio'
-                  ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848]'
-                  : 'bg-white dark:bg-[#202020] border-slate-200 dark:border-[#333] text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-[#262626]'
+                  ? 'bg-slate-900 text-white dark:bg-[#303030] dark:text-white border-slate-900 dark:border-[#484848] font-semibold ring-1 ring-slate-400/30'
+                  : 'bg-white dark:bg-[#252525] border-slate-200 dark:border-[#383838] text-slate-700 dark:text-neutral-300 hover:border-[#aaa] dark:hover:border-[#555] hover:bg-[#f9f9f9] dark:hover:bg-[#2c2c2c]'
               }`}
             >
-              <span>GERAR RELATÓRIO</span>
+              <FileText className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-neutral-400" />
+              <span className="truncate">Gerar Relatório</span>
             </button>
           </div>
         </div>

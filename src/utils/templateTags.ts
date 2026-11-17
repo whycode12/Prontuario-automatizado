@@ -211,10 +211,11 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   if (vitals.fr?.trim()) vitalsItems.push(`FR: ${vitals.fr.trim()} irpm`);
   if (vitals.sat?.trim()) vitalsItems.push(`SatO2: ${vitals.sat.trim()}%`);
   if (vitals.tax?.trim()) vitalsItems.push(`Tax: ${vitals.tax.trim()}ºC`);
+  if (vitals.glicemia?.trim()) vitalsItems.push(`Glicemia: ${vitals.glicemia.trim()} mg/dL`);
 
   const vitalsLine = vitalsItems.join(' | ');
   output = output.replace(
-    /^[ \t]*(?:(?:PA:\s*\{\{PA\}\}\s*mmHg|FC:\s*\{\{FC\}\}\s*bpm|FR:\s*\{\{FR\}\}\s*irpm|SatO2:\s*\{\{SAT\}\}%|Tax:\s*\{\{TAX\}\}ºC)(?:[ \t]*\|[ \t]*|\s*))+[ \t]*(?:\r?\n)?/gm,
+    /^[ \t]*(?:(?:PA:\s*\{\{PA\}\}\s*mmHg|FC:\s*\{\{FC\}\}\s*bpm|FR:\s*\{\{FR\}\}\s*irpm|SatO2:\s*\{\{SAT\}\}%|Tax:\s*\{\{TAX\}\}ºC|Glicemia:\s*\{\{(?:GLICEMIA|HGT|GLI)\}\}\s*mg\/dL)(?:[ \t]*\|[ \t]*|\s*))+[ \t]*(?:\r?\n)?/gm,
     vitalsLine ? `${vitalsLine}\n` : ''
   );
 
@@ -223,6 +224,7 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{FR\}\}/gi, vitals.fr?.trim() || '');
   output = output.replace(/\{\{SAT\}\}/gi, vitals.sat?.trim() || '');
   output = output.replace(/\{\{TAX\}\}/gi, vitals.tax?.trim() || '');
+  output = output.replace(/\{\{(GLICEMIA|HGT|GLI)\}\}/gi, vitals.glicemia?.trim() || '');
 
   // 6. Exame Físico e Resultados
   output = output.replace(/\{\{EXAME_FISICO\}\}/gi, exameFisico.trim() || '');

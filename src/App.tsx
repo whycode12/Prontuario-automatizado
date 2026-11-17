@@ -480,7 +480,8 @@ export default function App() {
     fc: '',
     fr: '',
     sat: '',
-    tax: ''
+    tax: '',
+    glicemia: ''
   });
   const [exameFisico, setExameFisico] = useState<string>(templates.exameFisico);
   const [examResults, setExamResults] = useState<string>('');
@@ -828,7 +829,7 @@ export default function App() {
     setQp('');
     setHma('');
     setHpp(parseHppText(templates.hpp));
-    setVitals({ pa: '', fc: '', fr: '', sat: '', tax: '' });
+    setVitals({ pa: '', fc: '', fr: '', sat: '', tax: '', glicemia: '' });
     setExameFisico(templates.exameFisico);
     setExamResults('');
     setCondutas('');
@@ -1027,7 +1028,14 @@ export default function App() {
       }
     }
     setPatient(loadedPatient);
-    setVitals(rec.vitals);
+    setVitals({
+      pa: rec.vitals?.pa || '',
+      fc: rec.vitals?.fc || '',
+      fr: rec.vitals?.fr || '',
+      sat: rec.vitals?.sat || '',
+      tax: rec.vitals?.tax || '',
+      glicemia: rec.vitals?.glicemia || ''
+    });
     setQp(rec.qp);
     setHma(rec.hma);
     setHpp(rec.hpp);
@@ -1244,6 +1252,7 @@ export default function App() {
       vitals.pa?.trim() ||
       vitals.fc?.trim() ||
       vitals.tax?.trim() ||
+      vitals.glicemia?.trim() ||
       (exameFisico && exameFisico !== templates.exameFisico) ||
       (aiResults.unitMedications && aiResults.unitMedications.length > 0) ||
       (aiResults.homeMedications && aiResults.homeMedications.length > 0) ||

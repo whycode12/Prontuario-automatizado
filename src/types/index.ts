@@ -17,6 +17,7 @@ export interface VitalSigns {
   fr: string;
   sat: string;
   tax: string;
+  glicemia?: string;
 }
 
 export interface HppData {
