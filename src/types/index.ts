@@ -106,6 +106,7 @@ export interface ObservationData {
   outcomeReason?: string;
   medicalLeaveNeeded?: boolean;
   medicalLeaveDays?: string;
+  medicalLeaveReason?: string;
   referralNeeded?: boolean;
   referralReason?: string;
   atestadoDocument?: string;

@@ -926,6 +926,7 @@ DIRETRIZES OBRIGATÓRIAS:
           layAlarmSignals: parsed.sinaisAlarmeReceita || '',
           medicalLeaveNeeded: !!parsed.atestadoNecessario,
           medicalLeaveDays: formattedDias,
+          medicalLeaveReason: parsed.motivoAtestado || '',
           referralNeeded: !!parsed.encaminhamentoUbs,
           referralReason: parsed.motivoEncaminhamento || ''
         }));

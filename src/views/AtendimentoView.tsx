@@ -1455,12 +1455,9 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
       {/* DOCUMENTOS RÁPIDOS */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-slate-500 dark:text-neutral-400" />
-            <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              DOCUMENTOS RÁPIDOS
-            </h2>
-          </div>
+          <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+            DOCUMENTOS RÁPIDOS
+          </h2>
 
           <div className="flex items-center gap-2">
             <button
@@ -1490,6 +1487,42 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Sugestão da IA para Atestado Médico */}
+        {!hideAiBoxes && (aiResults.medicalLeaveNeeded || aiResults.medicalLeaveDays) && (
+          <div className="p-3 rounded-lg border border-slate-200 dark:border-[#333] bg-slate-50/60 dark:bg-[#1c1c1c] text-xs space-y-1 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-neutral-200">
+              <span className="w-2 h-2 rounded-full bg-slate-600 dark:bg-neutral-400" />
+              <span>Sugestão da IA:</span>
+              <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#2d2d2d] text-slate-700 dark:text-neutral-300 font-bold">
+                Atestado Médico{aiResults.medicalLeaveDays ? ` — ${aiResults.medicalLeaveDays}` : ''}
+              </span>
+            </div>
+            {aiResults.medicalLeaveReason && (
+              <p className="text-slate-600 dark:text-neutral-400 text-xs leading-relaxed pl-3.5">
+                {aiResults.medicalLeaveReason}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Sugestão da IA para Encaminhamento UBS */}
+        {!hideAiBoxes && aiResults.referralNeeded && (
+          <div className="p-3 rounded-lg border border-slate-200 dark:border-[#333] bg-slate-50/60 dark:bg-[#1c1c1c] text-xs space-y-1 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-neutral-200">
+              <span className="w-2 h-2 rounded-full bg-slate-600 dark:bg-neutral-400" />
+              <span>Sugestão da IA:</span>
+              <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#2d2d2d] text-slate-700 dark:text-neutral-300 font-bold">
+                Encaminhamento UBS / Ambulatório
+              </span>
+            </div>
+            {aiResults.referralReason && (
+              <p className="text-slate-600 dark:text-neutral-400 text-xs leading-relaxed pl-3.5">
+                {aiResults.referralReason}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Gaveta Atestado */}
         {activeDocDrawer === 'atestado' && (
@@ -1763,6 +1796,23 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
           </div>
         </div>
 
+        {!hideAiBoxes && (aiResults.suggestedOutcome || aiResults.outcomeReason) && (
+          <div className="p-3 rounded-lg border border-slate-200 dark:border-[#333] bg-slate-50/60 dark:bg-[#1c1c1c] text-xs space-y-1 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-neutral-200">
+              <span className="w-2 h-2 rounded-full bg-slate-600 dark:bg-neutral-400" />
+              <span>Sugestão da IA:</span>
+              <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#2d2d2d] text-slate-700 dark:text-neutral-300 font-bold">
+                {aiResults.suggestedOutcome || aiResults.clinicalOutcome}
+              </span>
+            </div>
+            {aiResults.outcomeReason && (
+              <p className="text-slate-600 dark:text-neutral-400 text-xs leading-relaxed pl-3.5">
+                {aiResults.outcomeReason}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {/* Alta */}
           <button
@@ -1881,50 +1931,6 @@ export const AtendimentoView: React.FC<AtendimentoViewProps> = ({
                 />
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Sugestões da IA para Desfecho, Encaminhamentos e Atestado (Itens 8, 9 e 10) */}
-        {!hideAiBoxes && (aiResults.outcomeReason || aiResults.referralNeeded || aiResults.medicalLeaveNeeded) && (
-          <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800 flex flex-col gap-1.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            {aiResults.outcomeReason && (
-              <div className="flex items-start gap-1.5">
-                <span className="shrink-0">🎯</span>
-                <span>
-                  <strong>Desfecho Sugerido:</strong>{' '}
-                  <span className="font-semibold text-slate-800 dark:text-ice-100">
-                    {(aiResults.suggestedOutcome || aiResults.clinicalOutcome) === 'alta'
-                      ? 'Alta orientada'
-                      : (aiResults.suggestedOutcome || aiResults.clinicalOutcome) === 'observacao'
-                      ? 'Observação'
-                      : (aiResults.suggestedOutcome || aiResults.clinicalOutcome) === 'internacao'
-                      ? 'Internação'
-                      : (aiResults.suggestedOutcome || aiResults.clinicalOutcome) === 'transferencia'
-                      ? 'Transferência'
-                      : (aiResults.suggestedOutcome || aiResults.clinicalOutcome) || 'Alta'}
-                  </span>
-                  {' — '}{aiResults.outcomeReason}
-                </span>
-              </div>
-            )}
-            {aiResults.referralNeeded && (
-              <div className="flex items-start gap-1.5">
-                <span className="shrink-0">🏥</span>
-                <span>
-                  <strong>Encaminhamento UBS / Ambulatório:</strong>{' '}
-                  {aiResults.referralReason || 'Seguimento na atenção básica'}
-                </span>
-              </div>
-            )}
-            {aiResults.medicalLeaveNeeded && (
-              <div className="flex items-start gap-1.5">
-                <span className="shrink-0">📝</span>
-                <span>
-                  <strong>Atestado Médico:</strong>{' '}
-                  {aiResults.medicalLeaveDays || '01 dia'} ({aiResults.medicalLeaveReason || 'Repouso'})
-                </span>
-              </div>
-            )}
           </div>
         )}
       </section>

@@ -830,12 +830,9 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
       {/* 6. DOCUMENTOS RÁPIDOS (OPERANDO DE MANEIRA ISOLADA DO ATENDIMENTO CLÍNICO) */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-slate-500 dark:text-neutral-400" />
-            <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
-              DOCUMENTOS RÁPIDOS
-            </h2>
-          </div>
+          <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
+            DOCUMENTOS RÁPIDOS
+          </h2>
 
           <div className="flex items-center gap-2">
             <button
@@ -865,6 +862,42 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Sugestão da IA para Atestado Médico */}
+        {!hideAiBoxes && (observation.medicalLeaveNeeded || observation.medicalLeaveDays) && (
+          <div className="p-3 rounded-lg border border-slate-200 dark:border-[#333] bg-slate-50/60 dark:bg-[#1c1c1c] text-xs space-y-1 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-neutral-200">
+              <span className="w-2 h-2 rounded-full bg-slate-600 dark:bg-neutral-400" />
+              <span>Sugestão da IA:</span>
+              <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#2d2d2d] text-slate-700 dark:text-neutral-300 font-bold">
+                Atestado Médico{observation.medicalLeaveDays ? ` — ${observation.medicalLeaveDays}` : ''}
+              </span>
+            </div>
+            {observation.medicalLeaveReason && (
+              <p className="text-slate-600 dark:text-neutral-400 text-xs leading-relaxed pl-3.5">
+                {observation.medicalLeaveReason}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Sugestão da IA para Encaminhamento UBS */}
+        {!hideAiBoxes && observation.referralNeeded && (
+          <div className="p-3 rounded-lg border border-slate-200 dark:border-[#333] bg-slate-50/60 dark:bg-[#1c1c1c] text-xs space-y-1 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-neutral-200">
+              <span className="w-2 h-2 rounded-full bg-slate-600 dark:bg-neutral-400" />
+              <span>Sugestão da IA:</span>
+              <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#2d2d2d] text-slate-700 dark:text-neutral-300 font-bold">
+                Encaminhamento UBS / Ambulatório
+              </span>
+            </div>
+            {observation.referralReason && (
+              <p className="text-slate-600 dark:text-neutral-400 text-xs leading-relaxed pl-3.5">
+                {observation.referralReason}
+              </p>
+            )}
+          </div>
+        )}
 
         {activeDocDrawer === 'atestado' && (
           <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-navy-900/60 space-y-3 animate-in fade-in duration-150">
