@@ -538,28 +538,61 @@ export function getStandardizedInternaMedication(
   return { text: internals[0].text.trim(), adm: internals[0].adm || 'VO' };
 }
 
+export function isPediatricPatient(idadeStr?: string | null, pesoStr?: string | null): boolean {
+  if (idadeStr) {
+    const clean = idadeStr.toLowerCase().trim();
+    if (clean.includes('mês') || clean.includes('mes') || clean.includes('meses') || /\b\d+\s*m\b/.test(clean)) {
+      const matchAnos = clean.match(/(\d+)\s*(?:ano|a\b)/i);
+      const anos = matchAnos ? parseInt(matchAnos[1], 10) : 0;
+      if (anos < 12) return true;
+    }
+    const match = clean.match(/\b(\d+)\b/);
+    if (match) {
+      const anos = parseInt(match[1], 10);
+      if (anos >= 12) return false;
+      return true;
+    }
+  }
+
+  if (pesoStr) {
+    const peso = parseAndRoundPeso(pesoStr);
+    if (peso !== null) {
+      if (peso >= 45) return false;
+      if (peso < 40) return true;
+    }
+  }
+
+  return false;
+}
+
 export function getStandardizedDomiciliarMedication(
   med: Medicamento,
-  pesoStr?: string | null
+  pesoStr?: string | null,
+  idadeStr?: string | null
 ): { text: string; route: string } | null {
   const peso = parseAndRoundPeso(pesoStr);
   const route = med.via_administracao_padrao || 'USO ORAL';
+  const isPed = isPediatricPatient(idadeStr, pesoStr);
 
   let rawResult: { text: string; route: string } | null = null;
 
-  if (peso !== null && med.tem_pediatrico && med.receita_pediatrica?.tem_pediatrico) {
-    const key = String(peso);
-    const dosePorPeso = med.receita_pediatrica.doses_por_peso?.[key];
-    if (dosePorPeso) {
-      rawResult = { text: dosePorPeso.texto_completo.trim(), route };
-    } else if (peso >= 40 && med.receita_pediatrica.doses_por_peso?.['39']) {
-      rawResult = { text: med.receita_pediatrica.doses_por_peso['39'].texto_completo.trim(), route };
+  if (isPed && med.tem_pediatrico && med.receita_pediatrica?.tem_pediatrico) {
+    if (peso !== null) {
+      const key = String(peso);
+      const dosePorPeso = med.receita_pediatrica.doses_por_peso?.[key];
+      if (dosePorPeso) {
+        rawResult = { text: dosePorPeso.texto_completo.trim(), route };
+      } else if (peso >= 40 && med.receita_pediatrica.doses_por_peso?.['39']) {
+        rawResult = { text: med.receita_pediatrica.doses_por_peso['39'].texto_completo.trim(), route };
+      } else if (med.receita_pediatrica.texto_padrao) {
+        rawResult = { text: med.receita_pediatrica.texto_padrao.trim(), route };
+      }
     } else if (med.receita_pediatrica.texto_padrao) {
       rawResult = { text: med.receita_pediatrica.texto_padrao.trim(), route };
     }
   } else if (med.tem_adulto && med.receita_adulto) {
     rawResult = { text: med.receita_adulto.texto_completo.trim(), route };
-  } else if (med.receita_pediatrica?.texto_padrao) {
+  } else if (med.tem_pediatrico && med.receita_pediatrica?.texto_padrao) {
     rawResult = { text: med.receita_pediatrica.texto_padrao.trim(), route };
   }
 
@@ -576,7 +609,8 @@ export function getStandardizedDomiciliarMedication(
 export function standardizeSingleMedication(
   input: string,
   type: 'interna' | 'domiciliar',
-  pesoStr?: string | null
+  pesoStr?: string | null,
+  idadeStr?: string | null
 ): { text: string; route: string } {
   const detectedRoute = detectRouteFromText(input) || (type === 'interna' ? 'IM' : 'VO');
   const matchedMed = findMedicationInDb(input);
@@ -588,7 +622,7 @@ export function standardizeSingleMedication(
         return { text: std.text, route: std.adm };
       }
     } else {
-      const std = getStandardizedDomiciliarMedication(matchedMed, pesoStr);
+      const std = getStandardizedDomiciliarMedication(matchedMed, pesoStr, idadeStr);
       if (std) {
         return { text: std.text, route: std.route };
       }
@@ -609,7 +643,8 @@ export function standardizeSingleMedication(
 export function standardizePrescriptionList(
   itemsInput: string[] | string,
   type: 'interna' | 'domiciliar',
-  pesoStr?: string | null
+  pesoStr?: string | null,
+  idadeStr?: string | null
 ): string[] {
   const rawList: string[] = Array.isArray(itemsInput)
     ? itemsInput
@@ -653,7 +688,7 @@ export function standardizePrescriptionList(
 
   for (const rawItem of extractedItems) {
     if (!rawItem.trim()) continue;
-    const std = standardizeSingleMedication(rawItem, type, pesoStr);
+    const std = standardizeSingleMedication(rawItem, type, pesoStr, idadeStr);
     if (std.text) {
       assembledPrescription = appendMedicationToPrescription(
         assembledPrescription,

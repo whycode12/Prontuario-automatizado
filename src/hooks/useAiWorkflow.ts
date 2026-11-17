@@ -345,8 +345,8 @@ DIRETRIZES OBRIGATÓRIAS:
       await ensureReceituarioDb();
       const rawUnit = formatMedList(parsed.medicacoesUnidade);
       const rawHome = formatMedList(parsed.medicacoesCasa);
-      const stdUnit = standardizePrescriptionList(rawUnit, 'interna', patient?.peso);
-      const stdHome = standardizePrescriptionList(rawHome, 'domiciliar', patient?.peso);
+      const stdUnit = standardizePrescriptionList(rawUnit, 'interna', patient?.peso, patient?.idade);
+      const stdHome = standardizePrescriptionList(rawHome, 'domiciliar', patient?.peso, patient?.idade);
 
       const finalUnit = stdUnit.length > 0 ? stdUnit.map(formatUsoWithColon) : rawUnit.map(formatUsoWithColon);
       const finalHome = stdHome.length > 0 ? stdHome.map(formatUsoWithColon) : rawHome.map(formatUsoWithColon);
@@ -847,8 +847,8 @@ DIRETRIZES OBRIGATÓRIAS:
       await ensureReceituarioDb();
       const rawUnit = formatMedList(parsed.medicacoesUnidade);
       const rawHome = formatMedList(parsed.medicacoesCasa);
-      const stdUnit = standardizePrescriptionList(rawUnit, 'interna', patient?.peso);
-      const stdHome = standardizePrescriptionList(rawHome, 'domiciliar', patient?.peso);
+      const stdUnit = standardizePrescriptionList(rawUnit, 'interna', patient?.peso, patient?.idade);
+      const stdHome = standardizePrescriptionList(rawHome, 'domiciliar', patient?.peso, patient?.idade);
 
       const finalUnit = stdUnit.length > 0 ? stdUnit.map(formatUsoWithColon) : rawUnit.map(formatUsoWithColon);
       const finalHome = stdHome.length > 0 ? stdHome.map(formatUsoWithColon) : rawHome.map(formatUsoWithColon);
