@@ -714,10 +714,6 @@ ${observation?.inObservation ? 'Em observação clínica' : 'Em atendimento'}`;
         }
       }
 
-      const diffStrings = rankingHipoteses
-        .filter((h: any) => h.tipo?.toLowerCase() !== 'principal' && h.nome !== parsed.hipotesePrincipal)
-        .map((h: any) => h.nome);
-
       const cids = parsed.cids || [];
       const defaultCid = cids.length > 0 ? `${cids[0].cid} - ${cids[0].desc}` : undefined;
 
@@ -725,23 +721,14 @@ ${observation?.inObservation ? 'Em observação clínica' : 'Em atendimento'}`;
         setObservation((prev) => ({
           ...prev,
           conclusionNewHypothesis: parsed.hipotesePrincipal || prev.conclusionNewHypothesis,
-          conclusionCid: defaultCid || prev.conclusionCid
+          conclusionCid: defaultCid || prev.conclusionCid,
+          hypothesisRankings: rankingHipoteses,
+          cidRankings: cids,
+          isCompulsoryNotification: !!parsed.notificacaoCompulsoria,
+          compulsoryDetails: parsed.detalhesNotificacao || '',
+          clinicalScores: parsed.escoresClinicos || []
         }));
       }
-
-      setAiResults((prev) => ({
-        ...prev,
-        conclusionHypothesisSuggestion: parsed.hipotesePrincipal || prev.conclusionHypothesisSuggestion,
-        conclusionHypothesisRankings: rankingHipoteses,
-        conclusionCidRankings: cids,
-        hypothesisRankings: rankingHipoteses,
-        differentialDiagnoses: diffStrings.length ? diffStrings : (parsed.diagnosticosDiferenciais || []),
-        cidRankings: cids,
-        selectedCid: prev.selectedCid || defaultCid,
-        isCompulsoryNotification: !!parsed.notificacaoCompulsoria,
-        compulsoryDetails: parsed.detalhesNotificacao || '',
-        clinicalScores: parsed.escoresClinicos || []
-      }));
     });
   };
 
@@ -868,44 +855,39 @@ DIRETRIZES OBRIGATÓRIAS:
 
       const aiSuggested = (parsed.desfechoSugerido as 'alta' | 'observacao' | 'internacao' | 'transferencia') || 'alta';
 
+      const formattedDias = (() => {
+        const raw = parsed.diasAtestado || '';
+        const m = String(raw).match(/\d+/);
+        let n = m ? parseInt(m[0], 10) : 1;
+        if (n === 3 || isNaN(n) || n <= 0) n = 1;
+        const formattedN = n <= 9 ? `0${n}` : String(n);
+        const p = n === 1 ? 'dia' : 'dias';
+        return `${formattedN} ${p}`;
+      })();
+
       if (setObservation) {
         setObservation((prev) => ({
           ...prev,
           outcome: aiSuggested,
+          outcomeReason: parsed.motivoDesfecho || '',
           inObservation: aiSuggested === 'observacao',
-          startedAt: aiSuggested === 'observacao' ? (prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })) : undefined
+          startedAt: aiSuggested === 'observacao' ? (prev.startedAt || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })) : undefined,
+          unitMedications: finalUnit,
+          homeMedications: finalHome,
+          orderedLabs: formatExamList(parsed.examesLaboratorio),
+          orderedImages: formatExamList(parsed.examesImagem),
+          medicationDisclaimers: parsed.disclaimers || [],
+          tetanusRabiesAlert: parsed.alertaProfilaxiaVacinal || '',
+          techOrientations: ensureOriento(parsed.orientacoesProntuario || parsed.textoTecnico || ''),
+          techAlarmSignals: ensureOriento(parsed.sinaisAlarmeProntuario || ''),
+          layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
+          layAlarmSignals: parsed.sinaisAlarmeReceita || '',
+          medicalLeaveNeeded: !!parsed.atestadoNecessario,
+          medicalLeaveDays: formattedDias,
+          referralNeeded: !!parsed.encaminhamentoUbs,
+          referralReason: parsed.motivoEncaminhamento || ''
         }));
       }
-
-      setAiResults((prev) => ({
-        ...prev,
-        unitMedications: finalUnit,
-        homeMedications: finalHome,
-        medicationDisclaimers: parsed.disclaimers || [],
-        tetanusRabiesAlert: parsed.alertaProfilaxiaVacinal || '',
-        orderedLabs: formatExamList(parsed.examesLaboratorio),
-        orderedImages: formatExamList(parsed.examesImagem),
-        suggestedOutcome: aiSuggested,
-        clinicalOutcome: aiSuggested,
-        outcomeReason: parsed.motivoDesfecho || '',
-        referralNeeded: !!parsed.encaminhamentoUbs,
-        referralReason: parsed.motivoEncaminhamento || '',
-        medicalLeaveNeeded: !!parsed.atestadoNecessario,
-        medicalLeaveDays: (() => {
-          const raw = parsed.diasAtestado || '';
-          const m = String(raw).match(/\d+/);
-          let n = m ? parseInt(m[0], 10) : 1;
-          if (n === 3 || isNaN(n) || n <= 0) n = 1;
-          const formattedN = n <= 9 ? `0${n}` : String(n);
-          const p = n === 1 ? 'dia' : 'dias';
-          return `${formattedN} ${p}`;
-        })(),
-        medicalLeaveReason: parsed.motivoAtestado || '',
-        techOrientations: ensureOriento(parsed.orientacoesProntuario || parsed.textoTecnico || ''),
-        techAlarmSignals: ensureOriento(parsed.sinaisAlarmeProntuario || ''),
-        layOrientations: parsed.orientacoesReceita || parsed.textoLeigo || '',
-        layAlarmSignals: parsed.sinaisAlarmeReceita || ''
-      }));
     });
   };
 
@@ -913,16 +895,16 @@ DIRETRIZES OBRIGATÓRIAS:
     await executeAiAction('Gerar Condutas da Evolução', 'gerarCondutasEvolucao', async () => {
       const payloadBase = getCasePayload('payloadCaso');
 
-      const medsUnidadeText = Array.isArray(aiResults?.unitMedications)
-        ? aiResults.unitMedications.join('\n\n').trim()
-        : (aiResults?.unitMedications || '').trim();
-      const medsCasaText = Array.isArray(aiResults?.homeMedications)
-        ? aiResults.homeMedications.join('\n\n').trim()
-        : (aiResults?.homeMedications || '').trim();
-      const labsText = (aiResults?.orderedLabs || '').trim();
-      const imagesText = (aiResults?.orderedImages || '').trim();
-      const orientText = (aiResults?.techOrientations || '').trim();
-      const alarmText = (aiResults?.techAlarmSignals || '').trim();
+      const medsUnidadeText = Array.isArray(observation?.unitMedications)
+        ? observation.unitMedications.join('\n\n').trim()
+        : '';
+      const medsCasaText = Array.isArray(observation?.homeMedications)
+        ? observation.homeMedications.join('\n\n').trim()
+        : '';
+      const labsText = (observation?.orderedLabs || '').trim();
+      const imagesText = (observation?.orderedImages || '').trim();
+      const orientText = (observation?.techOrientations || '').trim();
+      const alarmText = (observation?.techAlarmSignals || '').trim();
       
       const outcomeVal = observation?.outcome || (observation?.inObservation ? 'observacao' : 'alta');
       const outcomeTextMap: Record<string, string> = {
@@ -986,10 +968,6 @@ ${finalOutcomeText}`;
           newConducts: cleaned
         }));
       }
-      setAiResults((prev) => ({
-        ...prev,
-        newConductsSuggestion: cleaned
-      }));
     });
   };
 

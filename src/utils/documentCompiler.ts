@@ -70,7 +70,9 @@ export function generateEvolucaoText(
   templateEvolucao: string,
   contextData: TagContextData
 ): string {
-  const rawMeds = contextData.aiResults.unitMedications || [];
+  const rawMeds = (contextData.observation?.unitMedications && contextData.observation.unitMedications.length > 0)
+    ? contextData.observation.unitMedications
+    : (contextData.aiResults?.unitMedications || []);
   let medsUnidade = '';
   if (rawMeds.length > 0) {
     const fullText = rawMeds.join('\n\n').trim();

@@ -77,7 +77,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   examResults,
   setExamResults,
   aiResults,
-  setAiResults,
+  setAiResults: _setAiResults,
   aiLoading,
   prompts,
   templates,
@@ -98,8 +98,8 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   setEvolucaoDocument,
   generateEvolucaoDocument,
   documents,
-  setDocuments,
-  compileSingleDocument,
+  setDocuments: _setDocuments,
+  compileSingleDocument: _compileSingleDocument,
   tagContextData,
   susFilter = false,
   hideAiBoxes = false,
@@ -110,7 +110,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
 
   const [activeDocDrawer, setActiveDocDrawer] = useState<'atestado' | 'relatorio' | null>(null);
   const [diasAtestado, setDiasAtestado] = useState<string>(() => {
-    const raw = aiResults?.medicalLeaveDays || '';
+    const raw = observation.medicalLeaveDays || '';
     const m = String(raw).match(/\d+/);
     let n = m ? parseInt(m[0], 10) : 1;
     if (n === 3 || isNaN(n) || n <= 0) n = 1;
@@ -121,15 +121,15 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   const [copiedDoc, setCopiedDoc] = useState<string | null>(null);
 
   React.useEffect(() => {
-    if (aiResults?.medicalLeaveDays) {
-      const m = String(aiResults.medicalLeaveDays).match(/\d+/);
+    if (observation.medicalLeaveDays) {
+      const m = String(observation.medicalLeaveDays).match(/\d+/);
       if (m) {
         let n = parseInt(m[0], 10);
         if (n === 3 || isNaN(n) || n <= 0) n = 1;
         setDiasAtestado(n <= 9 ? `0${n}` : String(n));
       }
     }
-  }, [aiResults?.medicalLeaveDays]);
+  }, [observation.medicalLeaveDays]);
 
   const copyToClipboard = (text: string, id: string) => {
     if (!text) return;
@@ -138,21 +138,55 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
     setTimeout(() => setCopiedDoc(null), 1800);
   };
 
-  const handleCompileAtestado = () => {
-    if (compileSingleDocument) {
-      const n = parseInt(diasAtestado, 10) || 1;
-      const formatted = n <= 9 ? `0${n}` : String(n);
-      compileSingleDocument('atestado', {
-        DIAS: formatted,
-        INCLUIR_CID: incluirCid ? 'true' : 'false'
-      });
+  const evoTagContextData: TagContextData = useMemo(() => {
+    if (!tagContextData) {
+      return {
+        patient,
+        examResults,
+        aiResults,
+        observation,
+        hpp: { alergias: '', comorbidades: '', muc: '', cirurgias: '', tabagismo: '', etilismo: '' },
+        vitals: { pa: '', fc: '', fr: '', sat: '', tax: '' }
+      };
     }
+    return {
+      ...tagContextData,
+      examResults,
+      observation,
+      aiResults: {
+        ...tagContextData.aiResults,
+        mainHypothesis: observation.conclusionNewHypothesis || tagContextData.aiResults.mainHypothesis,
+        selectedCid: observation.conclusionCid || tagContextData.aiResults.selectedCid,
+        unitMedications: observation.unitMedications ?? tagContextData.aiResults.unitMedications,
+        homeMedications: observation.homeMedications ?? tagContextData.aiResults.homeMedications,
+        orderedLabs: observation.orderedLabs ?? tagContextData.aiResults.orderedLabs,
+        orderedImages: observation.orderedImages ?? tagContextData.aiResults.orderedImages,
+        techOrientations: observation.techOrientations ?? tagContextData.aiResults.techOrientations,
+        techAlarmSignals: observation.techAlarmSignals ?? tagContextData.aiResults.techAlarmSignals,
+        layOrientations: observation.layOrientations ?? tagContextData.aiResults.layOrientations,
+        layAlarmSignals: observation.layAlarmSignals ?? tagContextData.aiResults.layAlarmSignals,
+      }
+    };
+  }, [tagContextData, patient, examResults, aiResults, observation]);
+
+  const handleCompileAtestado = () => {
+    const n = parseInt(diasAtestado, 10) || 1;
+    const formatted = n <= 9 ? `0${n}` : String(n);
+    const text = buildDocument('atestado', templates, {
+      ...evoTagContextData,
+      customReplacements: {
+        ...evoTagContextData.customReplacements,
+        DIAS: formatted,
+        INCLUIR_CID: incluirCid ? 'true' : 'false',
+        CID_CODIGO: observation.conclusionCid ? observation.conclusionCid.replace(/^CID:?\s*/i, '').trim() : ''
+      }
+    });
+    setObservation((prev) => ({ ...prev, atestadoDocument: text }));
   };
 
   const handleCompileRelatorio = () => {
-    if (compileSingleDocument) {
-      compileSingleDocument('encaminhamento');
-    }
+    const text = buildDocument('encaminhamento', templates, evoTagContextData);
+    setObservation((prev) => ({ ...prev, encaminhamentoDocument: text }));
   };
 
   const handleRunAiRelatorio = () => {
@@ -162,67 +196,58 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   };
 
   const handleCopyProntuario = () => {
-    const text = tagContextData
-      ? buildDocument('prontuario', templates, tagContextData)
-      : (documents?.prontuario || '');
-    if (setDocuments && text) {
-      setDocuments((prev) => ({ ...prev, prontuario: text }));
-    }
+    const text = documents?.prontuario || (tagContextData ? buildDocument('prontuario', templates, tagContextData) : '');
     copyToClipboard(text, 'prontuario');
   };
 
   const handleCopyReceita = () => {
-    const text = tagContextData
-      ? buildDocument('receitaDomiciliar', templates, tagContextData)
-      : (documents?.receitaDomiciliar || '');
-    if (setDocuments && text) {
-      setDocuments((prev) => ({ ...prev, receitaDomiciliar: text }));
-    }
+    const text = buildDocument('receitaDomiciliar', templates, evoTagContextData);
     copyToClipboard(text, 'receita');
   };
 
   const handleCopyAtestado = () => {
-    let text = documents?.atestado;
-    if (!text && tagContextData) {
+    let text = observation.atestadoDocument;
+    if (!text) {
       const n = parseInt(diasAtestado, 10) || 1;
       const formatted = n <= 9 ? `0${n}` : String(n);
       text = buildDocument('atestado', templates, {
-        ...tagContextData,
+        ...evoTagContextData,
         customReplacements: {
-          ...tagContextData.customReplacements,
+          ...evoTagContextData.customReplacements,
           DIAS: formatted,
-          INCLUIR_CID: incluirCid ? 'true' : 'false'
+          INCLUIR_CID: incluirCid ? 'true' : 'false',
+          CID_CODIGO: observation.conclusionCid ? observation.conclusionCid.replace(/^CID:?\s*/i, '').trim() : ''
         }
       });
-      if (setDocuments && text) setDocuments((prev) => ({ ...prev, atestado: text }));
+      setObservation((prev) => ({ ...prev, atestadoDocument: text }));
     }
     copyToClipboard(text || '', 'atestado');
   };
 
   const handleCopyRelatorio = () => {
-    let text = documents?.encaminhamento;
-    if (!text && tagContextData) {
-      text = buildDocument('encaminhamento', templates, tagContextData);
-      if (setDocuments && text) setDocuments((prev) => ({ ...prev, encaminhamento: text }));
+    let text = observation.encaminhamentoDocument;
+    if (!text) {
+      text = buildDocument('encaminhamento', templates, evoTagContextData);
+      setObservation((prev) => ({ ...prev, encaminhamentoDocument: text }));
     }
     copyToClipboard(text || '', 'relatorio');
   };
 
   const handleCopyEvolucao = () => {
-    const text = evolucaoDocument || (tagContextData ? generateEvolucaoText(templates.evolucao, tagContextData) : '');
+    const text = evolucaoDocument || generateEvolucaoText(templates.evolucao, evoTagContextData);
     copyToClipboard(text, 'evolucao');
   };
 
   const displayedHypotheses = useMemo(() => {
-    return aiResults.conclusionHypothesisRankings || aiResults.hypothesisRankings || [];
-  }, [aiResults.conclusionHypothesisRankings, aiResults.hypothesisRankings]);
+    return observation.hypothesisRankings || [];
+  }, [observation.hypothesisRankings]);
 
   const displayedCids = useMemo(() => {
-    return aiResults.conclusionCidRankings || aiResults.cidRankings || [];
-  }, [aiResults.conclusionCidRankings, aiResults.cidRankings]);
+    return observation.cidRankings || [];
+  }, [observation.cidRankings]);
 
-  const currentHypothesis = observation.conclusionNewHypothesis || aiResults.mainHypothesis || '';
-  const currentCid = observation.conclusionCid || aiResults.selectedCid || '';
+  const currentHypothesis = observation.conclusionNewHypothesis || '';
+  const currentCid = observation.conclusionCid || '';
 
   const selectedHypothesisIdx = useMemo(() => {
     if (!currentHypothesis || displayedHypotheses.length === 0) return null;
@@ -295,7 +320,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
     setPrevNewConducts(observation.newConducts);
     setObservation((prev) => ({
       ...prev,
-      newConducts: aiResults.newConductsSuggestion || ''
+      newConducts: observation.newConducts || ''
     }));
   };
 
@@ -387,7 +412,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         )}
       </section>
 
-      {/* 3. HIPÓTESE FINAL (IDÊNTICO AO BOX DE HIPÓTESE E CID DE ATENDIMENTO CLÍNICO) */}
+      {/* 3. HIPÓTESE FINAL (OPERANDO DE MANEIRA ISOLADA DO ATENDIMENTO CLÍNICO) */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -430,7 +455,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           </div>
         </div>
 
-        {!hideAiBoxes && aiResults.isCompulsoryNotification && (
+        {!hideAiBoxes && observation.isCompulsoryNotification && (
           <AIDrawer
             title="ATENÇÃO (SINAN): Hipótese de Notificação Compulsória"
             icon={<ShieldAlert className="w-4 h-4 text-rose-500" />}
@@ -442,14 +467,14 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           </AIDrawer>
         )}
 
-        {!hideAiBoxes && aiResults.clinicalScores && aiResults.clinicalScores.length > 0 && (
+        {!hideAiBoxes && observation.clinicalScores && observation.clinicalScores.length > 0 && (
           <AIDrawer
             title="Escores Clínicos Automatizados (IA):"
             variant="indigo"
-            triggerUpdate={aiResults.clinicalScores}
+            triggerUpdate={observation.clinicalScores}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {aiResults.clinicalScores.map((s, idx) => (
+              {observation.clinicalScores.map((s, idx) => (
                 <div key={idx} className="bg-white dark:bg-navy-850 p-2 rounded border border-indigo-100 dark:border-slate-800">
                   <strong className="text-indigo-800 dark:text-ice-300">{s.name}:</strong> {s.score} — {s.interpretation}
                 </div>
@@ -600,7 +625,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         </div>
       </section>
 
-      {/* 4. CONDUTAS & PRESCRIÇÕES (IDÊNTICO AO ATENDIMENTO CLÍNICO) */}
+      {/* 4. CONDUTAS & PRESCRIÇÕES (OPERANDO DE MANEIRA ISOLADA DO ATENDIMENTO CLÍNICO) */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -615,25 +640,25 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           </div>
         </div>
 
-        {!hideAiBoxes && aiResults.tetanusRabiesAlert && (
+        {!hideAiBoxes && observation.tetanusRabiesAlert && (
           <AIDrawer
             title="Alerta de Profilaxia Antitetânica / Antirrábica (IA):"
             variant="blue"
           >
             <span className="text-xs text-blue-900 dark:text-ice-200 font-medium">
-              💉 {aiResults.tetanusRabiesAlert}
+              💉 {observation.tetanusRabiesAlert}
             </span>
           </AIDrawer>
         )}
 
-        {!hideAiBoxes && aiResults.medicationDisclaimers && aiResults.medicationDisclaimers.length > 0 && (
+        {!hideAiBoxes && observation.medicationDisclaimers && observation.medicationDisclaimers.length > 0 && (
           <AIDrawer
             title="Alertas de Segurança Farmacológica (IA):"
             variant="blue"
-            triggerUpdate={aiResults.medicationDisclaimers}
+            triggerUpdate={observation.medicationDisclaimers}
           >
             <div className="space-y-1.5 text-xs">
-              {aiResults.medicationDisclaimers.map((d, idx) => (
+              {observation.medicationDisclaimers.map((d, idx) => (
                 <div
                   key={idx}
                   className="p-2.5 rounded-lg border text-xs flex items-start gap-2.5 bg-blue-50/50 dark:bg-navy-900/60 border-blue-200/60 dark:border-blue-900/50 text-blue-950 dark:text-ice-200"
@@ -658,18 +683,18 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
                 boxType="interna"
                 peso={patient?.peso}
                 onSelectMedication={(opt) => {
-                  const current = Array.isArray(aiResults.unitMedications)
-                    ? aiResults.unitMedications.join('\n\n').trim()
-                    : (aiResults.unitMedications || '').trim();
+                  const current = Array.isArray(observation.unitMedications)
+                    ? observation.unitMedications.join('\n\n').trim()
+                    : (observation.unitMedications || '').trim();
                   const updated = appendMedicationToPrescription(current, opt.fullText, opt.route);
-                  setAiResults({ ...aiResults, unitMedications: [updated] });
+                  setObservation((prev) => ({ ...prev, unitMedications: [updated] }));
                 }}
               />
             </div>
             <UndoableTextarea
-              value={Array.isArray(aiResults.unitMedications) ? aiResults.unitMedications.join('\n\n') : (aiResults.unitMedications || '')}
+              value={Array.isArray(observation.unitMedications) ? observation.unitMedications.join('\n\n') : (observation.unitMedications || '')}
               onChange={(val) =>
-                setAiResults({ ...aiResults, unitMedications: val ? [val] : [] })
+                setObservation((prev) => ({ ...prev, unitMedications: val ? [val] : [] }))
               }
               rows={4}
             />
@@ -684,18 +709,18 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
                 boxType="domiciliar"
                 peso={patient?.peso}
                 onSelectMedication={(opt) => {
-                  const current = Array.isArray(aiResults.homeMedications)
-                    ? aiResults.homeMedications.join('\n\n').trim()
-                    : (aiResults.homeMedications || '').trim();
+                  const current = Array.isArray(observation.homeMedications)
+                    ? observation.homeMedications.join('\n\n').trim()
+                    : (observation.homeMedications || '').trim();
                   const updated = appendMedicationToPrescription(current, opt.fullText, opt.route);
-                  setAiResults({ ...aiResults, homeMedications: [updated] });
+                  setObservation((prev) => ({ ...prev, homeMedications: [updated] }));
                 }}
               />
             </div>
             <UndoableTextarea
-              value={Array.isArray(aiResults.homeMedications) ? aiResults.homeMedications.join('\n\n') : (aiResults.homeMedications || '')}
+              value={Array.isArray(observation.homeMedications) ? observation.homeMedications.join('\n\n') : (observation.homeMedications || '')}
               onChange={(val) =>
-                setAiResults({ ...aiResults, homeMedications: val ? [val] : [] })
+                setObservation((prev) => ({ ...prev, homeMedications: val ? [val] : [] }))
               }
               rows={4}
             />
@@ -708,8 +733,8 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
               EXAMES LABORATORIAIS
             </span>
             <UndoableTextarea
-              value={aiResults.orderedLabs || ''}
-              onChange={(val) => setAiResults({ ...aiResults, orderedLabs: val })}
+              value={observation.orderedLabs || ''}
+              onChange={(val) => setObservation((prev) => ({ ...prev, orderedLabs: val }))}
               rows={3}
             />
           </div>
@@ -719,15 +744,15 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
               EXAMES DE IMAGEM
             </span>
             <UndoableTextarea
-              value={aiResults.orderedImages || ''}
-              onChange={(val) => setAiResults({ ...aiResults, orderedImages: val })}
+              value={observation.orderedImages || ''}
+              onChange={(val) => setObservation((prev) => ({ ...prev, orderedImages: val }))}
               rows={3}
             />
           </div>
         </div>
       </section>
 
-      {/* 5. ORIENTAÇÕES E SINAIS DE ALARME (IDÊNTICO AO ATENDIMENTO CLÍNICO) */}
+      {/* 5. ORIENTAÇÕES E SINAIS DE ALARME (OPERANDO DE MANEIRA ISOLADA DO ATENDIMENTO CLÍNICO) */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
@@ -743,15 +768,15 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             <UndoableTextarea
               label="Orientações Gerais"
               hideActions={true}
-              value={aiResults.techOrientations || ''}
-              onChange={(val) => setAiResults({ ...aiResults, techOrientations: val })}
+              value={observation.techOrientations || ''}
+              onChange={(val) => setObservation((prev) => ({ ...prev, techOrientations: val }))}
               rows={3}
             />
             <UndoableTextarea
               label="Sinais de Alarme"
               hideActions={true}
-              value={aiResults.techAlarmSignals || ''}
-              onChange={(val) => setAiResults({ ...aiResults, techAlarmSignals: val })}
+              value={observation.techAlarmSignals || ''}
+              onChange={(val) => setObservation((prev) => ({ ...prev, techAlarmSignals: val }))}
               rows={3}
             />
           </div>
@@ -763,22 +788,22 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             <UndoableTextarea
               label="Orientações Gerais"
               hideActions={true}
-              value={aiResults.layOrientations || ''}
-              onChange={(val) => setAiResults({ ...aiResults, layOrientations: val })}
+              value={observation.layOrientations || ''}
+              onChange={(val) => setObservation((prev) => ({ ...prev, layOrientations: val }))}
               rows={3}
             />
             <UndoableTextarea
               label="Sinais de Alarme"
               hideActions={true}
-              value={aiResults.layAlarmSignals || ''}
-              onChange={(val) => setAiResults({ ...aiResults, layAlarmSignals: val })}
+              value={observation.layAlarmSignals || ''}
+              onChange={(val) => setObservation((prev) => ({ ...prev, layAlarmSignals: val }))}
               rows={3}
             />
           </div>
         </div>
       </section>
 
-      {/* 6. DOCUMENTOS RÁPIDOS (IDÊNTICO AO ATENDIMENTO CLÍNICO) */}
+      {/* 6. DOCUMENTOS RÁPIDOS (OPERANDO DE MANEIRA ISOLADA DO ATENDIMENTO CLÍNICO) */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -883,8 +908,8 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             </div>
 
             <UndoableTextarea
-              value={documents?.atestado || ''}
-              onChange={(val) => setDocuments && setDocuments((prev) => ({ ...prev, atestado: val }))}
+              value={observation.atestadoDocument || ''}
+              onChange={(val) => setObservation((prev) => ({ ...prev, atestadoDocument: val }))}
               rows={6}
               className="font-mono text-xs leading-relaxed"
             />
@@ -941,8 +966,8 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
             </div>
 
             <UndoableTextarea
-              value={documents?.encaminhamento || ''}
-              onChange={(val) => setDocuments && setDocuments((prev) => ({ ...prev, encaminhamento: val }))}
+              value={observation.encaminhamentoDocument || ''}
+              onChange={(val) => setObservation((prev) => ({ ...prev, encaminhamentoDocument: val }))}
               rows={6}
               className="font-mono text-xs leading-relaxed"
             />
@@ -950,7 +975,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         )}
       </section>
 
-      {/* 7. CONDUTAS */}
+      {/* 7. CONDUTAS (OPERANDO DE MANEIRA ISOLADA DO ATENDIMENTO CLÍNICO) */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-1">
           <h2 className="text-sm font-bold text-slate-800 dark:text-ice-100 uppercase tracking-wide">
@@ -979,16 +1004,16 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           rows={4}
         />
 
-        {!hideAiBoxes && aiResults.newConductsSuggestion && observation.newConducts !== aiResults.newConductsSuggestion && (
+        {!hideAiBoxes && prevNewConducts !== null && (
           <AIDrawer
-            title="Sugestão da IA para Condutas:"
+            title="Histórico de alteração de Condutas:"
             onImplement={handleImplementNewConducts}
             onUndo={handleUndoNewConducts}
-            canUndo={prevNewConducts !== null}
-            triggerUpdate={aiResults.newConductsSuggestion}
+            canUndo={true}
+            triggerUpdate={prevNewConducts}
           >
             <p className="text-xs text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans bg-white dark:bg-[#1a1a1a] p-2.5 rounded border border-[#ececeb] dark:border-[#2a2a2a]">
-              {aiResults.newConductsSuggestion}
+              {prevNewConducts}
             </p>
           </AIDrawer>
         )}
@@ -1064,7 +1089,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         </div>
       </section>
 
-      {/* 8. DESFECHO */}
+      {/* 8. DESFECHO (OPERANDO DE MANEIRA ISOLADA DO ATENDIMENTO CLÍNICO) */}
       <section className="bg-white dark:bg-[#202020] border border-slate-200 dark:border-[#2e2e2e] rounded-xl p-4 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -1074,18 +1099,17 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
           </div>
         </div>
 
-        {/* Notificação/Sugestão de Desfecho da IA com justificativa */}
-        {!hideAiBoxes && aiResults.outcomeReason && (
+        {!hideAiBoxes && observation.outcomeReason && (
           <div className="p-3 rounded-lg border border-slate-200 dark:border-[#333] bg-slate-50/60 dark:bg-[#1c1c1c] text-xs space-y-1 animate-in fade-in duration-150">
             <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-neutral-200">
               <span className="w-2 h-2 rounded-full bg-slate-600 dark:bg-neutral-400" />
               <span>Sugestão da IA:</span>
               <span className="uppercase text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#2d2d2d] text-slate-700 dark:text-neutral-300 font-bold">
-                {aiResults.suggestedOutcome || aiResults.clinicalOutcome}
+                {observation.outcome}
               </span>
             </div>
             <p className="text-slate-600 dark:text-neutral-400 text-xs leading-relaxed pl-3.5">
-              {aiResults.outcomeReason}
+              {observation.outcomeReason}
             </p>
           </div>
         )}
@@ -1209,7 +1233,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
         )}
       </section>
 
-      {/* 9. EVOLUÇÃO */}
+      {/* 9. EVOLUÇÃO (PLOTADO COM OS DADOS DA EVOLUÇÃO MÉDICA) */}
       <section className="bg-white dark:bg-navy-850 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

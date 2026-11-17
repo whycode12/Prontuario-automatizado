@@ -87,6 +87,28 @@ export interface ObservationData {
   newConducts: string;
   outcome?: 'alta' | 'observacao' | 'internacao' | 'transferencia';
   conclusionCid?: string;
+  hypothesisRankings?: HypothesisItem[];
+  cidRankings?: Array<{ cid: string; desc: string; prob: string }>;
+  isCompulsoryNotification?: boolean;
+  compulsoryDetails?: string;
+  clinicalScores?: Array<{ name: string; score: string; interpretation: string }>;
+  unitMedications?: string[];
+  homeMedications?: string[];
+  orderedLabs?: string;
+  orderedImages?: string;
+  medicationDisclaimers?: Array<{ med: string; type: 'warning' | 'contraindication' | 'info'; note: string }>;
+  tetanusRabiesAlert?: string;
+  techOrientations?: string;
+  techAlarmSignals?: string;
+  layOrientations?: string;
+  layAlarmSignals?: string;
+  outcomeReason?: string;
+  medicalLeaveNeeded?: boolean;
+  medicalLeaveDays?: string;
+  referralNeeded?: boolean;
+  referralReason?: string;
+  atestadoDocument?: string;
+  encaminhamentoDocument?: string;
 }
 
 export interface FinalDocuments {
