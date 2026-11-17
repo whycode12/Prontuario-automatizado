@@ -52,6 +52,9 @@ import {
   saveUserApiKey,
   fetchUserApiKey,
   subscribeToUserApiKey,
+  saveUserModel,
+  fetchUserModel,
+  subscribeToUserModel,
   saveUserImprovements,
   fetchUserImprovements,
   subscribeToUserImprovements
@@ -149,7 +152,14 @@ export default function App() {
 
   // Settings & Storage State
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(STORAGE_KEYS.API_KEY) || '');
-  const [model, setModel] = useState<string>(() => localStorage.getItem(STORAGE_KEYS.MODEL) || 'gemini-3.8-flash');
+  const [model, setModel] = useState<string>(() => {
+    const user = auth.currentUser;
+    if (user) {
+      const userModel = localStorage.getItem(`${STORAGE_KEYS.MODEL}_${user.uid}`);
+      if (userModel) return userModel;
+    }
+    return localStorage.getItem(STORAGE_KEYS.MODEL) || 'gemini-3.8-flash';
+  });
   const [templates, setTemplates] = useState<SystemTemplates>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
     if (!saved) return DEFAULT_TEMPLATES;
@@ -262,6 +272,7 @@ export default function App() {
     let unsubscribeConfig: (() => void) | null = null;
     let unsubscribeGlobalConfig: (() => void) | null = null;
     let unsubscribeApiKey: (() => void) | null = null;
+    let unsubscribeModel: (() => void) | null = null;
 
     const setupListener = (user: typeof auth.currentUser, key: string) => {
       if (unsubscribeSnapshot) {
@@ -361,10 +372,38 @@ export default function App() {
       }
     };
 
+    const setupModelListener = (user: typeof auth.currentUser) => {
+      if (unsubscribeModel) {
+        unsubscribeModel();
+        unsubscribeModel = null;
+      }
+      if (user) {
+        const userCachedModel = localStorage.getItem(`${STORAGE_KEYS.MODEL}_${user.uid}`);
+        if (userCachedModel) {
+          setModel(userCachedModel);
+        }
+        fetchUserModel().then((cloudModel) => {
+          if (cloudModel) {
+            setModel(cloudModel);
+            localStorage.setItem(`${STORAGE_KEYS.MODEL}_${user.uid}`, cloudModel);
+            localStorage.setItem(STORAGE_KEYS.MODEL, cloudModel);
+          }
+        });
+        unsubscribeModel = subscribeToUserModel((newModel) => {
+          if (newModel) {
+            setModel(newModel);
+            localStorage.setItem(`${STORAGE_KEYS.MODEL}_${user.uid}`, newModel);
+            localStorage.setItem(STORAGE_KEYS.MODEL, newModel);
+          }
+        });
+      }
+    };
+
     const currentKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
     if (auth.currentUser) {
       if (currentKey) setupListener(auth.currentUser, currentKey);
       setupApiKeyListener(auth.currentUser);
+      setupModelListener(auth.currentUser);
     }
 
     let unsubscribeImprovements: (() => void) | null = null;
@@ -404,6 +443,7 @@ export default function App() {
       const activeKey = masterKey.trim() || localStorage.getItem(STORAGE_KEYS.ENCRYPTION_KEY) || '';
       setupListener(user, activeKey);
       setupApiKeyListener(user);
+      setupModelListener(user);
       setupImprovementsListener(user);
     });
 
@@ -417,6 +457,7 @@ export default function App() {
       if (unsubscribeConfig) unsubscribeConfig();
       if (unsubscribeGlobalConfig) unsubscribeGlobalConfig();
       if (unsubscribeApiKey) unsubscribeApiKey();
+      if (unsubscribeModel) unsubscribeModel();
       if (unsubscribeImprovements) unsubscribeImprovements();
     };
   }, [masterKey, configSource]);
@@ -540,9 +581,17 @@ export default function App() {
       showToast('Chave de API salva localmente neste navegador.');
     }
   };
-  const handleSaveModel = (m: string) => {
+  const handleSaveModel = async (m: string) => {
     setModel(m);
     localStorage.setItem(STORAGE_KEYS.MODEL, m);
+    if (auth.currentUser) {
+      localStorage.setItem(`${STORAGE_KEYS.MODEL}_${auth.currentUser.uid}`, m);
+      try {
+        await saveUserModel(m);
+      } catch (err: any) {
+        console.warn('[Sync] Erro ao salvar modelo de IA na nuvem:', err);
+      }
+    }
   };
   const handleSaveTemplate = async (key: keyof SystemTemplates, value: string) => {
     const updated = { ...templates, [key]: value };

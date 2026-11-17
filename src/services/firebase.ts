@@ -309,6 +309,61 @@ export function subscribeToUserApiKey(onApiKeyUpdated: (key: string) => void): (
   );
 }
 
+// Salva o modelo de IA selecionado pelo usuário na nuvem (Firebase)
+export async function saveUserModel(model: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const docRef = doc(db, 'users', user.uid, 'settings', 'aiModel');
+  await setDoc(
+    docRef,
+    {
+      model: model.trim(),
+      updatedAt: serverTimestamp(),
+      updatedBy: user.email || user.uid
+    },
+    { merge: true }
+  );
+}
+
+// Carrega o modelo de IA salvo deste médico na nuvem
+export async function fetchUserModel(): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) return null;
+
+  try {
+    const docRef = doc(db, 'users', user.uid, 'settings', 'aiModel');
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return null;
+    const data = docSnap.data();
+    return typeof data.model === 'string' ? data.model : null;
+  } catch (err) {
+    console.warn('[Sync] Erro ao carregar modelo do usuário:', err);
+    return null;
+  }
+}
+
+// Ouve atualizações em tempo real do modelo de IA do médico conectado
+export function subscribeToUserModel(onModelUpdated: (model: string) => void): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const docRef = doc(db, 'users', user.uid, 'settings', 'aiModel');
+  return onSnapshot(
+    docRef,
+    (docSnap) => {
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
+      if (data && typeof data.model === 'string') {
+        onModelUpdated(data.model);
+      }
+    },
+    (err) => {
+      console.warn('[Sync] Erro na escuta em tempo real do modelo de IA:', err);
+    }
+  );
+}
+
 // Helper para limpar campos undefined antes de enviar ao Firestore (o Firestore não aceita valores undefined)
 function removeUndefinedFields<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
