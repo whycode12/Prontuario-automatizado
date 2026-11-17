@@ -36,9 +36,12 @@ PADRÃO E ESTRUTURA DOS TÓPICOS:
    - Exemplo: "- Oriento hidratação oral frequente, dieta pastosa e repouso relativo."
 4. Sinais de alarme alertados ao paciente (extraídos dos sinais de alarme):
    - Exemplo: "- Oriento retorno imediato se surgimento de exantema, dificuldade respiratória, trismo ou incapacidade de deglutir saliva."
-5. Documentos emitidos (leia se foi fornecido atestado médico ou relatório):
-   - Se houver relatório/encaminhamento gerado ou indicado: "- Fornecido relatório para continuidade do acompanhamento em PSF."
-   - Se houver atestado médico gerado ou indicado: "- Fornecido atestado médico de 01 dias." (o padrão em pronto atendimento é sempre 01 dia, nunca 03).
+5. Documentos emitidos (REGRA RIGOROSA):
+   - SE A CAIXA DE ATESTADO ESTIVER VAZIA / NÃO EMITIDO: JAMAIS coloque que foi fornecido atestado médico. NÃO cite atestado.
+   - SE A CAIXA DE RELATÓRIO ESTIVER VAZIA / NÃO EMITIDO: JAMAIS coloque que foi fornecido relatório ou encaminhamento. NÃO cite relatório.
+   - Apenas se constar explicitamente EMITIDO nos dados fornecidos:
+     * Se relatório emitido: "- Fornecido relatório para continuidade do acompanhamento em PSF."
+     * Se atestado médico emitido: "- Fornecido atestado médico de 01 dia." (ou a quantidade descrita no atestado emitido).
 6. Desfecho clínico (OBRIGATORIAMENTE o último tópico):
    - Se alta médica: "- Alta médica com orientações."
    - Se em observação: "- Mantenho em observação, reavaliar após resultados de exames." (ou reavaliar após término da medicação).
@@ -403,8 +406,10 @@ DIRETRIZES OBRIGATÓRIAS:
         ? 'Em observação clínica para reavaliação após medicação/exames'
         : (aiResults?.clinicalOutcome === 'observacao' ? 'Em observação clínica' : 'Alta médica com orientações');
 
-      const atestadoText = (documents?.atestado || '').trim() || (aiResults?.medicalLeaveDays ? `${aiResults.medicalLeaveDays}` : '');
-      const relatorioText = (documents?.encaminhamento || '').trim() || (aiResults?.referralReason ? `Sim (${aiResults.referralReason})` : '');
+      const atestadoBoxText = (documents?.atestado || '').trim();
+      const relatorioBoxText = (documents?.encaminhamento || '').trim();
+      const hasAtestado = atestadoBoxText.length > 0;
+      const hasRelatorio = relatorioBoxText.length > 0;
 
       const factualActionsPayload = `=== AÇÕES CLÍNICAS REALIZADAS E DEFINIDAS NESTE ATENDIMENTO ===
 - PRESCRIÇÃO INTERNA (Unidade):
@@ -426,10 +431,10 @@ ${orientText || 'Orientações gerais de repouso e hidratação'}
 ${alarmText || 'Retorno imediato se piora dos sintomas ou sinais de alerta'}
 
 - ATESTADO MÉDICO:
-${atestadoText ? `Sim (${atestadoText})` : 'Não emitido'}
+${hasAtestado ? `EMITIDO (${atestadoBoxText})` : 'NÃO EMITIDO (caixa de atestado vazia - NÃO mencione fornecimento de atestado)'}
 
 - RELATÓRIO / ENCAMINHAMENTO:
-${relatorioText ? `Sim (${relatorioText})` : 'Não emitido'}
+${hasRelatorio ? `EMITIDO (${relatorioBoxText})` : 'NÃO EMITIDO (caixa de relatório vazia - NÃO mencione fornecimento de relatório)'}
 
 - DESFECHO CLÍNICO:
 ${outcomeText}`;
@@ -442,13 +447,29 @@ ${outcomeText}`;
         model,
         activePrompt,
         fullPayload,
-        'Gere a síntese final de condutas em tópicos objetivos com hífen (- ), cobrindo estritamente as medicações feitas e prescritas, exames pedidos, orientações dadas, documentos emitidos (se houver atestado médico, o padrão da unidade é estritamente 01 dias) e o desfecho do paciente como último tópico.'
+        'Gere a síntese final de condutas em tópicos objetivos com hífen (- ), cobrindo estritamente as medicações feitas e prescritas, exames pedidos, orientações dadas, documentos emitidos (REGRA RIGOROSA: se a caixa de atestado ou de relatório estiver vazia / não emitida, NUNCA cite fornecimento de atestado ou relatório) e o desfecho do paciente como último tópico.'
       );
 
-      const cleaned = response
+      let cleaned = response
         .replace(/```[a-z]*\r?\n?/gi, '')
         .replace(/```/g, '')
         .trim();
+
+      if (!hasAtestado) {
+        cleaned = cleaned
+          .split('\n')
+          .filter((line) => !/atestado/i.test(line))
+          .join('\n')
+          .trim();
+      }
+
+      if (!hasRelatorio) {
+        cleaned = cleaned
+          .split('\n')
+          .filter((line) => !/(?:relat[oó]rio|encaminhamento)/i.test(line))
+          .join('\n')
+          .trim();
+      }
 
       if (setCondutas) {
         setCondutas(cleaned);
@@ -462,6 +483,11 @@ ${outcomeText}`;
 
   const runAiMelhorarCondutas = async () => {
     await executeAiAction('Refinar Condutas', 'melhorarCondutas', async () => {
+      const atestadoBoxText = (documents?.atestado || '').trim();
+      const relatorioBoxText = (documents?.encaminhamento || '').trim();
+      const hasAtestado = atestadoBoxText.length > 0;
+      const hasRelatorio = relatorioBoxText.length > 0;
+
       const jsonExample = `{"condutasRefinadas": "- Dipirona 1g EV diluído em 100ml SF 0,9% agora em 20 min\\n- Hidratação com SF 0,9% 500ml EV\\n- Reavaliação clínica e sinais vitais após término das medicações"}`;
       const payload = `${getCasePayload('payloadConduta')}\n\n=== TEXTO ATUAL DE CONDUTAS DIGITADO PELO MÉDICO ===\n${condutas || 'Sem condutas descritas ainda'}`;
       const response = await callGeminiApi(
@@ -469,14 +495,29 @@ ${outcomeText}`;
         model,
         prompts.melhorarCondutas || DEFAULT_PROMPTS.melhorarCondutas || 'Aprimore a redação médica das condutas.',
         payload,
-        'Analise todo o caso e o texto digitado em Condutas. Refine e melhore a redação médica das condutas mantendo padrão hospitalar/ambulatorial claro e organizado.',
+        'Analise todo o caso e o texto digitado em Condutas. Refine e melhore a redação médica das condutas mantendo padrão hospitalar/ambulatorial claro e organizado. Se a caixa de atestado ou relatório estiver vazia, não cite atestado nem relatório.',
         jsonExample
       );
 
       const parsed = safeJsonParse(response);
+      let refined = parsed.condutasRefinadas || '';
+      if (!hasAtestado && refined) {
+        refined = refined
+          .split('\n')
+          .filter((line: string) => !/atestado/i.test(line))
+          .join('\n')
+          .trim();
+      }
+      if (!hasRelatorio && refined) {
+        refined = refined
+          .split('\n')
+          .filter((line: string) => !/(?:relat[oó]rio|encaminhamento)/i.test(line))
+          .join('\n')
+          .trim();
+      }
       setAiResults((prev) => ({
         ...prev,
-        condutasSuggestion: parsed.condutasRefinadas || ''
+        condutasSuggestion: refined
       }));
     });
   };
@@ -915,8 +956,10 @@ DIRETRIZES OBRIGATÓRIAS:
       };
       const finalOutcomeText = outcomeTextMap[outcomeVal] || '- Alta médica com orientações.';
 
-      const atestadoText = (documents?.atestado || '').trim() || (aiResults?.medicalLeaveDays ? `${aiResults.medicalLeaveDays}` : '');
-      const relatorioText = (documents?.encaminhamento || '').trim() || (aiResults?.referralReason ? `Sim (${aiResults.referralReason})` : '');
+      const atestadoBoxText = (observation?.atestadoDocument || documents?.atestado || '').trim();
+      const relatorioBoxText = (observation?.encaminhamentoDocument || documents?.encaminhamento || '').trim();
+      const hasAtestado = atestadoBoxText.length > 0;
+      const hasRelatorio = relatorioBoxText.length > 0;
 
       const factualActionsPayload = `=== AÇÕES CLÍNICAS E DEFINIÇÕES DA EVOLUÇÃO MÉDICA ===
 - RESULTADOS DE EXAMES:
@@ -941,7 +984,7 @@ ${[labsText, imagesText].filter(Boolean).join('\n') || 'Nenhum exame solicitado'
 ${orientText || 'Orientações clínicas'} | ${alarmText || 'Sinais de alarme'}
 
 - DOCUMENTOS EMITIDOS:
-Atestado: ${atestadoText ? `Sim (${atestadoText})` : 'Não'} | Relatório: ${relatorioText ? `Sim` : 'Não'}
+Atestado: ${hasAtestado ? `EMITIDO (${atestadoBoxText})` : 'NÃO EMITIDO (caixa de atestado vazia - NÃO mencione fornecimento de atestado)'} | Relatório: ${hasRelatorio ? `EMITIDO (${relatorioBoxText})` : 'NÃO EMITIDO (caixa de relatório vazia - NÃO mencione fornecimento de relatório)'}
 
 - DESFECHO DEFINIDO:
 ${finalOutcomeText}`;
@@ -954,13 +997,29 @@ ${finalOutcomeText}`;
         model,
         activePrompt,
         fullPayload,
-        'Gere a síntese das NOVAS CONDUTAS da EVOLUÇÃO MÉDICA em tópicos objetivos com hífen (- ), cobrindo medicações realizadas/prescritas, exames se houver, orientações dadas, documentos emitidos e OBRIGATORIAMENTE o desfecho atual do paciente como último tópico.'
+        'Gere a síntese das NOVAS CONDUTAS da EVOLUÇÃO MÉDICA em tópicos objetivos com hífen (- ), cobrindo medicações realizadas/prescritas, exames se houver, orientações dadas, documentos emitidos (REGRA RIGOROSA: se a caixa de atestado ou de relatório estiver vazia / não emitida, NUNCA cite fornecimento de atestado ou relatório) e OBRIGATORIAMENTE o desfecho atual do paciente como último tópico.'
       );
 
-      const cleaned = response
+      let cleaned = response
         .replace(/```[a-z]*\r?\n?/gi, '')
         .replace(/```/g, '')
         .trim();
+
+      if (!hasAtestado) {
+        cleaned = cleaned
+          .split('\n')
+          .filter((line) => !/atestado/i.test(line))
+          .join('\n')
+          .trim();
+      }
+
+      if (!hasRelatorio) {
+        cleaned = cleaned
+          .split('\n')
+          .filter((line) => !/(?:relat[oó]rio|encaminhamento)/i.test(line))
+          .join('\n')
+          .trim();
+      }
 
       if (setObservation) {
         setObservation((prev) => ({
