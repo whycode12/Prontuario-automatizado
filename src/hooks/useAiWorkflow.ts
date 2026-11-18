@@ -32,21 +32,16 @@ PADRÃO E ESTRUTURA DOS TÓPICOS:
    - Exemplos:
      "- Solicito RX de tórax em AP e PERFIL."
      "- Solicito HMG, Cr, Ur, K, Na."
-3. Orientações clínicas dadas ao paciente (extraídas das orientações):
-   - Exemplo: "- Oriento hidratação oral frequente, dieta pastosa e repouso relativo."
-4. Sinais de alarme alertados ao paciente (extraídos dos sinais de alarme):
-   - Exemplo: "- Oriento retorno imediato se surgimento de exantema, dificuldade respiratória, trismo ou incapacidade de deglutir saliva."
-5. Documentos emitidos (REGRA RIGOROSA):
+3. Documentos emitidos (REGRA RIGOROSA):
    - SE A CAIXA DE ATESTADO ESTIVER VAZIA / NÃO EMITIDO: JAMAIS coloque que foi fornecido atestado médico. NÃO cite atestado.
    - SE A CAIXA DE RELATÓRIO ESTIVER VAZIA / NÃO EMITIDO: JAMAIS coloque que foi fornecido relatório ou encaminhamento. NÃO cite relatório.
    - Apenas se constar explicitamente EMITIDO nos dados fornecidos:
      * Se relatório emitido: "- Fornecido relatório para continuidade do acompanhamento em PSF."
      * Se atestado médico emitido: "- Fornecido atestado médico de 01 dia." (ou a quantidade descrita no atestado emitido).
-6. Desfecho clínico (OBRIGATORIAMENTE o último tópico):
-   - Se alta médica: "- Alta médica com orientações."
-   - Se em observação: "- Mantenho em observação, reavaliar após resultados de exames." (ou reavaliar após término da medicação).
 
-DIRETRIZES:
+REGRA RIGOROSA DE HIGIENE:
+- NÃO inclua orientações ao paciente nem sinais de alarme (estes já são puxados automaticamente no template).
+- NÃO inclua o desfecho final (alta, observação, internação ou transferência), pois o template já insere automaticamente a conduta final abaixo das orientações.
 - Retorne APENAS os tópicos iniciados com hífen (- ), sem introduções, sem saudações e sem comentários adicionais.`;
 
 interface UseAiWorkflowParams {
@@ -400,11 +395,6 @@ DIRETRIZES OBRIGATÓRIAS:
         : (aiResults?.homeMedications || '').trim();
       const labsText = (aiResults?.orderedLabs || '').trim();
       const imagesText = (aiResults?.orderedImages || '').trim();
-      const orientText = (aiResults?.techOrientations || '').trim();
-      const alarmText = (aiResults?.techAlarmSignals || '').trim();
-      const outcomeText = observation?.inObservation
-        ? 'Em observação clínica para reavaliação após medicação/exames'
-        : (aiResults?.clinicalOutcome === 'observacao' ? 'Em observação clínica' : 'Alta médica com orientações');
 
       const atestadoBoxText = (documents?.atestado || '').trim();
       const relatorioBoxText = (documents?.encaminhamento || '').trim();
@@ -424,20 +414,11 @@ ${labsText || 'Nenhum exame laboratorial solicitado'}
 - EXAMES DE IMAGEM SOLICITADOS:
 ${imagesText || 'Nenhum exame de imagem solicitado'}
 
-- ORIENTAÇÕES CLÍNICAS (Prontuário):
-${orientText || 'Orientações gerais de repouso e hidratação'}
-
-- SINAIS DE ALARME (Prontuário):
-${alarmText || 'Retorno imediato se piora dos sintomas ou sinais de alerta'}
-
 - ATESTADO MÉDICO:
 ${hasAtestado ? `EMITIDO (${atestadoBoxText})` : 'NÃO EMITIDO (caixa de atestado vazia - NÃO mencione fornecimento de atestado)'}
 
 - RELATÓRIO / ENCAMINHAMENTO:
-${hasRelatorio ? `EMITIDO (${relatorioBoxText})` : 'NÃO EMITIDO (caixa de relatório vazia - NÃO mencione fornecimento de relatório)'}
-
-- DESFECHO CLÍNICO:
-${outcomeText}`;
+${hasRelatorio ? `EMITIDO (${relatorioBoxText})` : 'NÃO EMITIDO (caixa de relatório vazia - NÃO mencione fornecimento de relatório)'}`;
 
       const fullPayload = `${payloadBase}\n\n${factualActionsPayload}`;
 
@@ -447,12 +428,23 @@ ${outcomeText}`;
         model,
         activePrompt,
         fullPayload,
-        'Gere a síntese final de condutas em tópicos objetivos com hífen (- ), cobrindo estritamente as medicações feitas e prescritas, exames pedidos, orientações dadas, documentos emitidos (REGRA RIGOROSA: se a caixa de atestado ou de relatório estiver vazia / não emitida, NUNCA cite fornecimento de atestado ou relatório) e o desfecho do paciente como último tópico.'
+        'Gere a síntese final de condutas em tópicos objetivos com hífen (- ), cobrindo estritamente as medicações feitas e prescritas, exames pedidos e documentos emitidos (REGRA RIGOROSA: se a caixa de atestado ou de relatório estiver vazia / não emitida, NUNCA cite fornecimento de atestado ou relatório). NÃO inclua orientações ao paciente, NÃO inclua sinais de alarme e NÃO inclua o desfecho do paciente (pois o template insere estes três itens automaticamente abaixo das condutas).'
       );
 
       let cleaned = response
         .replace(/```[a-z]*\r?\n?/gi, '')
         .replace(/```/g, '')
+        .trim();
+
+      cleaned = cleaned
+        .split('\n')
+        .filter((line) => {
+          const l = line.trim();
+          if (/^-[ \t]*(?:oriento|orienta[çc]|sinais? de alarme|retornar se|retorno imediato)/i.test(l)) return false;
+          if (/^-[ \t]*(?:alta m[eé]dica|em observa[çc][aã]o|interna[çc][aã]o|transfer[eê]ncia|mantenho em)/i.test(l)) return false;
+          return true;
+        })
+        .join('\n')
         .trim();
 
       if (!hasAtestado) {
@@ -946,17 +938,6 @@ DIRETRIZES OBRIGATÓRIAS:
         : '';
       const labsText = (observation?.orderedLabs || '').trim();
       const imagesText = (observation?.orderedImages || '').trim();
-      const orientText = (observation?.techOrientations || '').trim();
-      const alarmText = (observation?.techAlarmSignals || '').trim();
-      
-      const outcomeVal = observation?.outcome || (observation?.inObservation ? 'observacao' : 'alta');
-      const outcomeTextMap: Record<string, string> = {
-        alta: '- Alta médica com receitas e orientações domiciliares.',
-        observacao: '- Mantido em leito de observação clínica para continuidade do cuidado.',
-        internacao: '- Solicitada vaga de internação hospitalar via regulação (SUS Fácil / NIR).',
-        transferencia: '- Solicitada transferência inter-hospitalar / vaga de CTI via SAMU/SUS Fácil.'
-      };
-      const finalOutcomeText = outcomeTextMap[outcomeVal] || '- Alta médica com orientações.';
 
       const atestadoBoxText = (observation?.atestadoDocument || documents?.atestado || '').trim();
       const relatorioBoxText = (observation?.encaminhamentoDocument || documents?.encaminhamento || '').trim();
@@ -982,14 +963,8 @@ ${medsCasaText || 'Nenhuma medicação domiciliar prescrita'}
 - EXAMES SOLICITADOS:
 ${[labsText, imagesText].filter(Boolean).join('\n') || 'Nenhum exame solicitado'}
 
-- ORIENTAÇÕES E ALARME:
-${orientText || 'Orientações clínicas'} | ${alarmText || 'Sinais de alarme'}
-
 - DOCUMENTOS EMITIDOS:
-Atestado: ${hasAtestado ? `EMITIDO (${atestadoBoxText})` : 'NÃO EMITIDO (caixa de atestado vazia - NÃO mencione fornecimento de atestado)'} | Relatório: ${hasRelatorio ? `EMITIDO (${relatorioBoxText})` : 'NÃO EMITIDO (caixa de relatório vazia - NÃO mencione fornecimento de relatório)'}
-
-- DESFECHO DEFINIDO:
-${finalOutcomeText}`;
+Atestado: ${hasAtestado ? `EMITIDO (${atestadoBoxText})` : 'NÃO EMITIDO (caixa de atestado vazia - NÃO mencione fornecimento de atestado)'} | Relatório: ${hasRelatorio ? `EMITIDO (${relatorioBoxText})` : 'NÃO EMITIDO (caixa de relatório vazia - NÃO mencione fornecimento de relatório)'}`;
 
       const fullPayload = `${payloadBase}\n\n${factualActionsPayload}`;
 
@@ -999,12 +974,23 @@ ${finalOutcomeText}`;
         model,
         activePrompt,
         fullPayload,
-        'Gere a síntese das NOVAS CONDUTAS da EVOLUÇÃO MÉDICA em tópicos objetivos com hífen (- ), cobrindo medicações realizadas/prescritas, exames se houver, orientações dadas, documentos emitidos (REGRA RIGOROSA: se a caixa de atestado ou de relatório estiver vazia / não emitida, NUNCA cite fornecimento de atestado ou relatório) e OBRIGATORIAMENTE o desfecho atual do paciente como último tópico.'
+        'Gere a síntese das NOVAS CONDUTAS da EVOLUÇÃO MÉDICA em tópicos objetivos com hífen (- ), cobrindo medicações realizadas/prescritas, exames se houver e documentos emitidos (REGRA RIGOROSA: se a caixa de atestado ou de relatório estiver vazia / não emitida, NUNCA cite fornecimento de atestado ou relatório). NÃO inclua orientações ao paciente, NÃO inclua sinais de alarme e NÃO inclua o desfecho final (pois o template insere estes itens automaticamente abaixo das condutas).'
       );
 
       let cleaned = response
         .replace(/```[a-z]*\r?\n?/gi, '')
         .replace(/```/g, '')
+        .trim();
+
+      cleaned = cleaned
+        .split('\n')
+        .filter((line) => {
+          const l = line.trim();
+          if (/^-[ \t]*(?:oriento|orienta[çc]|sinais? de alarme|retornar se|retorno imediato)/i.test(l)) return false;
+          if (/^-[ \t]*(?:alta m[eé]dica|em observa[çc][aã]o|interna[çc][aã]o|transfer[eê]ncia|mantido em|mantenho em)/i.test(l)) return false;
+          return true;
+        })
+        .join('\n')
         .trim();
 
       if (!hasAtestado) {

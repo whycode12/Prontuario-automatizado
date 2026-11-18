@@ -98,10 +98,22 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
     customReplacements = {}
   } = data;
 
-  const techOrient = ensureOriento(aiResults.techOrientations?.trim() || '');
-  const techAlarm = ensureOriento(aiResults.techAlarmSignals?.trim() || '');
-  const layOrient = aiResults.layOrientations?.trim() || '';
-  const layAlarm = aiResults.layAlarmSignals?.trim() || '';
+  const isEvolucaoDoc = templateStr.includes('#EVOLUÇÃO') || templateStr.includes('{{REAVALIACAO_TEXTO}}') || templateStr.includes('{{NOVA_HIPOTESE}}') || templateStr.includes('{{NOVAS_CONDUTAS}}');
+  const sourceTechOrient = isEvolucaoDoc
+    ? (observation.techOrientations?.trim() || aiResults.techOrientations?.trim() || '')
+    : (aiResults.techOrientations?.trim() || '');
+  const sourceTechAlarm = isEvolucaoDoc
+    ? (observation.techAlarmSignals?.trim() || aiResults.techAlarmSignals?.trim() || '')
+    : (aiResults.techAlarmSignals?.trim() || '');
+
+  const techOrient = ensureOriento(sourceTechOrient);
+  const techAlarm = ensureOriento(sourceTechAlarm);
+  const layOrient = isEvolucaoDoc
+    ? (observation.layOrientations?.trim() || aiResults.layOrientations?.trim() || '')
+    : (aiResults.layOrientations?.trim() || '');
+  const layAlarm = isEvolucaoDoc
+    ? (observation.layAlarmSignals?.trim() || aiResults.layAlarmSignals?.trim() || '')
+    : (aiResults.layAlarmSignals?.trim() || '');
 
   const hasSeparateTechAlarm = /\{\{(alarme_prontuario|sinais_alarme_prontuario|alarme_tecnico|sinais_alarme_tecnicos)\}\}/i.test(templateStr);
 
@@ -293,14 +305,31 @@ export function replaceTemplateTags(templateStr: string, data: TagContextData): 
   output = output.replace(/\{\{NOVAS_CONDUTAS\}\}/gi, observation.newConducts || condutas || '- Alta clínica orientada com receitas e orientações domiciliares.');
   
   const desfechoMap: Record<string, string> = {
-    alta: 'Alta médica com orientações',
-    observacao: 'Em observação clínica',
-    internacao: 'Internação hospitalar',
-    transferencia: 'Transferência inter-hospitalar'
+    alta: 'Alta médica com orientações.',
+    observacao: 'Em observação, com reavaliação posterior.',
+    internacao: 'Internação hospitalar.',
+    transferencia: 'Transferência inter-hospitalar.'
   };
-  const currentOutcomeKey = observation.outcome || aiResults.clinicalOutcome || (observation.inObservation ? 'observacao' : undefined);
-  const desfechoDesc = currentOutcomeKey ? (desfechoMap[currentOutcomeKey] || currentOutcomeKey) : 'A definir';
-  output = output.replace(/\{\{(DESFECHO|DESFECHO_ATUAL|DESFECHO_FINAL)\}\}/gi, desfechoDesc);
+  const currentOutcomeKey = isEvolucaoDoc
+    ? (observation.outcome || (observation.inObservation ? 'observacao' : 'alta'))
+    : (aiResults.clinicalOutcome || (observation.inObservation ? 'observacao' : 'alta'));
+  const desfechoDesc = desfechoMap[currentOutcomeKey] || (currentOutcomeKey ? `${currentOutcomeKey}.` : 'Alta médica com orientações.');
+  
+  output = output.replace(/^[ \t]*-?[ \t]*\{\{(DESFECHO|DESFECHO_ATUAL|DESFECHO_FINAL|CONDUTA_FINAL)\}\}[ \t]*(?:\r?\n)?/gmi, `- ${desfechoDesc}\n`);
+  output = output.replace(/\{\{(DESFECHO|DESFECHO_ATUAL|DESFECHO_FINAL|CONDUTA_FINAL)\}\}/gi, desfechoDesc);
+
+  const isProntuarioDoc = templateStr.includes('#CONDUTAS:') && (templateStr.includes('#HMA:') || templateStr.includes('#QP:'));
+  if (isProntuarioDoc || isEvolucaoDoc) {
+    if (!output.includes(desfechoDesc)) {
+      if (techAlarm && output.includes(techAlarm)) {
+        output = output.replace(techAlarm, `${techAlarm}\n- ${desfechoDesc}`);
+      } else if (techOrient && output.includes(techOrient)) {
+        output = output.replace(techOrient, `${techOrient}\n- ${desfechoDesc}`);
+      } else if (output.includes('#CONDUTAS:')) {
+        output = output.replace(/(#CONDUTAS:[^\n]*\n(?:[^\n#]+(?:\n|$))*)/i, `$1- ${desfechoDesc}\n`);
+      }
+    }
+  }
   output = output.replace(/\{\{SINAIS_ALERTA\}\}/gi, 'Piora hemodinâmica ou dor refratária');
   const propostasDefault = observation.whatToReevaluate
     ? `- ${observation.whatToReevaluate}`

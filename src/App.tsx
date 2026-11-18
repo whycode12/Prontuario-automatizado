@@ -127,8 +127,38 @@ function sanitizeTemplates(raw: Partial<SystemTemplates>): SystemTemplates {
   if (updated.prontuario && !updated.prontuario.includes('MEDICACOES_UNIDADE') && !updated.prontuario.includes('PRESCRIÇÃO INTERNA')) {
     updated.prontuario = `${updated.prontuario.trim()}\n\n———————————————————————————————————\n\nPRESCRIÇÃO INTERNA:\n{{MEDICACOES_UNIDADE}}`;
   }
+  if (updated.prontuario) {
+    if (!updated.prontuario.includes('{{DESFECHO}}') && !updated.prontuario.includes('{{DESFECHO_FINAL}}')) {
+      if (updated.prontuario.includes('{{alarme_prontuario}}')) {
+        updated.prontuario = updated.prontuario.replace(
+          /(-[ \t]*\{\{alarme_prontuario\}\})/gi,
+          '$1\n- {{DESFECHO}}'
+        );
+      } else if (updated.prontuario.includes('{{CONDUTAS}}')) {
+        updated.prontuario = updated.prontuario.replace(
+          /(\{\{CONDUTAS\}\})/gi,
+          '$1\n- {{orientacoes_prontuario}}\n- {{alarme_prontuario}}\n- {{DESFECHO}}'
+        );
+      }
+    }
+  }
   if (updated.evolucao && updated.evolucao.includes('#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:')) {
     updated.evolucao = updated.evolucao.replace('#MEDICAÇÕES ADMINISTRADAS NA UNIDADE:', '#PRESCRIÇÃO INTERNA:');
+  }
+  if (updated.evolucao) {
+    if (!updated.evolucao.includes('{{DESFECHO}}') && !updated.evolucao.includes('{{DESFECHO_FINAL}}')) {
+      if (updated.evolucao.includes('{{alarme_prontuario}}')) {
+        updated.evolucao = updated.evolucao.replace(
+          /(-[ \t]*\{\{alarme_prontuario\}\})/gi,
+          '$1\n- {{DESFECHO}}'
+        );
+      } else if (updated.evolucao.includes('{{NOVAS_CONDUTAS}}')) {
+        updated.evolucao = updated.evolucao.replace(
+          /(\{\{NOVAS_CONDUTAS\}\})/gi,
+          '$1\n- {{orientacoes_prontuario}}\n- {{alarme_prontuario}}\n- {{DESFECHO}}'
+        );
+      }
+    }
   }
   return updated;
 }

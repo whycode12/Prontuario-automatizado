@@ -85,6 +85,7 @@ export const TemplateEditorButton: React.FC<TemplateEditorButtonProps> = ({
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">{'{{orientacoes_prontuario}}'}</span>
                   <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">{'{{alarme_prontuario}}'}</span>
+                  <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300">{'{{DESFECHO}}'}</span>
                   <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">{'{{orientacoes_paciente}}'}</span>
                   <span className="font-mono text-[10px] bg-white dark:bg-[#202020] px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">{'{{alarme_paciente}}'}</span>
                 </div>

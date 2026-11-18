@@ -196,7 +196,7 @@ export const EvolucaoView: React.FC<EvolucaoViewProps> = ({
   };
 
   const handleCopyProntuario = () => {
-    const text = documents?.prontuario || (tagContextData ? buildDocument('prontuario', templates, tagContextData) : '');
+    const text = documents?.evolucao || (evoTagContextData ? generateEvolucaoText(templates.evolucao, evoTagContextData) : '') || documents?.prontuario || '';
     copyToClipboard(text, 'prontuario');
   };
 
